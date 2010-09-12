@@ -20,10 +20,6 @@ Tests the Sink class, found in ../sink.py
 """ 
 
 class TestSink:
-    def can_be_imported(self):
-        """
-        Basic sanity checks: the class is in the correct location on the
-        python path and import successfully
-        """
+    def test_can_be_imported(self):
         from message_server import Sink
 
