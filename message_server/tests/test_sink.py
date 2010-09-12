@@ -1,4 +1,3 @@
-
 # Copyright 2010 (C) Daniel Richman
 #
 # This file is part of reHAB.
@@ -17,11 +16,14 @@
 # along with reHAB.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Basic sanity checks: the classes are in the correct location on the python
-path and import successfully
+Tests the Sink class, found in ../sink.py
 """ 
 
-class TestSanity:
-    def test_sink(self):
+class TestSink:
+    def can_be_imported(self):
+        """
+        Basic sanity checks: the class is in the correct location on the
+        python path and import successfully
+        """
         from message_server import Sink
 
