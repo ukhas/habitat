@@ -51,22 +51,17 @@ class Server:
             raise ValueError("len(sink_name) must be > 0")
 
         components = sink_name.split(".")
-        assert len(components) != 0
 
-        if len(components) == 1:
-            sink = globals()[sink_name]
-        elif len(components) == 2:
-            module_name = components[0]
-            class_name = components[1]
+        if len(components) < 2:
+            raise ValueError("len(sink_name.split(\".\")) must be >= 2")
 
-            module = __import__(module_name)
-            sink = getattr(module, class_name)
-        else:
-            parent_module = ".".join(components[:-2])
-            module_name = ".".join(components[:-1])
-            class_name = components[-1]
+        if "" in components:
+            raise ValueError("sink_name.split(\".\") contains empty strings")
 
-            module = __import__(module_name, fromlist=[parent_module])
-            sink = getattr(module, class_name)
+        module_name = ".".join(components[:-1])
+        sink = __import__(module_name)
+
+        for i in components[1:]:
+            sink = getattr(sink, i)
 
         return sink
