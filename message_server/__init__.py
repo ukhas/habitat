@@ -21,3 +21,4 @@ or more 'sinks'.
 """
 
 from sink import Sink
+from server import Server
