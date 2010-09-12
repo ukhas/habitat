@@ -62,6 +62,18 @@ class TestServerSinkLoader:
     def test_refuses_to_load_empty_str(self):
         self.server.load("")
 
+    @raises(ValueError)
+    def test_refuses_to_str_without_enough_components(self):
+        self.server.load("test")
+
+    def test_refuses_to_str_with_empty_components(self):
+        for i in ["asdf.", ".", "asdf..asdf"]:
+            yield self.check_refuses_to_str_with_empty_components, i
+
+    @raises(ValueError)
+    def check_refuses_to_str_with_empty_components(self, name):
+        self.server.load(name)
+
     @raises(AttributeError)
     def test_refuses_to_load_nonexistant_sink_class_by_name(self):
         self.server.load("message_server.tests.test_server.FakeSink99")
