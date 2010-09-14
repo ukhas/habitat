@@ -26,38 +26,39 @@ from message_server import Message, Listener
 
 class TestMessage:
     def test_ids_exist_and_are_unique(self):
-        mtypes = set()
-        for i in [ "RX_STR", "LI_INF", "LI_TLM", "TELEM" ]:
-            mtype = getattr(Message, i)
-            assert mtype not in mtypes
-            mtypes.add(mtype)
+        types = set()
+        for i in [ "RECEIVED_TELEM", "LISTENER_INFO", "LISTENER_TELEM", 
+                   "TELEM" ]:
+            type = getattr(Message, i)
+            assert type not in types
+            types.add(type)
 
     def test_initialiser_accepts_and_stores_data(self):
         source = Listener(1234)
         mydata = {"asdf": "defg", "hjkl": "yuio"}
-        message = Message(source, Message.RX_STR, mydata)
+        message = Message(source, Message.RECEIVED_TELEM, mydata)
         assert message.source == source
-        assert message.mtype == Message.RX_STR
+        assert message.type == Message.RECEIVED_TELEM
         assert message.data == mydata
 
     @raises(TypeError)
     def test_initialiser_rejects_garbage_source(self):
-        Message("asdf", Message.RX_STR, "asdf")
+        Message("asdf", Message.RECEIVED_TELEM, "asdf")
 
     @raises(TypeError)
     def test_initialiser_rejects_null_source(self):
-        Message(None, Message.RX_STR, "asdf")
+        Message(None, Message.RECEIVED_TELEM, "asdf")
 
     @raises(ValueError)
-    def test_initialiser_rejects_invalid_mtype(self):
+    def test_initialiser_rejects_invalid_type(self):
         Message(Listener(0), 951, "asdf")
 
     @raises(TypeError)
-    def test_initialiser_rejects_garbage_mtype(self):
+    def test_initialiser_rejects_garbage_type(self):
         Message(Listener(0), "asdf", "asdf")
 
     def test_initialiser_allows_no_data(self):
-        Message(Listener(0), Message.RX_STR, None)
+        Message(Listener(0), Message.RECEIVED_TELEM, None)
 
 class TestListener:
     def test_initialiser_accepts_and_stores_data(self):

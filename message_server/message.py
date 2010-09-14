@@ -26,22 +26,22 @@ per listener.
 'Message' has the following initialiser which assigns to the following
 members:
 
-my_message = Message(source, mtype, data)
+my_message = Message(source, type, data)
 where:
   source is a Listener object
-  mtype is one of the type constants below
+  type is one of the type constants below
   data is a type-specific data object, which will be validated
 
 The data is then available in
   message.source
-  message.mtype
+  message.type
   message.data
 
 Message types:
-  Message.RX_STR - received telemetry string
-  Message.LI_INF - listener information
-  Message.LI_TLM - listener telemetry
-  Message.TELEM  - (parsed) telemetry data
+  Message.RECEIVED_TELEM  - received telemetry string
+  Message.LISTENER_INFO   - listener information
+  Message.LISTENER_TELEM  - listener telemetry
+  Message.TELEM           - (parsed) telemetry data
 
 'Listener' has the following initialiser which assigns to the following
 members:
@@ -54,22 +54,22 @@ The identifier is then available as Listener.identifier
 """
 
 class Message:
-    RX_STR, LI_INF, LI_TLM, TELEM = mtypes = range(4)
+    RECEIVED_TELEM, LISTENER_INFO, LISTENER_TELEM, TELEM = types = range(4)
 
-    def __init__(self, source, mtype, data):
+    def __init__(self, source, type, data):
         # TODO data validation based on type
 
         if not isinstance(source, Listener):
             raise TypeError("source must be a Listener object")
 
-        if not isinstance(mtype, int):
-            raise TypeError("mtype must be an int")
+        if not isinstance(type, int):
+            raise TypeError("type must be an int")
 
-        if mtype not in self.mtypes:
-            raise ValueError("mtype is not a valid type")
+        if type not in self.types:
+            raise ValueError("type is not a valid type")
 
         self.source = source
-        self.mtype = mtype
+        self.type = type
         self.data = data
 
 class Listener:
