@@ -20,5 +20,8 @@ The message server receives messages and pushes each message to one
 or more 'sinks'. 
 """
 
+# These classes are defined in separate files but we want them to be
+# accessible as message_server.Class:
 from sink import Sink
 from server import Server
+from message import Message, Listener
