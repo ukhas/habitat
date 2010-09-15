@@ -65,3 +65,7 @@ class Server:
             sink = getattr(sink, i)
 
         return sink
+
+    def push_message(self, message):
+        for sink in self.sinks:
+            sink.push_message(message)

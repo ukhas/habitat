@@ -62,15 +62,19 @@ class Message:
         if not isinstance(source, Listener):
             raise TypeError("source must be a Listener object")
 
-        if not isinstance(type, int):
-            raise TypeError("type must be an int")
-
-        if type not in self.types:
-            raise ValueError("type is not a valid type")
+        self.validate_type(type)
 
         self.source = source
         self.type = type
         self.data = data
+
+    @classmethod
+    def validate_type(cls, type):
+        if not isinstance(type, int):
+            raise TypeError("type must be an int")
+
+        if type not in cls.types:
+            raise ValueError("type is not a valid type")
 
 class Listener:
     def __init__(self, identifier):

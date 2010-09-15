@@ -60,6 +60,17 @@ class TestMessage:
     def test_initialiser_allows_no_data(self):
         Message(Listener(0), Message.RECEIVED_TELEM, None)
 
+    @raises(TypeError)
+    def test_validate_type_rejects_garbage_type(self):
+        Message.validate_type("asdf")
+
+    @raises(ValueError)
+    def test_validate_type_rejects_invalid_type(self):
+        Message.validate_type(951)
+
+    def test_validate_type_accepts_valid_type(self):
+        Message.validate_type(Message.LISTENER_TELEM)
+
 class TestListener:
     def test_initialiser_accepts_and_stores_data(self):
         listener = Listener(910)
