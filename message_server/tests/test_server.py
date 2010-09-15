@@ -20,7 +20,7 @@ Tests the Server class, found in ../server.py
 """ 
 
 from nose.tools import raises, with_setup
-from message_server import Sink, Server
+from message_server import Sink, Server, Message, Listener
 
 class FakeSink(Sink):
     def start(self):
@@ -33,6 +33,18 @@ class FakeSink2(Sink):
         pass
     def message(self):
         pass
+
+class TestSink(Sink):
+    def start(self):
+        self.test_messages = []
+        self.message = self.test_messages.append
+        self.set_types(set(self.testtypes))
+
+class TestSinkA(TestSink):
+    testtypes = [Message.RECEIVED_TELEM, Message.LISTENER_INFO]
+
+class TestSinkB(TestSink):
+    testtypes = [Message.LISTENER_INFO]
 
 class NonSink:
     """
@@ -134,3 +146,17 @@ class TestServerSinkLoader:
             pass
 
         assert len(self.server.sinks) == 0
+
+    def test_pushes_to_sinks(self):
+        message_li = Message(Listener(0), Message.LISTENER_INFO, None)
+        message_rt = Message(Listener(0), Message.RECEIVED_TELEM, None)
+        self.server.load(TestSinkA)
+        self.server.load(TestSinkB)
+        self.server.push_message(message_li)
+        self.server.push_message(message_rt)
+        self.server.push_message(message_li)
+        assert isinstance(self.server.sinks[0], TestSinkA)
+        assert isinstance(self.server.sinks[1], TestSinkB)
+        assert self.server.sinks[0].test_messages == [message_li, message_rt,
+                                                      message_li]
+        assert self.server.sinks[1].test_messages == [message_li, message_li]
