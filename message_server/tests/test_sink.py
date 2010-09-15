@@ -21,7 +21,7 @@ Tests the Sink class, found in ../sink.py
 
 from nose.tools import raises
 from message_server import Sink
-from message_server import Message
+from message_server import Message, Listener
 
 class EmptySink(Sink):
     def start(self):
@@ -134,3 +134,26 @@ class TestSink:
     @raises(ValueError)
     def check_rejects_invalid_types(self, func):
         func(set([Message.RECEIVED_TELEM, 952]))
+
+    def test_start_called(self):
+        sink = FakeSink()
+        assert sink.types == set([Message.RECEIVED_TELEM,
+                                  Message.LISTENER_INFO])
+        assert sink.message == sink.test_messages.append
+
+    def test_push_message(self):
+        sink = FakeSink()
+
+        # Same story as test_types
+        yield self.check_push_unwanted_message, sink
+        yield self.check_push_requested_message, sink
+
+    def check_push_unwanted_message(self, sink):
+        sink.push_message(Message(Listener(0), Message.TELEM, None))
+        assert sink.test_messages == []
+
+    def check_push_requested_message(self, sink):
+        message = Message(Listener(0), Message.RECEIVED_TELEM, 100)
+        sink.push_message(message)
+        assert sink.test_messages == [message]
+        assert sink.test_messages[0].data == 100

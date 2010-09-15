@@ -50,10 +50,18 @@ class Sink:
         self.remove_types = TypesValidator(self.types.difference_update)
         self.clear_types = self.types.clear
 
+        self.start()
+
     def set_types(self, types):
         self.clear_types()
         self.add_types(types)
 
+    def push_message(self, message):
+        if not isinstance(message, Message):
+            raise TypeError("message must be a Message object")
+
+        if message.type in self.types:
+            self.message(message)
 
 class Validator:
     def __init__(self, func):

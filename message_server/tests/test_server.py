@@ -23,10 +23,16 @@ from nose.tools import raises, with_setup
 from message_server import Sink, Server
 
 class FakeSink(Sink):
-    pass
+    def start(self):
+        pass
+    def message(self):
+        pass
 
 class FakeSink2(Sink):
-    pass
+    def start(self):
+        pass
+    def message(self):
+        pass
 
 class NonSink:
     """
