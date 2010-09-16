@@ -19,25 +19,26 @@
 Tests the Sink class, found in ../sink.py
 """ 
 
+import threading
 from nose.tools import raises
-from message_server import SimpleSink
+from message_server import SimpleSink, ThreadedSink
 from message_server import Message, Listener
 
 class EmptySink(SimpleSink):
-    def start(self):
+    def setup(self):
         pass
 
     def message(self):
         pass
 
 class FakeSink(SimpleSink):
-    def start(self):
+    def setup(self):
         self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
         self.test_messages = []
         self.message = self.test_messages.append
 
-class ChangySink(SimpleSink):
-    def start(self):
+class ChangeySink():
+    def setup(self):
         self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
         self.status = 0
 
@@ -57,6 +58,41 @@ class ChangySink(SimpleSink):
             self.status = 2
         else:
             raise ValueError
+
+class ChangeySimpleSink(SimpleSink, ChangeySink):
+    pass
+
+class ChangeyThreadedSink(ThreadedSink, ChangeySink):
+    pass
+
+class FakeThreadedSink(ThreadedSink):
+    def setup(self):
+        self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
+        self.status = 0
+        self.failed = 0
+        self.test_thread = None
+
+    def message(self, message):
+        self.status = self.status + 1
+
+        if self.test_thread != None:
+            if self.test_thread != threading.current_thread():
+                self.failed = 1
+        else:
+            self.test_thread = threading.current_thread()
+
+class ThreadedPush(threading.Thread):
+    def __init__(self, sink, message, event):
+        threading.Thread.__init__(self)
+        self.sink = sink
+        self.message = message
+        self.event = event
+
+    def run(self):
+        try:
+            self.sink.push_message(self.message)
+        finally:
+            self.event.set()
 
 class TestSink:
     def test_types_is_a_set(self):
@@ -157,7 +193,7 @@ class TestSink:
     def check_rejects_invalid_types(self, func):
         func(set([Message.RECEIVED_TELEM, 952]))
 
-    def test_start_called(self):
+    def test_setup_called(self):
         sink = FakeSink()
         assert sink.types == set([Message.RECEIVED_TELEM,
                                   Message.LISTENER_INFO])
@@ -180,9 +216,42 @@ class TestSink:
         assert sink.test_messages == [message]
         assert sink.test_messages[0].data == 100
 
-    def check_sink_changing_types_push(self, sink):
-        sink = ChangeySink()
+    def test_sink_changing_types_push(self):
+        yield self.check_sink_changing_types_push, ChangeySimpleSink
+        yield self.check_sink_changing_types_push, ChangeyThreadedSink
+
+    def check_sink_changing_types_push(self, sink_class):
+        sink = sink_class()
+
         sink.push_message(Message(Listener(0), Message.LISTENER_INFO, 1))
         sink.push_message(Message(Listener(0), Message.LISTENER_INFO, 2))
         sink.push_message(Message(Listener(0), Message.RECEIVED_TELEM, 3))
+
+        try:
+            sink.queue.join()
+        except(AttributeError):
+            pass
+
         assert sink.status == 2
+
+    def test_threaded_sink_executes_in_one_thread(self):
+        sink = FakeThreadedSink()
+        done_a = threading.Event()
+        done_b = threading.Event()
+        done_c = threading.Event()
+
+        ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 1),
+                     done_a).start()
+        ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 2),
+                     done_b).start()
+        ThreadedPush(sink, Message(Listener(0), Message.RECEIVED_TELEM, 3),
+                     done_c).start()
+
+        done_a.wait()
+        done_b.wait()
+        done_c.wait()
+
+        sink.queue.join()
+
+        assert sink.failed == 0
+        assert sink.status == 3

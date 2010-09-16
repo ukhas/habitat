@@ -41,12 +41,14 @@ ThreadedSink.
     achieve this.
 
 A sink must define these functions:
-start(): called once; the sink must call some of the self.*type* functions in
+setup(): called once; the sink must call some of the self.*type* functions in
          order to set up the set of types that the sink would like to receive
 message(message): called whenever a message is received for the sink to 
                   process
 """
 
+import Queue
+import threading
 from message import Message
 
 class Sink:
@@ -59,7 +61,7 @@ class Sink:
         self.remove_types = TypesValidator(self.types.difference_update)
         self.clear_types = self.types.clear
 
-        self.start()
+        self.setup()
 
     def set_types(self, types):
         self.clear_types()
@@ -72,6 +74,31 @@ class SimpleSink(Sink):
 
         if message.type in self.types:
             self.message(message)
+
+class ThreadedSink(Sink, threading.Thread):
+    def __init__(self):
+        Sink.__init__(self)
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.queue = Queue.Queue()
+        self.start()
+
+    def push_message(self, message):
+        if not isinstance(message, Message):
+            raise TypeError("message must be a Message object")
+
+        # Between get()ting items from the queue, self.types may change.
+        # We should let run() filter for messages we want
+        self.queue.put(message)
+
+    def run(self):
+        while True:
+            message = self.queue.get()
+
+            if message.type in self.types:
+                self.message(message)
+
+            self.queue.task_done()
 
 class Validator:
     def __init__(self, func):

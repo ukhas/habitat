@@ -23,19 +23,19 @@ from nose.tools import raises, with_setup
 from message_server import Sink, SimpleSink, Server, Message, Listener
 
 class FakeSink(SimpleSink):
-    def start(self):
+    def setup(self):
         pass
     def message(self):
         pass
 
 class FakeSink2(SimpleSink):
-    def start(self):
+    def setup(self):
         pass
     def message(self):
         pass
 
 class TestSink(SimpleSink):
-    def start(self):
+    def setup(self):
         self.test_messages = []
         self.message = self.test_messages.append
         self.set_types(set(self.testtypes))
