@@ -86,3 +86,22 @@ class Listener:
     # compare requests other than __eq__ - we do our best:
     def __cmp__(self, other):
         return self.identifier.__cmp__(other.identifier)
+
+class Validator:
+    def __init__(self, func):
+        self.func = func
+
+class TypeValidator(Validator):
+    def __call__(self, type):
+        Message.validate_type(type)
+        self.func(type)
+
+class TypesValidator(Validator):
+    def __call__(self, types):
+        if not isinstance(types, (set, frozenset)):
+            raise TypeError("types must be a set")
+
+        for type in types:
+            Message.validate_type(type)
+
+        self.func(types)

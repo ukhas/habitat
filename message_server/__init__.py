@@ -24,4 +24,4 @@ or more 'sinks'.
 # accessible as message_server.Class:
 from sink import Sink
 from server import Server
-from message import Message, Listener
+from message import Message, Listener, TypeValidator, TypesValidator

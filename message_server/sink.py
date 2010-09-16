@@ -38,7 +38,7 @@ Please note that multiple calls to message() may be made simultaneously by
 different threads. Your message() function must not block!
 """
 
-from message import Message
+from message import Message, TypeValidator, TypesValidator
 
 class Sink:
     def __init__(self):
@@ -62,22 +62,3 @@ class Sink:
 
         if message.type in self.types:
             self.message(message)
-
-class Validator:
-    def __init__(self, func):
-        self.func = func
-
-class TypeValidator(Validator):
-    def __call__(self, type):
-        Message.validate_type(type)
-        self.func(type)
-
-class TypesValidator(Validator):
-    def __call__(self, types):
-        if not isinstance(types, (set, frozenset)):
-            raise TypeError("types must be a set")
-
-        for type in types:
-            Message.validate_type(type)
-
-        self.func(types)
