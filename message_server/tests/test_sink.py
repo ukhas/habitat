@@ -20,23 +20,23 @@ Tests the Sink class, found in ../sink.py
 """ 
 
 from nose.tools import raises
-from message_server import Sink
+from message_server import SimpleSink
 from message_server import Message, Listener
 
-class EmptySink(Sink):
+class EmptySink(SimpleSink):
     def start(self):
         pass
 
     def message(self):
         pass
 
-class FakeSink(Sink):
+class FakeSink(SimpleSink):
     def start(self):
         self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
         self.test_messages = []
         self.message = self.test_messages.append
 
-class ChangySink(Sink):
+class ChangySink(SimpleSink):
     def start(self):
         self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
         self.status = 0

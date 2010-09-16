@@ -20,21 +20,21 @@ Tests the Server class, found in ../server.py
 """ 
 
 from nose.tools import raises, with_setup
-from message_server import Sink, Server, Message, Listener
+from message_server import Sink, SimpleSink, Server, Message, Listener
 
-class FakeSink(Sink):
+class FakeSink(SimpleSink):
     def start(self):
         pass
     def message(self):
         pass
 
-class FakeSink2(Sink):
+class FakeSink2(SimpleSink):
     def start(self):
         pass
     def message(self):
         pass
 
-class TestSink(Sink):
+class TestSink(SimpleSink):
     def start(self):
         self.test_messages = []
         self.message = self.test_messages.append

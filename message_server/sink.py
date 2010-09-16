@@ -24,18 +24,27 @@ A 'Sink' has the following methods:
     Sink.remove_type(type), Sink.remove_types(set([type, type, ...]))
     Sink.set_types(types), Sink.clear_types()
 
-  called internally by the message server
-    Sink.push_message(message)
+All types of sinks implement this function, which is called internally by the
+message server
+  Sink.push_message(message)
 
-Currently, a sink must inherit this class and in addition define these 
-functions:
+To write a sink, have your sink class either inherit SimpleSink or 
+ThreadedSink.
+  - SimpleSinks must be non blocking and thread safe (however can't use
+    mutexes to achieve this since that would block. They must tolerate
+    multiple calls to message() by multiple threads, simultaneously. If you
+    want your sink to be able to place messages "back into" the server then
+    it must tolerate recusrion
+  - If your sink inherits ThreadedSink then the parent class will execute
+    message() exclusively in a thread for your Sink, and two cals to message
+    will never occur simultaneously. It uses an internal Python Queue to
+    achieve this.
+
+A sink must define these functions:
 start(): called once; the sink must call some of the self.*type* functions in
          order to set up the set of types that the sink would like to receive
 message(message): called whenever a message is received for the sink to 
                   process
-
-Please note that multiple calls to message() may be made simultaneously by
-different threads. Your message() function must not block!
 """
 
 from message import Message
@@ -56,6 +65,7 @@ class Sink:
         self.clear_types()
         self.add_types(types)
 
+class SimpleSink(Sink):
     def push_message(self, message):
         if not isinstance(message, Message):
             raise TypeError("message must be a Message object")
