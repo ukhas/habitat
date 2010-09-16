@@ -29,3 +29,9 @@ class TestParserSink:
 
     def test_sink_can_be_loaded(self):
         self.server.load(ParserSink)
+
+    def test_sink_has_RECEIVED_TELEM_type(self):
+        """sink has RECEIVED_TELEM type"""
+        sink = ParserSink()
+        assert sink.types == set([Message.RECEIVED_TELEM])
+

@@ -22,11 +22,12 @@ server, turning it into beautiful telemetry data, and then sending that
 back.
 """
 
-from message_server import SimpleSink
+from message_server import SimpleSink, Message
 
 class ParserSink(SimpleSink):
     def setup(self):
-        pass
+        self.add_type(Message.RECEIVED_TELEM)
+
     def message(self):
         pass
 
