@@ -24,14 +24,8 @@ from message_server import Server, Message
 from parser import ParserSink
 
 class TestParserSink:
-    def setup(self):
-        self.server = Server()
-
-    def test_sink_can_be_loaded(self):
-        self.server.load(ParserSink)
-
     def test_sink_has_RECEIVED_TELEM_type(self):
         """sink has RECEIVED_TELEM type"""
         sink = ParserSink()
         assert sink.types == set([Message.RECEIVED_TELEM])
-
+    
