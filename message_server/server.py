@@ -1,4 +1,5 @@
 # Copyright 2010 (C) Daniel Richman
+# Copyright 2010 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -39,6 +40,14 @@ class Server:
 
         if not issubclass(new_sink, Sink):
             raise ValueError("new_sink must inherit message_server.Sink")
+
+        methods = [method[0] for method in
+            inspect.getmembers(new_sink, inspect.ismethod)]
+
+        if 'setup' not in methods:
+            raise ValueError("sink must implement setup()")
+        if 'message' not in methods:
+            raise ValueError("sink must implement message()")
 
         sink = new_sink()
         self.sinks.append(sink)

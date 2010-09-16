@@ -1,4 +1,5 @@
 # Copyright 2010 (C) Daniel Richman
+# Copyright 2010 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -34,11 +35,23 @@ class FakeSink2(SimpleSink):
     def message(self):
         pass
 
+class SinkWithoutSetup(SimpleSink):
+    """A sink without a setup method should not be loaded."""
+    def message(self):
+        pass
+
+class SinkWithoutMessage(SimpleSink):
+    """A sink without a message method should not be loaded."""
+    def setup(self):
+        pass
+
 class TestSink(SimpleSink):
     def setup(self):
         self.test_messages = []
         self.message = self.test_messages.append
         self.set_types(set(self.testtypes))
+    def message(self):
+        pass
 
 class TestSinkA(TestSink):
     testtypes = [Message.RECEIVED_TELEM, Message.LISTENER_INFO]
@@ -99,6 +112,14 @@ class TestServerSinkLoader:
     @raises(ImportError)
     def test_refuses_to_load_nonexistant_module_by_name(self):
         self.server.load("message_server.tests.test_server99.FakeSink")
+
+    @raises(ValueError)
+    def test_refuses_to_load_sink_without_setup_method(self):
+        self.server.load("message_server.tests.test_server.SinkWithoutSetup")
+
+    @raises(ValueError)
+    def test_refuses_to_load_sink_without_message_method(self):
+        self.server.load(SinkWithoutMessage)
 
     def test_load_by_name_gets_correct_class(self):
         for i in ["FakeSink", "FakeSink2"]:
