@@ -25,6 +25,7 @@ back.
 import inspect
 
 from message_server import SimpleSink, Message
+from parser import ParserModule
 
 class ParserSink(SimpleSink):
     BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = locations = range(3)
@@ -84,6 +85,17 @@ class ParserSink(SimpleSink):
                 raise ValueError("Filter was not loaded")
         else:
             raise ValueError("Invalid location")
+
+    def add_module(self, module):
+        if not issubclass(module, ParserModule):
+            raise TypeError("Module must be a sub class of ParserModule")
+        self.modules.append(module)
+
+    def remove_module(self, module):
+        if module in self.modules:
+            self.modules.remove(module)
+        else:
+            raise ValueError("Module was not loaded")
 
     def message(self, message):
         """

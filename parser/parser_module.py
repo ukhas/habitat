@@ -16,8 +16,10 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The parser interprets incoming telemetry strings into useful telemetry data.
+ParserModules are classes which actually turn radio strings into
+useful data. They can be given various configuration parameters.
+All modules inherit from ParserModule.
 """
 
-from parser_module import ParserModule
-from parser_sink import ParserSink
+class ParserModule:
+    pass

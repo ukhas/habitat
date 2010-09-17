@@ -21,7 +21,7 @@ Unit tests for the Parser's Sink class.
 
 from nose.tools import raises
 from message_server import Server, Message
-from parser import ParserSink
+from parser import ParserSink, ParserModule
 
 class FilterClass:
     def __call__(self, message):
@@ -34,6 +34,8 @@ class WorseFilterClass:
 def FilterFunc(msg):
     pass
 def BadFilterFunc():
+    pass
+class Module(ParserModule):
     pass
 
 class TestParserSink:
@@ -58,25 +60,40 @@ class TestParserSink:
         invalid_location = ParserSink.locations[-1] + 1
         yield self.check_fails_to_load_filter, invalid_location, FilterFunc
 
-    @raises(TypeError, ValueError)
-    def check_fails_to_load_filter(self, location, filter):
-        self.sink.add_filter(location, filter)
-    
     def test_parser_loads_filters(self):
         for filter in [FilterFunc, FilterClass]:
             for location in ParserSink.locations:
                 yield self.check_loads_filter, location, filter
 
-    def check_loads_filter(self, location, filter):
-        self.sink.add_filter(location, filter)
-
     def test_parser_removes_filters(self):
         for location in ParserSink.locations:
             yield self.check_removes_filter, location
+
+    def check_loads_filter(self, location, filter):
+        self.sink.add_filter(location, filter)
+        assert len(self.sink.filters[location]) == 1
+        assert self.sink.filters[location][0] == filter
+    
+    @raises(TypeError, ValueError)
+    def check_fails_to_load_filter(self, location, filter):
+        self.sink.add_filter(location, filter)
     
     def check_removes_filter(self, location):
-        self.sink.add_filter(location, FilterFunc)
-        assert len(self.sink.filters[location]) == 1
-        assert self.sink.filters[location][0] == FilterFunc
+        self.check_loads_filter(location, FilterFunc)
         self.sink.remove_filter(location, FilterFunc)
         assert len(self.sink.filters[location]) == 0
+
+    def check_loads_module(self, module):
+        self.sink.add_module(module)
+        assert len(self.sink.modules) == 1
+        assert self.sink.modules[0] == module
+
+    @raises(TypeError, ValueError)
+    def check_fails_to_load_module(self, module):
+        self.sink.add_module(module)
+
+    def check_removes_module(self, module):
+        self.check_loads_module(self, module)
+        self.sink.remove_module(module)
+        assert len(self.sink.modules) == 0
+
