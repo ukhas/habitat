@@ -43,11 +43,20 @@ class TestParserSink:
     def test_parser_has_RECEIVED_TELEM_type(self):
         """sink has RECEIVED_TELEM type"""
         assert self.sink.types == set([Message.RECEIVED_TELEM])
+
+    def test_empty_parser_has_no_filters(self):
+        assert len(self.sink.before_filters) == 0
+        assert len(self.sink.during_filters) == 0
+        assert len(self.sink.after_filters) == 0
     
     def test_parser_does_not_load_filters_with_too_many_args(self):
         for filter in [BadFilterFunc, BadFilterClass, WorseFilterClass]:
-            for location in ParserSink.types:
+            for location in ParserSink.locations:
                 yield self.check_fails_to_load_filter, location, filter
+    
+    def test_parser_does_not_load_filters_with_invalid_locations(self):
+        invalid_location = ParserSink.locations[-1] + 1
+        yield self.check_fails_to_load_filter, invalid_location, FilterFunc
 
     @raises(TypeError, ValueError)
     def check_fails_to_load_filter(self, location, filter):
@@ -55,9 +64,19 @@ class TestParserSink:
     
     def test_parser_loads_filters(self):
         for filter in [FilterFunc, FilterClass]:
-            for location in ParserSink.types:
+            for location in ParserSink.locations:
                 yield self.check_loads_filter, location, filter
 
     def check_loads_filter(self, location, filter):
         self.sink.add_filter(location, filter)
 
+    def test_parser_removes_filters(self):
+        for location in ParserSink.locations:
+            yield self.check_removes_filter, location
+    
+    def check_removes_filter(self, location):
+        self.sink.add_filter(location, FilterFunc)
+        assert len(self.sink.filters[location]) == 1
+        assert self.sink.filters[location][0] == FilterFunc
+        self.sink.remove_filter(location, FilterFunc)
+        assert len(self.sink.filters[location]) == 0

@@ -27,13 +27,21 @@ import inspect
 from message_server import SimpleSink, Message
 
 class ParserSink(SimpleSink):
-    BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = types = range(3)
+    BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = locations = range(3)
 
     def setup(self):
         self.add_type(Message.RECEIVED_TELEM)
+
         self.before_filters = []
         self.during_filters = []
         self.after_filters = []
+        self.filters = {
+            self.BEFORE_FILTER: self.before_filters,
+            self.DURING_FILTER: self.during_filters,
+            self.AFTER_FILTER: self.after_filters
+        }
+
+        self.modules = []
 
     def add_filter(self, location, filter):
         """
@@ -60,14 +68,31 @@ class ParserSink(SimpleSink):
         if args != 1:
             raise ValueError("filter must only take one argument")
 
-        if location == self.BEFORE_FILTER:
-            self.before_filters.append(filter)
-        elif location == self.DURING_FILTER:
-            self.during_filters.append(filter)
-        elif location == self.AFTER_FILTER:
-            self.after_filters.append(filter)
+        if location in self.filters.keys():
+            self.filters[location].append(filter)
+        else:
+            raise ValueError("Invalid location")
+
+    def remove_filter(self, location, filter):
+        """
+        Remove a filter from the Parser.
+        """
+        if location in self.filters.keys():
+            if filter in self.filters[location]:
+                self.filters[location].remove(filter)
+            else:
+                raise ValueError("Filter was not loaded")
+        else:
+            raise ValueError("Invalid location")
 
     def message(self, message):
+        """
+        Parse an incoming message from the message server. It should be
+        a raw telemetry string.
+        """
+        if message.type != Message.RECEIVED_TELEM:
+            return
+
         for filter in self.before_filters:
             message = filter(message)
         for filter in self.during_filters:
