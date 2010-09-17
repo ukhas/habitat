@@ -22,7 +22,13 @@ Tests the Message class, found in ../message.py
 # TODO: when validation is implemented modify these tests
 
 from nose.tools import raises
-from message_server import Message, Listener
+from message_server import Message, Listener, TypeValidator
+
+def wrapme(arg):
+   """
+   Test Docstring
+   """
+   pass
 
 class TestMessage:
     def test_ids_exist_and_are_unique(self):
@@ -89,3 +95,9 @@ class TestListener:
 
     def check_listener_compares(self, i):
         assert (Listener(i[0]) == Listener(i[1])) == i[2]
+
+class TestValidator:
+    def test_validator_wraps_function(self):
+        wrapped = TypeValidator(wrapme)
+        assert wrapped.__name__ == 'wrapme'
+        assert wrapme.__doc__ == wrapped.__doc__

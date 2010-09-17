@@ -19,6 +19,8 @@
 Contains the 'Message' and 'Listener' classes.
 """
 
+import functools
+
 class Message:
     """
     A Message object describes a single message that the server might handle
@@ -96,6 +98,7 @@ class Validator:
 
     def __init__(self, func):
         self.func = func
+        functools.update_wrapper(self, func)
 
 class TypeValidator(Validator):
     """
