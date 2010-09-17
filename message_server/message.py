@@ -17,46 +17,34 @@
 
 """
 Contains the 'Message' and 'Listener' classes.
-'Message' describes a single message that the server might handle,
-and 'Listener' describes the source from which that message came, by some
-means, though does not hold metadata about that listener, and indeed it is
-not guaranteed (nor even is it expected) that there is one unique object
-per listener.
-
-'Message' has the following initialiser which assigns to the following
-members:
-
-my_message = Message(source, type, data)
-where:
-  source is a Listener object
-  type is one of the type constants below
-  data is a type-specific data object, which will be validated
-
-The data is then available in
-  message.source
-  message.type
-  message.data
-
-Message types:
-  Message.RECEIVED_TELEM  - received telemetry string
-  Message.LISTENER_INFO   - listener information
-  Message.LISTENER_TELEM  - listener telemetry
-  Message.TELEM           - (parsed) telemetry data
-
-'Listener' has the following initialiser which assigns to the following
-members:
-
-my_listener = Listener(identifier)
-where:
-  identifier is to be implemented
-
-The identifier is then available as Listener.identifier
 """
 
 class Message:
+    """
+    A Message object describes a single message that the server might handle
+
+    After initialisation, the data is available in
+        message.source
+        message.type
+        message.data
+
+    The following message types are available:
+        Message.RECEIVED_TELEM  - received telemetry string
+        Message.LISTENER_INFO   - listener information
+        Message.LISTENER_TELEM  - listener telemetry
+        Message.TELEM           - (parsed) telemetry data
+    """
+
     RECEIVED_TELEM, LISTENER_INFO, LISTENER_TELEM, TELEM = types = range(4)
 
     def __init__(self, source, type, data):
+        """
+        Create a new Message
+
+        source: a Listener object
+        type: one of the type constants
+        data: a type-specific data object, which will be validated
+        """
         # TODO data validation based on type
 
         if not isinstance(source, Listener):
@@ -77,7 +65,19 @@ class Message:
             raise ValueError("type is not a valid type")
 
 class Listener:
+    """
+    A Listener objects describes the source from which a message came, by some
+    means. The majority of this class is yet to be implemented.
+    Once initialised, the identifier is then available as listener.identifier
+    """
+
     def __init__(self, identifier):
+        """
+        Creates a Listener object
+        identifier: to be implemeted. Can be anything that can be compared 
+        using __eq__ and should be the same value for the same listener.
+        """
+
         self.identifier = identifier
 
     def __eq__(self, other):
@@ -88,15 +88,32 @@ class Listener:
         return self.identifier.__cmp__(other.identifier)
 
 class Validator:
+    """
+    Parent class of TypeValidator and TypesValidator, which are function
+    decorators that ensure that the argument passed to the function passes
+    Message.validate_type(type)
+    """
+
     def __init__(self, func):
         self.func = func
 
 class TypeValidator(Validator):
+    """
+    A function decorator that ensures that when the function is called the
+    single argument passes Message.validate_type(type)
+    """
+
     def __call__(self, type):
         Message.validate_type(type)
         self.func(type)
 
 class TypesValidator(Validator):
+    """
+    A function decorator that ensures that when the function is called the
+    single argument is a set, and every item of that set passes
+    Message.validate_type(type)
+    """
+
     def __call__(self, types):
         if not isinstance(types, (set, frozenset)):
             raise TypeError("types must be a set")

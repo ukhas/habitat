@@ -30,9 +30,9 @@ class Server:
     def load(self, new_sink):
         """
         Loads the sink module specified by sink_name
-        sink_name: can be a class object, or a string, e.g.,
-                   "myprogram.sinks.my_sink", where myprogram.sinks
-                   is a module and my_sink is a class inside that module
+        new_sink: can be a class object, or a string, e.g.,
+                  "myprogram.sinks.my_sink", where myprogram.sinks
+                  is a module and my_sink is a class inside that module
         """
 
         if not inspect.isclass(new_sink):
