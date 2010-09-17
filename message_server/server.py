@@ -20,6 +20,7 @@
 Contains 'Server', the main messager_server class
 """
 
+import sys
 import inspect
 from sink import Sink, SimpleSink, ThreadedSink
 
@@ -70,10 +71,10 @@ class Server:
             raise ValueError("sink name contains empty components")
 
         module_name = ".".join(components[:-1])
-        sink = __import__(module_name)
+        class_name = components[-1]
 
-        for i in components[1:]:
-            sink = getattr(sink, i)
+        __import__(module_name)
+        sink = getattr(sys.modules[module_name], class_name)
 
         return sink
 
