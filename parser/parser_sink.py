@@ -96,6 +96,14 @@ class ParserSink(SimpleSink):
             self.modules.remove(module)
         else:
             raise ValueError("Module was not loaded")
+    
+    def reload_module(self, module):
+        for loaded_module in self.modules:
+            if loaded_module.__name__ == module.__name__:
+                self.modules.remove(loaded_module)
+                self.modules.append(module)
+                return
+        raise ValueError("Module was not loaded")
 
     def message(self, message):
         """

@@ -37,6 +37,8 @@ def BadFilterFunc():
     pass
 class Module(ParserModule):
     pass
+class Module2(ParserModule):
+    pass
 
 class TestParserSink:
     def setUp(self):
@@ -69,6 +71,28 @@ class TestParserSink:
         for location in ParserSink.locations:
             yield self.check_removes_filter, location
 
+    def test_parser_does_not_load_non_modules(self):
+        yield self.check_fails_to_load_module, FilterClass
+    
+    def test_parser_loads_modules(self):
+        yield self.check_loads_module, Module
+
+    def test_parser_removes_modules(self):
+        yield self.check_removes_module, Module
+
+    def test_parser_reloads_module(self):
+        class mod(ParserModule):
+            pass
+
+        self.check_loads_module(mod)
+
+        class mod(ParserModule):
+            pass
+
+        assert self.sink.modules[0] != mod
+        self.sink.reload_module(mod)
+        assert self.sink.modules[0] == mod
+
     def check_loads_filter(self, location, filter):
         self.sink.add_filter(location, filter)
         assert len(self.sink.filters[location]) == 1
@@ -93,7 +117,7 @@ class TestParserSink:
         self.sink.add_module(module)
 
     def check_removes_module(self, module):
-        self.check_loads_module(self, module)
+        self.check_loads_module(module)
         self.sink.remove_module(module)
         assert len(self.sink.modules) == 0
 
