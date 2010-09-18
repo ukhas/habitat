@@ -74,7 +74,7 @@ class TestServer:
         self.server.load(FakeSink)
 
     def test_can_load_fakesink_by_name(self):
-        self.server.load(self.__module__ + ".FakeSink")
+        self.server.load(__name__ + ".FakeSink")
 
     @raises(ValueError)
     def test_refuses_to_load_nonsink(self):
@@ -84,7 +84,7 @@ class TestServer:
     @raises(ValueError)
     def test_refuses_to_load_nonsink_by_name(self):
         """refuses to load a sink that doesn't have Sink as a base class"""
-        self.server.load(self.__module__ + ".NonSink")
+        self.server.load(__name__ + ".NonSink")
 
     @raises(TypeError)
     def test_refuses_to_load_garbage_type(self):
@@ -108,15 +108,15 @@ class TestServer:
 
     @raises(AttributeError)
     def test_refuses_to_load_nonexistant_sink_class_by_name(self):
-        self.server.load(self.__module__ + ".FakeSink99")
+        self.server.load(__name__ + ".FakeSink99")
 
     @raises(ImportError)
     def test_refuses_to_load_nonexistant_module_by_name(self):
-        self.server.load(self.__module__ + "asdf.FakeSink")
+        self.server.load(__name__ + "asdf.FakeSink")
 
     @raises(ValueError)
     def test_refuses_to_load_sink_without_setup_method(self):
-        self.server.load(self.__module__ + ".SinkWithoutSetup")
+        self.server.load(__name__ + ".SinkWithoutSetup")
 
     @raises(ValueError)
     def test_refuses_to_load_sink_without_message_method(self):
@@ -127,8 +127,8 @@ class TestServer:
             yield self.check_load_by_name_gets_correct_class, i
 
     def check_load_by_name_gets_correct_class(self, name):
-        real_class = getattr(sys.modules[self.__module__], name)
-        loaded_class = self.server.load_by_name(self.__module__ + "." + name)
+        real_class = getattr(sys.modules[__name__], name)
+        loaded_class = self.server.load_by_name(__name__ + "." + name)
         assert real_class == loaded_class
 
     def clean_server_sinks(self):
@@ -141,8 +141,8 @@ class TestServer:
     @with_setup(clean_server_sinks)
     def check_load_adds_correct_sink(self, sink):
         if isinstance(sink, basestring):
-            self.server.load(self.__module__ + "." + sink)
-            real_class = getattr(sys.modules[self.__module__], sink)
+            self.server.load(__name__ + "." + sink)
+            real_class = getattr(sys.modules[__name__], sink)
         else:
             assert issubclass(sink, Sink)
             self.server.load(sink)
@@ -152,9 +152,9 @@ class TestServer:
         assert self.server.sinks[0].__class__ == real_class
 
     def test_failed_load_adds_no_sinks(self):
-        for i in [self.__module__ + ".FakeSink99",
-                  self.__module__ + "asdf.FakeSink",
-                  self.__module__ + ".NonSink",
+        for i in [__name__ + ".FakeSink99",
+                  __name__ + "asdf.FakeSink",
+                  __name__ + ".NonSink",
                   "", 1, NonSink]:
             yield self.check_failed_load_adds_no_sinks, i
 
