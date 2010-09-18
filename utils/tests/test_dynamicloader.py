@@ -1,0 +1,219 @@
+# Copyright 2010 (C) Daniel Richman
+#
+# This file is part of habitat.
+#
+# habitat is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# habitat is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with habitat.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Tests the Dynamic Loader module, ../dynamicloader.py
+""" 
+
+import sys
+import functools
+import datetime
+from utils import dynamicloader
+from nose.tools import raises
+from utils.tests import dynamicloadme
+
+unimp_name = "utils.tests.dynamicloadunimp"
+
+class TestLoad:
+    """dynamicloader.load():"""
+
+    def test_load_gets_correct_object(self):
+        # This tests calls of the format load(MyClass) and
+        # load("packagea.packageb.aclass")
+        for i in [dynamicloadme.AClass, dynamicloadme.BClass,
+                  dynamicloadme.AFunction, dynamicloadme.BFunction]:
+            assert dynamicloader.load(i) == i
+            assert dynamicloader.load(i.__fullname__) == i
+
+    def chcek_load_gets_correct_object(self, loadable, target):
+        assert dynamicloader.load(loadable) == target
+
+    def test_can_load_module(self):
+        # Test a call in the form load("datetime")
+        assert dynamicloader.load("datetime") == datetime
+
+    def test_can_load_notyetimported_module(self):
+        """can load a module that has not yet been imported once"""
+        # I picked something that probably won't have been loaded yet
+        assert "httplib2" not in sys.modules
+        # Check to see httplib2.Authentication exists (if it does we've
+        # probably got the right module)
+        assert dynamicloader.load("httplib2").Authentication
+
+    def test_can_load_notyetimported_function(self):
+        """can load an object from a module that has not been imported yet"""
+        f = dynamicloader.load(unimp_name + ".AFunction")
+        assert f() == 412314
+
+    def test_can_use_loaded_class(self):
+        # CClass is subclass of AClass; CClass is callable
+        a = dynamicloader.load(unimp_name + ".AClass")
+        c = dynamicloader.load(unimp_name + ".CClass")
+        assert issubclass(c, a)
+        oa = a()
+        oc = c()
+        assert isinstance(oa, a)
+        assert isinstance(oc, c)
+        assert isinstance(oc, a)
+        assert oc(None, None) == None
+
+    def test_can_load_generator(self):
+        a = dynamicloader.load(unimp_name + ".GFunction")
+        b = dynamicloader.load(dynamicloadme.GFunction)
+        t = ["Hello", "World"]
+        ta = []
+        tb = []
+        for i in a(): ta.append(i)
+        for i in b(): tb.append(i)
+        assert ta == tb == t
+
+    @raises(TypeError)
+    def test_load_rejects_garbage_target(self):
+        """load rejects a target that is neither a function nor a class"""
+        dynamicloader.load(dynamicloadme.__name__ + ".avariable")
+
+    @raises(TypeError)
+    def test_load_rejects_garbage_argument(self):
+        dynamicloader.load(1234)
+
+    @raises(ImportError)
+    def test_load_rejects_nonexistent_module(self):
+        dynamicloader.load("nonexistant_module_asdf.apath.aclass")
+
+    @raises(AttributeError)
+    def test_load_rejects_nonexistent_class(self):
+        dynamicloader.load(dynamicloadme.__name__ + ".nothingasdf")
+
+    @raises(ImportError)
+    def test_load_does_not_recurse_into_classes(self):
+        dynamicloader.load(dynamicloadme.__name__ + ".AClass.anattr")
+
+    @raises(TypeError)
+    def test_refuses_to_load_garbage_loadable(self):
+        dynamicloader.load(1234)
+
+    @raises(ValueError)
+    def test_refuses_to_load_empty_str(self):
+        dynamicloader.load("")
+
+    def test_refuses_to_load_str_with_empty_components(self):
+        for i in ["asdf.", ".", "asdf..asdf"]:
+            yield self.check_refuses_to_load_str_with_empty_components, i
+
+    @raises(ValueError)
+    def check_refuses_to_load_str_with_empty_components(self, name):
+        dynamicloader.load(name)
+
+class TestInspectors:
+    def test_isclass(self):
+        fn = dynamicloader.isclass
+        ex = dynamicloader.expectisclass
+        self.check_function_success(fn, ex, dynamicloadme.AClass)
+        self.check_function_failure(fn, ex, dynamicloadme.AFunction, TypeError)
+        self.check_function_failure(fn, ex, "asdf", TypeError)
+
+    def test_isfunction(self):
+        """isfunction, isgeneratorfunction, isstandardfunction, iscallable"""
+        fnn = dynamicloader.isfunction
+        exn = dynamicloader.expectisfunction
+        fns = dynamicloader.isstandardfunction
+        exs = dynamicloader.expectisstandardfunction
+        fng = dynamicloader.isgeneratorfunction
+        exg = dynamicloader.expectisgeneratorfunction
+        fni = dynamicloader.iscallable
+        exi = dynamicloader.expectiscallable
+
+        afn = dynamicloadme.AFunction
+        gfn = dynamicloadme.GFunction
+        acl = dynamicloadme.AClass
+        ccl = dynamicloadme.CClass
+        dcl = dynamicloadme.DClass
+        
+        self.check_function_success(fnn, exn, afn)
+        self.check_function_success(fnn, exn, gfn)
+        self.check_function_failure(fnn, exn, acl, TypeError)
+        self.check_function_failure(fnn, exn, "asdf", TypeError)
+        self.check_function_success(fns, exs, afn)
+        self.check_function_failure(fns, exs, gfn, TypeError)
+        self.check_function_failure(fns, exs, acl, TypeError)
+        self.check_function_failure(fns, exs, "asdf", TypeError)
+        self.check_function_failure(fng, exg, afn, TypeError)
+        self.check_function_success(fng, exg, gfn)
+        self.check_function_failure(fng, exg, acl, TypeError)
+        self.check_function_failure(fng, exg, "asdf", TypeError)
+        self.check_function_success(fni, exi, afn)
+        self.check_function_success(fni, exi, gfn)
+        self.check_function_success(fni, exi, ccl)
+        self.check_function_success(fni, exi, dcl)
+        self.check_function_failure(fni, exi, acl, ValueError)
+        self.check_function_failure(fni, exi, "asdf", ValueError)
+
+    def test_hasnumargs(self):
+        for func, val in [ (dynamicloadme.AFunction, 0),
+                           (dynamicloadme.BFunction, 3),
+                           (dynamicloadme.CClass, 2),
+                           (dynamicloadme.DClass, 2),
+                           (dynamicloadme.BClass.a_method, 0) ]:
+            
+            self.check_value_function(dynamicloader.hasnumargs, 
+                                      dynamicloader.expecthasnumargs,
+                                      func, val, val + 1, ValueError)
+
+    def test_hasstuff(self):
+        """hasmethod, hasattr"""
+        fna = dynamicloader.hasattr
+        exa = dynamicloader.expecthasattr
+        fnm = dynamicloader.hasmethod
+        exm = dynamicloader.expecthasmethod
+        acl = dynamicloadme.AClass
+        bcl = dynamicloadme.BClass
+        ccl = dynamicloadme.CClass
+        mod = dynamicloadme
+
+        self.check_value_function(fna, exa, acl, "anattr", "asdf", ValueError)
+        self.check_value_function(fna, exa, ccl, "anattr", "asdf", ValueError)
+        self.check_value_function(fna, exa, mod, "avariable", "z", ValueError)
+        self.check_value_function(fna, exa, mod, "AFunction", "x", ValueError)
+
+        self.check_value_function(fnm, exm, mod, "AFunction", "avariable",
+                                  ValueError)
+        self.check_value_function(fnm, exm, ccl, "__call__", "anattr",
+                                  ValueError)
+        self.check_value_function(fnm, exm, bcl, "a_method", "a", ValueError)
+
+    def check_function_success(self, func, expectfunc, argument):
+        assert func(argument) == True
+        expectfunc(argument)
+
+    def check_function_failure(self, func, expectfunc, argument, error):
+        assert func(argument) == False
+        try:
+            expectfunc(argument)
+        except error:
+            return
+        raise AssertionError
+
+    def check_value_function(self, func, expectfunc, argument, value,
+                             wrongvalue, error):
+        assert func(argument, value) == True
+        expectfunc(argument, value)
+        assert func(argument, wrongvalue) == False
+        try:
+            expectfunc(argument, wrongvalue)
+        except error:
+            return
+        raise AssertionError
