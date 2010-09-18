@@ -20,6 +20,8 @@ Tests the Dynamic Loader module, ../dynamicloader.py
 """ 
 
 import sys
+import time
+import os
 import functools
 import datetime
 from utils import dynamicloader
@@ -37,7 +39,10 @@ class TestLoad:
         for i in [dynamicloadme.AClass, dynamicloadme.BClass,
                   dynamicloadme.AFunction, dynamicloadme.BFunction]:
             assert dynamicloader.load(i) == i
-            assert dynamicloader.load(i.__fullname__) == i
+
+            # if nosetests is running --with-isolation, this is required:
+            realitem = getattr(sys.modules[i.__module__], i.__name__)
+            assert dynamicloader.load(i.__fullname__) == realitem
 
     def chcek_load_gets_correct_object(self, loadable, target):
         assert dynamicloader.load(loadable) == target
@@ -117,6 +122,83 @@ class TestLoad:
     @raises(ValueError)
     def check_refuses_to_load_str_with_empty_components(self, name):
         dynamicloader.load(name)
+
+    def test_reload_module_class(self):
+        modulecode_1 = "class asdf:\n    def __init__(self): self.test = 1\n"
+        modulecode_2 = "class asdf:\n    def __init__(self): self.test = 2\n"
+        self.check_reload_module("reloadablea", modulecode_1, modulecode_2)
+
+    def test_reload_module_function(self):
+        modulecode_1 = "def asdf():\n    asdf.test = 1\n    return asdf\n"
+        modulecode_2 = "def asdf():\n    asdf.test = 2\n    return asdf\n"
+        self.check_reload_module("reloadableb", modulecode_1, modulecode_2)
+
+    def check_reload_module(self, modname, modulecode_1, modulecode_2):
+        components = __name__.split(".")
+        components[-1:] = [modname, 'asdf']
+
+        loadable = ".".join(components)
+        module = ".".join(components[:-1])
+        assert module not in sys.modules
+
+        self.write_reloadable_module(modname, modulecode_1)
+
+        asdf_1a = dynamicloader.load(loadable)
+        asdf_1a_object = asdf_1a()
+        assert asdf_1a_object.test == 1
+
+        self.write_reloadable_module(modname, modulecode_2)
+
+        # Should not cause a reload, should just re-use sys.moudles[loadable]
+        asdf_1b = dynamicloader.load(loadable)
+        assert asdf_1b == asdf_1a
+        asdf_1b_object = asdf_1b()
+        assert asdf_1b_object.test == asdf_1a_object.test == 1
+
+        # This time we want a reload
+        asdf_2a = dynamicloader.load(loadable, force_reload=True)
+        assert asdf_2a != asdf_1b
+        asdf_2a_object = asdf_2a()
+        assert asdf_2a_object.test == 2
+
+        # It should stay reloaded, even without force_reload
+        asdf_2b = dynamicloader.load(loadable)
+        assert asdf_2b == asdf_2a
+        asdf_2b_object = asdf_2a()
+        assert asdf_2b_object.test == asdf_2a_object.test == 2
+
+        # asdf_1b should still be the old module, though in typical use it
+        # would have been discarded by now
+        asdf_1b_object = asdf_1b()
+        assert asdf_1b_object.test == 1
+
+        self.write_reloadable_module(modname, modulecode_1)
+
+        # Finally, we should also be able to reload like this:
+        asdf_1c = dynamicloader.load(asdf_1b)
+        assert asdf_1c != asdf_2a
+        asdf_1c_object = asdf_1c()
+        assert asdf_1c_object.test == 1
+
+    def write_reloadable_module(self, modname, code):
+        filename = os.path.join(os.path.dirname(__file__), modname + ".py")
+
+        # Even when the builtin reload is called python will read from the
+        # pyc file if the embedded mtime matches that of the py file. That's
+        # typically going to be fine, however, if you load, modify, reload
+        # within one second then the updated module won't be read.
+        # We won't be reloading that fast, but the test will. So hack the 
+        # mtime two seconds into the future every time.
+
+        try:
+            newtime = os.path.getmtime(filename) + 2
+        except OSError:
+            newtime = int(time.time())
+
+        with open(filename, 'w') as f:
+            f.write(code)
+
+        os.utime(filename, (newtime, newtime))
 
 class TestInspectors:
     def test_isclass(self):

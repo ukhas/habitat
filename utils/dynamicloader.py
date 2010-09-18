@@ -50,8 +50,9 @@ import sys
 import collections
 import functools
 import inspect
+import imp
 
-def load(loadable):
+def load(loadable, force_reload=False):
     """
     Attempts to dynamically load "loadable", which is either a class,
     a function, a module, or a string: a dotted-path to one of those.
@@ -75,19 +76,42 @@ def load(loadable):
             raise ValueError("loadable(str) contains empty components")
 
         if len(components) == 1:
+            already_loaded = loadable in sys.modules
+
             __import__(loadable)
             loadable = sys.modules[loadable]
         else:
             module_name = ".".join(components[:-1])
             target_name = components[-1]
 
+            already_loaded = module_name in sys.modules
+
             __import__(module_name)
             loadable = getattr(sys.modules[module_name], target_name)
+    else:
+        # If we've been given it, then it's obviously already loaded
+        already_loaded = True
+
+    # If force_reload is set, but it's the first time we've loaded this
+    # loadable anyway, there's no point calling reload().
+
+    # There could be a race condition between already_loaded and __import__,
+    # however the worst that could happen is for already_loaded to be False
+    # when infact by the time __import__ was reached, it had been loaded by
+    # another thread. In this case the side effect is that reload may be
+    # called on it. No bad effects, just a slight performance hit from double
+    # loading. No big deal.
 
     if inspect.isclass(loadable) or inspect.isfunction(loadable):
-        pass
+        if force_reload and already_loaded:
+            # Reload the module and then find the new version of loadable
+            module = sys.modules[loadable.__module__]
+            reload(module)
+            loadable = getattr(module, loadable.__name__)
     elif inspect.ismodule(loadable):
-        pass
+        if force_reload and already_loaded:
+            # Module objects are updated in place.
+            reload(loadable)
     else:
         raise TypeError("load() takes a string, class, function or module")
 
