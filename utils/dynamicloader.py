@@ -36,6 +36,14 @@ def loadsomething(loadable):
     loadable = dynamicloader.load(loadable)
     expectisstandardfunction(loadable)
     expecthasattr(loadable, 2)
+
+If you use expectiscallable note that you may get either a function or a class,
+an object of which is callable (ie. the class has __call__(self, ...)). In that
+case you may need to create an object:
+    if isclass(loadable):
+        loadable = loadable()
+Of course if you've used expectiscallable then you will be creating an object
+anyway.
 """
 
 import sys
@@ -95,7 +103,14 @@ isstandardfunction = lambda loadable: (isfunction(loadable) and not
 # The following we have to implement ourselves
 def hasnumargs(thing, num):
     """
-    returns true if thing has num arguments
+    Returns true if thing has num arguments.
+
+    If thing is a function, the positional arguments are simply counted up.
+    If thing is a method, the positional arguments are counted up and one
+    is subtracted in order to account for method(self, ...)
+    If thing is a class, the positional arguments of cls.__call__ are
+    counted up and one is subtracted (self), giving the number of arguments
+    a callable object created from that class would have.
     """
 
     # Inspect argument list based on type. Class methods will
@@ -113,7 +128,7 @@ def hasnumargs(thing, num):
 
 def hasmethod(loadable, name):
     """
-    returns true if loadable.name is a callable
+    Returns true if loadable.name is callable
     """
     try:
         expecthasattr(loadable, name)
@@ -125,6 +140,11 @@ def hasmethod(loadable, name):
 # Builtin callable() is not good enough since it returns true for any
 # class oboject
 def iscallable(loadable):
+    """
+    Returns true if loadable is a method or function, OR if it is a class
+    with a __call__ method (i.e., when an object is created from the class
+    the object is callable)
+    """
     if inspect.isclass(loadable):
         return hasmethod(loadable, "__call__")
     else:
