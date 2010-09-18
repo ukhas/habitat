@@ -39,7 +39,10 @@ class TestLoad:
         for i in [dynamicloadme.AClass, dynamicloadme.BClass,
                   dynamicloadme.AFunction, dynamicloadme.BFunction]:
             assert dynamicloader.load(i) == i
-            assert dynamicloader.load(i.__fullname__) == i
+
+            # if nosetests is running --with-isolation, this is required:
+            realitem = getattr(sys.modules[i.__module__], i.__name__)
+            assert dynamicloader.load(i.__fullname__) == realitem
 
     def chcek_load_gets_correct_object(self, loadable, target):
         assert dynamicloader.load(loadable) == target
@@ -120,22 +123,31 @@ class TestLoad:
     def check_refuses_to_load_str_with_empty_components(self, name):
         dynamicloader.load(name)
 
-    def test_reload_module(self):
+    def test_reload_module_class(self):
         modulecode_1 = "class asdf:\n    def __init__(self): self.test = 1\n"
         modulecode_2 = "class asdf:\n    def __init__(self): self.test = 2\n"
+        self.check_reload_module("reloadablea", modulecode_1, modulecode_2)
 
+    def test_reload_module_function(self):
+        modulecode_1 = "def asdf():\n    asdf.test = 1\n    return asdf\n"
+        modulecode_2 = "def asdf():\n    asdf.test = 2\n    return asdf\n"
+        self.check_reload_module("reloadableb", modulecode_1, modulecode_2)
+
+    def check_reload_module(self, modname, modulecode_1, modulecode_2):
         components = __name__.split(".")
-        components[-1:] = ['reloadable', 'asdf']
-        loadable = ".".join(components)
-        assert loadable not in sys.modules
+        components[-1:] = [modname, 'asdf']
 
-        self.write_reloadable_module(modulecode_1)
+        loadable = ".".join(components)
+        module = ".".join(components[:-1])
+        assert module not in sys.modules
+
+        self.write_reloadable_module(modname, modulecode_1)
 
         asdf_1a = dynamicloader.load(loadable)
         asdf_1a_object = asdf_1a()
         assert asdf_1a_object.test == 1
 
-        self.write_reloadable_module(modulecode_2)
+        self.write_reloadable_module(modname, modulecode_2)
 
         # Should not cause a reload, should just re-use sys.moudles[loadable]
         asdf_1b = dynamicloader.load(loadable)
@@ -160,7 +172,7 @@ class TestLoad:
         asdf_1b_object = asdf_1b()
         assert asdf_1b_object.test == 1
 
-        self.write_reloadable_module(modulecode_1)
+        self.write_reloadable_module(modname, modulecode_1)
 
         # Finally, we should also be able to reload like this:
         asdf_1c = dynamicloader.load(asdf_1b)
@@ -168,8 +180,8 @@ class TestLoad:
         asdf_1c_object = asdf_1c()
         assert asdf_1c_object.test == 1
 
-    def write_reloadable_module(self, code):
-        filename = os.path.join(os.path.dirname(__file__), "reloadable.py")
+    def write_reloadable_module(self, modname, code):
+        filename = os.path.join(os.path.dirname(__file__), modname + ".py")
 
         # Even when the builtin reload is called python will read from the
         # pyc file if the embedded mtime matches that of the py file. That's
