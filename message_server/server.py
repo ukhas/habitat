@@ -68,21 +68,6 @@ class Server:
                 self.sinks.remove(s)
                 return
 
-        # It could be that we've got the wrong sink_name if it's a string,
-        # since it could be imported into the package we think it is in from
-        # somewhere else. (see tests/fakesink.py)
-        if isinstance(sink, (str, unicode)):
-            sink = dynamicloader.load(sink)
-            dynamicloader.expectisclass(sink)
-            dynamicloader.expectissubclass(sink, Sink)
-            sink_name = dynamicloader.fullname(sink)
-
-            # try again!
-            for s in self.sinks:
-                if dynamicloader.fullname(s.__class__) == sink_name:
-                    self.sinks.remove(s)
-                    return
-
         # If we're here it looks like it didn't work. :'(
         raise ValueError("sink was never loaded")
 

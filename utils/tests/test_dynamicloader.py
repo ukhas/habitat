@@ -28,6 +28,9 @@ from utils import dynamicloader
 from nose.tools import raises
 from utils.tests import dynamicloadme
 
+# For fullname() tests
+from utils.tests.dynamicloadme import AClass
+
 unimp_name = "utils.tests.dynamicloadunimp"
 
 class TestLoad:
@@ -203,10 +206,19 @@ class TestLoad:
     def test_fullname(self):
         lm = dynamicloadme
         lmn = dynamicloadme.__name__
+
         assert dynamicloader.fullname(lm.AClass) == lmn + ".AClass"
         assert dynamicloader.fullname(lm.AFunction) == lmn + ".AFunction"
         assert dynamicloader.fullname(lm) == lmn
-        assert dynamicloader.fullname("astring") == "astring"
+
+        # Fullname can be passed a string just like load() can
+        assert dynamicloader.fullname(lmn) == lmn
+        assert dynamicloader.fullname(lmn + ".AClass") == lmn + ".AClass"
+
+        # Because we import dynamicloadme into this module, we *could*
+        # import AClass by this route (see above). fullname must tolerate this
+        acwn = __name__ + ".AClass"
+        assert dynamicloader.fullname(acwn) == lmn + ".AClass"
 
     @raises(TypeError)
     def test_fullname_rejects_garbage(self):
