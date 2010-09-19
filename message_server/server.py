@@ -52,6 +52,11 @@ class Server:
         if 'message' not in methods:
             raise ValueError("sink must implement message()")
 
+        current_sinks = (s.__class__ for s in self.sinks)
+
+        if new_sink in current_sinks:
+            raise ValueError("this sink is already loaded")
+
         sink = new_sink()
         self.sinks.append(sink)
 

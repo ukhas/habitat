@@ -122,6 +122,11 @@ class TestServer:
     def test_refuses_to_load_sink_without_message_method(self):
         self.server.load(SinkWithoutMessage)
 
+    @raises(ValueError)
+    def test_refuses_to_load_two_of_the_same_sink(self):
+        self.server.load(FakeSink)
+        self.server.load(FakeSink)
+
     def test_load_by_name_gets_correct_class(self):
         for i in ["FakeSink", "FakeSink2"]:
             yield self.check_load_by_name_gets_correct_class, i
@@ -133,6 +138,15 @@ class TestServer:
 
     def clean_server_sinks(self):
         self.server.sinks = []
+
+    @with_setup(clean_server_sinks)
+    def test_does_not_load_two_of_the_same_sink(self):
+        self.server.load(FakeSink)
+        try:
+            self.server.load(FakeSink)
+        except ValueError:
+            pass
+        assert len(self.server.sinks) == 1
 
     def test_load_adds_correct_sink(self):
         for i in ["FakeSink", "FakeSink2", FakeSink, FakeSink2]:
