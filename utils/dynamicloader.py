@@ -24,6 +24,7 @@ In addition, several functions to quickly test the loaded object are provided:
     isgeneratorfunction
     isstandardfunction (isfunction and not isgeneratorfunction)
     iscallable
+    issubclass
     hasnumargs
     hasmethod
     hasattr
@@ -192,6 +193,7 @@ expectisgeneratorfunction = expectgenerator(TypeError)(isgeneratorfunction)
 expectisstandardfunction = expectgenerator(TypeError)(isstandardfunction)
 
 expectiscallable = expectgenerator(ValueError)(iscallable)
+expectissubclass = expectgenerator(ValueError)(issubclass)
 expecthasnumargs = expectgenerator(ValueError)(hasnumargs)
 expecthasmethod = expectgenerator(ValueError)(hasmethod)
 expecthasattr = expectgenerator(ValueError)(hasattr)

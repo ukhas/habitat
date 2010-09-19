@@ -208,6 +208,13 @@ class TestInspectors:
         self.check_function_failure(fn, ex, dynamicloadme.AFunction, TypeError)
         self.check_function_failure(fn, ex, "asdf", TypeError)
 
+    def test_issubclass(self):
+        fn = dynamicloader.issubclass
+        ex = dynamicloader.expectissubclass
+        self.check_value_function(fn, ex, dynamicloadme.CClass,
+                                  dynamicloadme.Parent2, dynamicloadme.BClass,
+                                  ValueError)
+
     def test_isfunction(self):
         """isfunction, isgeneratorfunction, isstandardfunction, iscallable"""
         fnn = dynamicloader.isfunction
