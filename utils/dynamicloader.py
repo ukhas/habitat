@@ -118,6 +118,22 @@ def load(loadable, force_reload=False):
 
     return loadable
 
+def fullname(loadable):
+    """
+    Determines the full name in module.module.class form of loadable,
+    which can be a class module or function. If loadable is a string,
+    it is simply returned.
+    """
+
+    if isinstance(loadable, (str, unicode)):
+        return loadable
+    elif inspect.isclass(loadable) or inspect.isfunction(loadable):
+        return loadable.__module__ + "." + loadable.__name__
+    elif inspect.ismodule(loadable):
+        return loadable.__name__
+    else:
+        raise TypeError("loadable isn't a string, class, function, or module")
+
 # A large number of the functions we need can just be imported
 from inspect import isclass, isfunction, isgeneratorfunction
 from __builtin__ import issubclass, hasattr

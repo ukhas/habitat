@@ -200,6 +200,18 @@ class TestLoad:
 
         os.utime(filename, (newtime, newtime))
 
+    def test_fullname(self):
+        lm = dynamicloadme
+        lmn = dynamicloadme.__name__
+        assert dynamicloader.fullname(lm.AClass) == lmn + ".AClass"
+        assert dynamicloader.fullname(lm.AFunction) == lmn + ".AFunction"
+        assert dynamicloader.fullname(lm) == lmn
+        assert dynamicloader.fullname("astring") == "astring"
+
+    @raises(TypeError)
+    def test_fullname_rejects_garbage(self):
+        dynamicloader.fullname(1234)
+
 class TestInspectors:
     def test_isclass(self):
         fn = dynamicloader.isclass
