@@ -43,11 +43,10 @@ class Server:
         dynamicloader.expecthasmethod(new_sink, "setup")
         dynamicloader.expecthasmethod(new_sink, "message")
 
-        classes = (s.__class__ for s in self.sinks)
         fullnames = (dynamicloader.fullname(s.__class__) for s in self.sinks)
         new_sink_name = dynamicloader.fullname(new_sink)
 
-        if new_sink in classes or new_sink_name in fullnames:
+        if new_sink_name in fullnames:
             raise ValueError("this sink is already loaded")
 
         sink = new_sink()
