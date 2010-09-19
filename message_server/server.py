@@ -22,6 +22,7 @@ Contains 'Server', the main messager_server class
 
 import sys
 import inspect
+from utils import dynamicloader
 from sink import Sink, SimpleSink, ThreadedSink
 
 class Server:
@@ -36,52 +37,18 @@ class Server:
                   is a module and my_sink is a class inside that module
         """
 
-        if not inspect.isclass(new_sink):
-            new_sink = self.load_by_name(new_sink)
-
-        if not (issubclass(new_sink, SimpleSink)
-                or issubclass(new_sink, ThreadedSink)):
-            raise ValueError(
-                "sink must inherit from SimpleSink or ThreadedSink")
-
-        methods = [method[0] for method in
-            inspect.getmembers(new_sink, inspect.ismethod)]
-
-        if 'setup' not in methods:
-            raise ValueError("sink must implement setup()")
-        if 'message' not in methods:
-            raise ValueError("sink must implement message()")
+        new_sink = dynamicloader.load(new_sink)
+        dynamicloader.expectisclass(new_sink)
+        dynamicloader.expectissubclass(new_sink, Sink)
+        dynamicloader.expecthasmethod(new_sink, "setup")
+        dynamicloader.expecthasmethod(new_sink, "message")
 
         current_sinks = (s.__class__ for s in self.sinks)
-
         if new_sink in current_sinks:
             raise ValueError("this sink is already loaded")
 
         sink = new_sink()
         self.sinks.append(sink)
-
-    def load_by_name(self, sink_name):
-        if not isinstance(sink_name, basestring):
-            raise TypeError("sink must be passed as a string or class")
-
-        if len(sink_name) <= 0:
-            raise ValueError("sink name must have non zero length")
-
-        components = sink_name.split(".")
-
-        if len(components) < 2:
-            raise ValueError("sink name must have at least two components")
-
-        if "" in components:
-            raise ValueError("sink name contains empty components")
-
-        module_name = ".".join(components[:-1])
-        class_name = components[-1]
-
-        __import__(module_name)
-        sink = getattr(sys.modules[module_name], class_name)
-
-        return sink
 
     def push_message(self, message):
         for sink in self.sinks:

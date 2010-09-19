@@ -94,16 +94,16 @@ class TestServer:
     def test_refuses_to_load_empty_str(self):
         self.server.load("")
 
-    @raises(ValueError)
-    def test_refuses_to_str_without_enough_components(self):
+    @raises(TypeError)
+    def test_refuses_to_load_module(self):
         self.server.load("test")
 
-    def test_refuses_to_str_with_empty_components(self):
+    def test_refuses_to_load_str_with_empty_components(self):
         for i in ["asdf.", ".", "asdf..asdf"]:
-            yield self.check_refuses_to_str_with_empty_components, i
+            yield self.check_refuses_to_load_str_with_empty_components, i
 
     @raises(ValueError)
-    def check_refuses_to_str_with_empty_components(self, name):
+    def check_refuses_to_load_str_with_empty_components(self, name):
         self.server.load(name)
 
     @raises(AttributeError)
@@ -127,17 +127,19 @@ class TestServer:
         self.server.load(FakeSink)
         self.server.load(FakeSink)
 
-    def test_load_by_name_gets_correct_class(self):
+    def test_load_gets_correct_class(self):
         for i in ["FakeSink", "FakeSink2"]:
-            yield self.check_load_by_name_gets_correct_class, i
-
-    def check_load_by_name_gets_correct_class(self, name):
-        real_class = getattr(sys.modules[__name__], name)
-        loaded_class = self.server.load_by_name(__name__ + "." + name)
-        assert real_class == loaded_class
+            yield self.check_load_gets_correct_class, i
 
     def clean_server_sinks(self):
         self.server.sinks = []
+
+    @with_setup(clean_server_sinks)
+    def check_load_gets_correct_class(self, name):
+        real_class = getattr(sys.modules[__name__], name)
+        self.server.load(__name__ + "." + name)
+        loaded = self.server.sinks[0]
+        assert isinstance(loaded, real_class)
 
     @with_setup(clean_server_sinks)
     def test_does_not_load_two_of_the_same_sink(self):
