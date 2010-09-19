@@ -30,12 +30,6 @@ class FakeSink(SimpleSink):
     def message(self):
         pass
 
-class FakeSink2(SimpleSink):
-    def setup(self):
-        pass
-    def message(self):
-        pass
-
 class SinkWithoutSetup(SimpleSink):
     """A sink without a setup method should not be loaded."""
     def message(self):
@@ -46,19 +40,8 @@ class SinkWithoutMessage(SimpleSink):
     def setup(self):
         pass
 
-class TestSink(SimpleSink):
-    def setup(self):
-        self.test_messages = []
-        self.message = self.test_messages.append
-        self.set_types(set(self.testtypes))
-    def message(self):
-        pass
-
-class TestSinkA(TestSink):
-    testtypes = [Message.RECEIVED_TELEM, Message.LISTENER_INFO]
-
-class TestSinkB(TestSink):
-    testtypes = [Message.LISTENER_INFO]
+# This should confuse dynamicloader.fullname. Muahaha
+from fakesink import *
 
 class NonSink:
     """
@@ -184,6 +167,7 @@ class TestServer:
 
         assert len(self.server.sinks) == 0
 
+    @with_setup(clean_server_sinks)
     def test_pushes_to_sinks(self):
         message_li = Message(Listener(0), Message.LISTENER_INFO, None)
         message_rt = Message(Listener(0), Message.RECEIVED_TELEM, None)
@@ -197,3 +181,23 @@ class TestServer:
         assert self.server.sinks[0].test_messages == [message_li, message_rt,
                                                       message_li]
         assert self.server.sinks[1].test_messages == [message_li, message_li]
+
+    @with_setup(clean_server_sinks)
+    def test_unload(self):
+        self.server.load(TestSinkA)
+        self.server.load(TestSinkB)
+        assert len(self.server.sinks) == 2
+        assert isinstance(self.server.sinks[0], TestSinkA)
+        assert isinstance(self.server.sinks[1], TestSinkB)
+
+        self.server.unload(TestSinkA)
+        assert len(self.server.sinks) == 1
+        assert isinstance(self.server.sinks[0], TestSinkB)
+
+        self.server.load(TestSinkA)
+        assert len(self.server.sinks) == 2
+        assert isinstance(self.server.sinks[1], TestSinkA)
+
+        self.server.unload(__name__ + ".TestSinkA")
+        assert len(self.server.sinks) == 1
+        assert isinstance(self.server.sinks[0], TestSinkB)

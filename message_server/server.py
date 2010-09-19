@@ -43,12 +43,48 @@ class Server:
         dynamicloader.expecthasmethod(new_sink, "setup")
         dynamicloader.expecthasmethod(new_sink, "message")
 
-        current_sinks = (s.__class__ for s in self.sinks)
-        if new_sink in current_sinks:
+        classes = (s.__class__ for s in self.sinks)
+        fullnames = (dynamicloader.fullname(s.__class__) for s in self.sinks)
+        new_sink_name = dynamicloader.fullname(new_sink)
+
+        if new_sink in classes or new_sink_name in fullnames:
             raise ValueError("this sink is already loaded")
 
         sink = new_sink()
         self.sinks.append(sink)
+
+    def unload(self, sink):
+        """
+        Opposite of load(); Removes sink from the server.
+        sink must represent a class that has been loaded by a call to load().
+        Just like load() this can accept a string instead of a class.
+        """
+
+        # The easiest way to get rid of is to just search for the name
+        sink_name = dynamicloader.fullname(sink)
+
+        for s in self.sinks:
+            if dynamicloader.fullname(s.__class__) == sink_name:
+                self.sinks.remove(s)
+                return
+
+        # It could be that we've got the wrong sink_name if it's a string,
+        # since it could be imported into the package we think it is in from
+        # somewhere else. (see tests/fakesink.py)
+        if isinstance(sink, (str, unicode)):
+            sink = dynamicloader.load(sink)
+            dynamicloader.expectisclass(sink)
+            dynamicloader.expectissubclass(sink, Sink)
+            sink_name = dynamicloader.fullname(sink)
+
+            # try again!
+            for s in self.sinks:
+                if dynamicloader.fullname(s.__class__) == sink_name:
+                    self.sinks.remove(s)
+                    return
+
+        # If we're here it looks like it didn't work. :'(
+        raise ValueError("sink was never loaded")
 
     def push_message(self, message):
         for sink in self.sinks:
