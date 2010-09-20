@@ -118,6 +118,30 @@ def load(loadable, force_reload=False):
 
     return loadable
 
+def fullname(loadable):
+    """
+    Determines the full name in module.module.class form of loadable,
+    which can be a class, module or function.
+    If fullname is given a string it will load() it in order to resolve it to
+    its true full name.
+    """
+
+    # You can import things into classes from all over the place. Therefore
+    # you could have two different strings that you can pass to load but
+    # load the same thing. If fullname() is given a string, rather than
+    # simply return it, it has to load() it and then figure out what its
+    # real full name is. See tests
+
+    if isinstance(loadable, (str, unicode)):
+        loadable = load(loadable)
+
+    if inspect.isclass(loadable) or inspect.isfunction(loadable):
+        return loadable.__module__ + "." + loadable.__name__
+    elif inspect.ismodule(loadable):
+        return loadable.__name__
+    else:
+        raise TypeError("loadable isn't class, function, or module")
+
 # A large number of the functions we need can just be imported
 from inspect import isclass, isfunction, isgeneratorfunction
 from __builtin__ import issubclass, hasattr
