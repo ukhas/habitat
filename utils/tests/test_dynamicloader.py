@@ -58,10 +58,36 @@ class TestLoad:
     def test_can_load_notyetimported_module(self):
         """can load a module that has not yet been imported once"""
         # I picked something that probably won't have been loaded yet
-        assert "httplib2" not in sys.modules
+        assert "anydbm" not in sys.modules
         # Check to see httplib2.Authentication exists (if it does we've
         # probably got the right module)
-        assert dynamicloader.load("httplib2").Authentication
+        assert dynamicloader.load("anydbm").error
+
+    def test_doublereload(self):
+        """force-reloading a not yet been imported module causes one load"""
+        # TODO: implementation specific use of __builtins__.
+        assert dynamicloader.__builtins__
+        assert "whichdb" not in sys.modules
+
+        # Wrap reload to work out how many times it was called.
+        old_reload = dynamicloader.__builtins__["reload"]
+        def new_reload(*args, **kwargs):
+            new_reload.hits += 1
+            return old_reload(*args, **kwargs)
+        new_reload.hits = 0
+
+        dynamicloader.__builtins__["reload"] = new_reload
+
+        assert dynamicloader.load("whichdb", force_reload=True).whichdb
+        assert new_reload.hits == 0
+
+        assert dynamicloader.load("whichdb", force_reload=True).whichdb
+        assert new_reload.hits == 1
+
+        dynamicloader.__builtins__["reload"] = old_reload
+
+        assert dynamicloader.load("whichdb", force_reload=True).whichdb
+        assert new_reload.hits == 1 # no change; no longer wrapped
 
     def test_can_load_notyetimported_function(self):
         """can load an object from a module that has not been imported yet"""
@@ -70,8 +96,8 @@ class TestLoad:
 
     def test_can_use_loaded_class(self):
         # CClass is subclass of AClass; CClass is callable
-        a = dynamicloader.load(unimp_name + ".AClass")
-        c = dynamicloader.load(unimp_name + ".CClass")
+        a = dynamicloader.load(dynamicloadme.AClass.__fullname__)
+        c = dynamicloader.load(dynamicloadme.CClass.__fullname__)
         assert issubclass(c, a)
         oa = a()
         oc = c()
@@ -81,7 +107,7 @@ class TestLoad:
         assert oc(None, None) == None
 
     def test_can_load_generator(self):
-        a = dynamicloader.load(unimp_name + ".GFunction")
+        a = dynamicloader.load(dynamicloadme.GFunction.__fullname__)
         b = dynamicloader.load(dynamicloadme.GFunction)
         t = ["Hello", "World"]
         ta = []
@@ -109,7 +135,7 @@ class TestLoad:
 
     @raises(ImportError)
     def test_load_does_not_recurse_into_classes(self):
-        dynamicloader.load(dynamicloadme.__name__ + ".AClass.anattr")
+        dynamicloader.load(dynamicloadme.__name__ + ".AClass.afunc")
 
     @raises(TypeError)
     def test_refuses_to_load_garbage_loadable(self):
@@ -139,6 +165,11 @@ class TestLoad:
 
     def check_reload_module(self, modname, modulecode_1, modulecode_2):
         rmod = ReloadableModuleWriter(__name__, __file__, modname, 'asdf')
+        assert not rmod.is_loaded()
+
+        roundabout_loadable = rmod.fullmodname + "_alias.asdf"
+        assert roundabout_loadable not in sys.modules
+
         rmod.write_code(modulecode_1)
 
         asdf_1a = dynamicloader.load(rmod.loadable)
@@ -172,11 +203,19 @@ class TestLoad:
 
         rmod.write_code(modulecode_1)
 
-        # Finally, we should also be able to reload like this:
-        asdf_1c = dynamicloader.load(asdf_1b)
+        # We should also be able to reload like this:
+        asdf_1c = dynamicloader.load(asdf_2b, force_reload=True)
         assert asdf_1c != asdf_2a
         asdf_1c_object = asdf_1c()
         assert asdf_1c_object.test == 1
+
+        rmod.write_code(modulecode_2)
+
+        # And finally like this:
+        asdf_2c = dynamicloader.load(roundabout_loadable, force_reload=True)
+        assert asdf_2c != asdf_1c
+        asdf_2c_object = asdf_2c()
+        assert asdf_2c_object.test == 2
 
     def test_fullname(self):
         lm = dynamicloadme

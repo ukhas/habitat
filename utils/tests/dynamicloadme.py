@@ -25,8 +25,12 @@ class Parent:
 class Parent2:
     pass
 
+def afunction():
+    pass
+
 class AClass(Parent, Parent2):
     anattr = "asdf"
+    afunc = afunction
 
 class BClass:
     def __init__():
