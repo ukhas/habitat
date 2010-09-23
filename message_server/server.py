@@ -52,6 +52,16 @@ class Server:
         sink = new_sink()
         self.sinks.append(sink)
 
+    def find_sink(self, sink):
+        # The easiest way is to just search for the name
+        sink_name = dynamicloader.fullname(sink)
+
+        for s in self.sinks:
+            if dynamicloader.fullname(s.__class__) == sink_name:
+                return s
+
+        raise ValueError("sink not found")
+
     def unload(self, sink):
         """
         Opposite of load(); Removes sink from the server.
@@ -59,16 +69,19 @@ class Server:
         Just like load() this can accept a string instead of a class.
         """
 
-        # The easiest way to get rid of is to just search for the name
-        sink_name = dynamicloader.fullname(sink)
+        self.sinks.remove(self.find_sink(sink))
 
-        for s in self.sinks:
-            if dynamicloader.fullname(s.__class__) == sink_name:
-                self.sinks.remove(s)
-                return
+    def reload(self, sink):
+        """
+        Calls utils.dynamicloader.load(force_reload=True) on the sink,
+        removes the old sink and adds a new object created from the result
+        of the class reloading.
+        """
 
-        # If we're here it looks like it didn't work. :'(
-        raise ValueError("sink was never loaded")
+        sink = self.find_sink(sink)
+        self.sinks.remove(sink)
+        new_sink = dynamicloader.load(sink.__class__, force_reload=True)
+        self.load(new_sink)
 
     def push_message(self, message):
         for sink in self.sinks:

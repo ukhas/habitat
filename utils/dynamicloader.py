@@ -67,6 +67,8 @@ def load(loadable, force_reload=False):
         e.t.c.
     """
 
+    old_modules = sys.modules.keys()
+
     if isinstance(loadable, (str, unicode)):
         if len(loadable) <= 0:
             raise ValueError("loadable(str) must have non zero length")
@@ -77,21 +79,14 @@ def load(loadable, force_reload=False):
             raise ValueError("loadable(str) contains empty components")
 
         if len(components) == 1:
-            already_loaded = loadable in sys.modules
-
             __import__(loadable)
             loadable = sys.modules[loadable]
         else:
             module_name = ".".join(components[:-1])
             target_name = components[-1]
 
-            already_loaded = module_name in sys.modules
-
             __import__(module_name)
             loadable = getattr(sys.modules[module_name], target_name)
-    else:
-        # If we've been given it, then it's obviously already loaded
-        already_loaded = True
 
     # If force_reload is set, but it's the first time we've loaded this
     # loadable anyway, there's no point calling reload().
@@ -104,12 +99,16 @@ def load(loadable, force_reload=False):
     # loading. No big deal.
 
     if inspect.isclass(loadable) or inspect.isfunction(loadable):
+        already_loaded = loadable.__module__ in old_modules
+
         if force_reload and already_loaded:
             # Reload the module and then find the new version of loadable
             module = sys.modules[loadable.__module__]
             reload(module)
             loadable = getattr(module, loadable.__name__)
     elif inspect.ismodule(loadable):
+        already_loaded = loadable.__name__ in old_modules
+
         if force_reload and already_loaded:
             # Module objects are updated in place.
             reload(loadable)

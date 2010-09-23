@@ -27,6 +27,7 @@ import datetime
 from utils import dynamicloader
 from nose.tools import raises
 from utils.tests import dynamicloadme
+from utils.tests.reloadable_module import ReloadableModuleWriter
 
 # For fullname() tests
 from utils.tests.dynamicloadme import AClass
@@ -57,10 +58,36 @@ class TestLoad:
     def test_can_load_notyetimported_module(self):
         """can load a module that has not yet been imported once"""
         # I picked something that probably won't have been loaded yet
-        assert "httplib2" not in sys.modules
+        assert "anydbm" not in sys.modules
         # Check to see httplib2.Authentication exists (if it does we've
         # probably got the right module)
-        assert dynamicloader.load("httplib2").Authentication
+        assert dynamicloader.load("anydbm").error
+
+    def test_doublereload(self):
+        """force-reloading a not yet been imported module causes one load"""
+        # TODO: implementation specific use of __builtins__.
+        assert dynamicloader.__builtins__
+        assert "whichdb" not in sys.modules
+
+        # Wrap reload to work out how many times it was called.
+        old_reload = dynamicloader.__builtins__["reload"]
+        def new_reload(*args, **kwargs):
+            new_reload.hits += 1
+            return old_reload(*args, **kwargs)
+        new_reload.hits = 0
+
+        dynamicloader.__builtins__["reload"] = new_reload
+
+        assert dynamicloader.load("whichdb", force_reload=True).whichdb
+        assert new_reload.hits == 0
+
+        assert dynamicloader.load("whichdb", force_reload=True).whichdb
+        assert new_reload.hits == 1
+
+        dynamicloader.__builtins__["reload"] = old_reload
+
+        assert dynamicloader.load("whichdb", force_reload=True).whichdb
+        assert new_reload.hits == 1 # no change; no longer wrapped
 
     def test_can_load_notyetimported_function(self):
         """can load an object from a module that has not been imported yet"""
@@ -69,8 +96,8 @@ class TestLoad:
 
     def test_can_use_loaded_class(self):
         # CClass is subclass of AClass; CClass is callable
-        a = dynamicloader.load(unimp_name + ".AClass")
-        c = dynamicloader.load(unimp_name + ".CClass")
+        a = dynamicloader.load(dynamicloadme.AClass.__fullname__)
+        c = dynamicloader.load(dynamicloadme.CClass.__fullname__)
         assert issubclass(c, a)
         oa = a()
         oc = c()
@@ -80,7 +107,7 @@ class TestLoad:
         assert oc(None, None) == None
 
     def test_can_load_generator(self):
-        a = dynamicloader.load(unimp_name + ".GFunction")
+        a = dynamicloader.load(dynamicloadme.GFunction.__fullname__)
         b = dynamicloader.load(dynamicloadme.GFunction)
         t = ["Hello", "World"]
         ta = []
@@ -108,7 +135,7 @@ class TestLoad:
 
     @raises(ImportError)
     def test_load_does_not_recurse_into_classes(self):
-        dynamicloader.load(dynamicloadme.__name__ + ".AClass.anattr")
+        dynamicloader.load(dynamicloadme.__name__ + ".AClass.afunc")
 
     @raises(TypeError)
     def test_refuses_to_load_garbage_loadable(self):
@@ -137,35 +164,34 @@ class TestLoad:
         self.check_reload_module("reloadableb", modulecode_1, modulecode_2)
 
     def check_reload_module(self, modname, modulecode_1, modulecode_2):
-        components = __name__.split(".")
-        components[-1:] = [modname, 'asdf']
+        rmod = ReloadableModuleWriter(__name__, __file__, modname, 'asdf')
+        assert not rmod.is_loaded()
 
-        loadable = ".".join(components)
-        module = ".".join(components[:-1])
-        assert module not in sys.modules
+        roundabout_loadable = rmod.fullmodname + "_alias.asdf"
+        assert roundabout_loadable not in sys.modules
 
-        self.write_reloadable_module(modname, modulecode_1)
+        rmod.write_code(modulecode_1)
 
-        asdf_1a = dynamicloader.load(loadable)
+        asdf_1a = dynamicloader.load(rmod.loadable)
         asdf_1a_object = asdf_1a()
         assert asdf_1a_object.test == 1
 
-        self.write_reloadable_module(modname, modulecode_2)
+        rmod.write_code(modulecode_2)
 
         # Should not cause a reload, should just re-use sys.moudles[loadable]
-        asdf_1b = dynamicloader.load(loadable)
+        asdf_1b = dynamicloader.load(rmod.loadable)
         assert asdf_1b == asdf_1a
         asdf_1b_object = asdf_1b()
         assert asdf_1b_object.test == asdf_1a_object.test == 1
 
         # This time we want a reload
-        asdf_2a = dynamicloader.load(loadable, force_reload=True)
+        asdf_2a = dynamicloader.load(rmod.loadable, force_reload=True)
         assert asdf_2a != asdf_1b
         asdf_2a_object = asdf_2a()
         assert asdf_2a_object.test == 2
 
         # It should stay reloaded, even without force_reload
-        asdf_2b = dynamicloader.load(loadable)
+        asdf_2b = dynamicloader.load(rmod.loadable)
         assert asdf_2b == asdf_2a
         asdf_2b_object = asdf_2a()
         assert asdf_2b_object.test == asdf_2a_object.test == 2
@@ -175,33 +201,21 @@ class TestLoad:
         asdf_1b_object = asdf_1b()
         assert asdf_1b_object.test == 1
 
-        self.write_reloadable_module(modname, modulecode_1)
+        rmod.write_code(modulecode_1)
 
-        # Finally, we should also be able to reload like this:
-        asdf_1c = dynamicloader.load(asdf_1b)
+        # We should also be able to reload like this:
+        asdf_1c = dynamicloader.load(asdf_2b, force_reload=True)
         assert asdf_1c != asdf_2a
         asdf_1c_object = asdf_1c()
         assert asdf_1c_object.test == 1
 
-    def write_reloadable_module(self, modname, code):
-        filename = os.path.join(os.path.dirname(__file__), modname + ".py")
+        rmod.write_code(modulecode_2)
 
-        # Even when the builtin reload is called python will read from the
-        # pyc file if the embedded mtime matches that of the py file. That's
-        # typically going to be fine, however, if you load, modify, reload
-        # within one second then the updated module won't be read.
-        # We won't be reloading that fast, but the test will. So hack the 
-        # mtime two seconds into the future every time.
-
-        try:
-            newtime = os.path.getmtime(filename) + 2
-        except OSError:
-            newtime = int(time.time())
-
-        with open(filename, 'w') as f:
-            f.write(code)
-
-        os.utime(filename, (newtime, newtime))
+        # And finally like this:
+        asdf_2c = dynamicloader.load(roundabout_loadable, force_reload=True)
+        assert asdf_2c != asdf_1c
+        asdf_2c_object = asdf_2c()
+        assert asdf_2c_object.test == 2
 
     def test_fullname(self):
         lm = dynamicloadme
