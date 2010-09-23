@@ -23,6 +23,7 @@ Tests the Server class, found in ../server.py
 import sys
 from nose.tools import raises, with_setup
 from message_server import Sink, SimpleSink, Server, Message, Listener
+from utils.tests.reloadable_module import ReloadableModuleWriter
 
 class FakeSink(SimpleSink):
     def setup(self):
@@ -40,7 +41,8 @@ class SinkWithoutMessage(SimpleSink):
     def setup(self):
         pass
 
-# This should confuse dynamicloader.fullname. Muahaha
+# This would confuse an earlier version of of the software that would compare
+# dynamicloader.fullname with a string "loadable".
 from fakesink import *
 
 class NonSink:
@@ -201,3 +203,33 @@ class TestServer:
         self.server.unload(__name__ + ".TestSinkA")
         assert len(self.server.sinks) == 1
         assert isinstance(self.server.sinks[0], TestSinkB)
+
+    @with_setup(clean_server_sinks)
+    def test_reload(self):
+        rmod = ReloadableModuleWriter(__name__, __file__,
+                                      'rsink', 'ReloadableSink')
+        assert not rmod.is_loaded()
+
+        # dynamicloader.reload's functionality is tested quite thoroughly in
+        # utils/tests
+
+        (code, values) = self.generate_rmod_code("RECEIVED_TELEM",
+                                                 "LISTENER_TELEM")
+        rmod.write_code(code)
+        self.server.load(rmod.loadable)
+        assert self.server.sinks[0].types == values
+
+        (code, values) = self.generate_rmod_code("LISTENER_TELEM")
+        rmod.write_code(code)
+        self.server.reload(rmod.loadable)
+        assert len(self.server.sinks) == 1
+        assert self.server.sinks[0].types == values
+
+    def generate_rmod_code(self, *types):
+        values = set([getattr(Message, i) for i in types])
+        values_string = ", ".join(["Message.%s" % t for t in types])
+        code = "from fakesink import TestSink\n" + \
+               "from message_server import Message\n" + \
+               "class ReloadableSink(TestSink):\n" + \
+               "    testtypes = [%s]\n"
+        return (code % values_string, values)

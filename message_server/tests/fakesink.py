@@ -15,7 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
-# This should confuse dynamicloader.fullname. Muahaha
+# This would confuse an earlier version of of the software that would compare
+# dynamicloader.fullname with a string "loadable".
 
 from message_server import SimpleSink, Message
 
