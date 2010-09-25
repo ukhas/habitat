@@ -90,17 +90,13 @@ class FakeThreadedSink(ThreadedSink):
             self.test_thread = threading.current_thread()
 
 class ThreadedPush(threading.Thread):
-    def __init__(self, sink, message, event):
+    def __init__(self, sink, message):
         threading.Thread.__init__(self)
         self.sink = sink
         self.message = message
-        self.event = event
 
     def run(self):
-        try:
-            self.sink.push_message(self.message)
-        finally:
-            self.event.set()
+        self.sink.push_message(self.message)
 
 class TestSink:
     def test_types_is_a_set(self):
@@ -235,31 +231,23 @@ class TestSink:
         sink.push_message(Message(Listener(0), Message.LISTENER_INFO, 2))
         sink.push_message(Message(Listener(0), Message.RECEIVED_TELEM, 3))
 
-        try:
-            sink.queue.join()
-        except(AttributeError):
-            pass
+        # Clean up threaded sinks, do nothing to simple sinks.
+        sink.shutdown()
 
         assert sink.status == 2
 
     def test_threaded_sink_executes_in_one_thread(self):
         sink = FakeThreadedSink()
-        done_a = threading.Event()
-        done_b = threading.Event()
-        done_c = threading.Event()
 
-        ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 1),
-                     done_a).start()
-        ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 2),
-                     done_b).start()
-        ThreadedPush(sink, Message(Listener(0), Message.RECEIVED_TELEM, 3),
-                     done_c).start()
+        a = ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 1))
+        b = ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 2))
+        c = ThreadedPush(sink, Message(Listener(0), Message.RECEIVED_TELEM, 3))
 
-        done_a.wait()
-        done_b.wait()
-        done_c.wait()
+        for t in [a, b, c]:
+            t.start()
+            t.join()
 
-        sink.queue.join()
+        sink.shutdown()
 
         assert sink.failed == 0
         assert sink.status == 3
@@ -285,6 +273,9 @@ class TestSink:
 
         t.join()
 
+        # Does nothing to simple sinks, cleans up a threaded sink's thread
+        sink.shutdown()
+
     def test_shutdown(self):
         # For a SimpleSink, flush and shutdown do exactly the same thing.
         sink = EmptySink()
@@ -309,3 +300,4 @@ class TestSink:
     def test_threadname(self):
         sink = EmptyThreadedSink()
         assert sink.name.startswith("ThreadedSink runner: EmptyThreadedSink")
+        sink.shutdown()

@@ -112,7 +112,6 @@ class ThreadedSink(Sink, threading.Thread):
 
     def __init__(self):
         threading.Thread.__init__(self)
-        self.daemon = True
         self.name = "ThreadedSink runner: " + self.__class__.__name__
 
         Sink.__init__(self)
