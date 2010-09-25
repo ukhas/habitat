@@ -22,7 +22,7 @@ Tests the Sink class, found in ../sink.py
 import threading
 from nose.tools import raises
 from message_server import SimpleSink, ThreadedSink
-from message_server import Message, Listener
+from message_server import Message, Listener, Server
 
 class EmptySink(SimpleSink):
     def setup(self):
@@ -96,11 +96,16 @@ class ThreadedPush(threading.Thread):
 
 class TestSink:
     def test_types_is_a_set(self):
-        sink = EmptySink()
+        sink = EmptySink(None)
         assert isinstance(sink.types, set)
 
+    def test_sink_stores_server(self):
+        server = Server()
+        sink = EmptySink(server)
+        assert sink.server == server
+
     def test_types(self):
-        sink = EmptySink()
+        sink = EmptySink(None)
 
         # We need these executed in this precise order but it'd be nice if
         # they were printed by spec as separate tests:
@@ -155,14 +160,14 @@ class TestSink:
         assert sink.types == set([])
 
     def test_can_remove_type_twice(self):
-        sink = EmptySink()
+        sink = EmptySink(None)
         sink.add_type(Message.RECEIVED_TELEM)
         sink.remove_type(Message.RECEIVED_TELEM)
         sink.remove_type(Message.RECEIVED_TELEM)
         # Should not produce a KeyError
     
     def test_rejects_garbage(self):
-        sink = EmptySink()
+        sink = EmptySink(None)
         for i in [sink.add_type, sink.remove_type]:
             yield self.check_rejects_garbage_type, i
             yield self.check_rejects_invalid_type, i
@@ -194,13 +199,13 @@ class TestSink:
         func(set([Message.RECEIVED_TELEM, 952]))
 
     def test_setup_called(self):
-        sink = FakeSink()
+        sink = FakeSink(None)
         assert sink.types == set([Message.RECEIVED_TELEM,
                                   Message.LISTENER_INFO])
         assert sink.message == sink.test_messages.append
 
     def test_push_message(self):
-        sink = FakeSink()
+        sink = FakeSink(None)
 
         # Same story as test_types
         yield self.check_push_unwanted_message, sink
@@ -221,7 +226,7 @@ class TestSink:
         yield self.check_sink_changing_types_push, ChangeyThreadedSink
 
     def check_sink_changing_types_push(self, sink_class):
-        sink = sink_class()
+        sink = sink_class(None)
 
         sink.push_message(Message(Listener(0), Message.LISTENER_INFO, 1))
         sink.push_message(Message(Listener(0), Message.LISTENER_INFO, 2))
@@ -235,7 +240,7 @@ class TestSink:
         assert sink.status == 2
 
     def test_threaded_sink_executes_in_one_thread(self):
-        sink = FakeThreadedSink()
+        sink = FakeThreadedSink(None)
         done_a = threading.Event()
         done_b = threading.Event()
         done_c = threading.Event()

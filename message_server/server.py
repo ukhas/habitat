@@ -49,7 +49,7 @@ class Server:
         if new_sink_name in fullnames:
             raise ValueError("this sink is already loaded")
 
-        sink = new_sink()
+        sink = new_sink(self)
         self.sinks.append(sink)
 
     def find_sink(self, sink):

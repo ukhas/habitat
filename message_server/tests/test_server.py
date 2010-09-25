@@ -44,6 +44,7 @@ class SinkWithoutMessage(SimpleSink):
 # This would confuse an earlier version of of the software that would compare
 # dynamicloader.fullname with a string "loadable".
 from fakesink import *
+from pushback import *
 
 class NonSink:
     """
@@ -120,6 +121,11 @@ class TestServer:
         self.server.sinks = []
 
     @with_setup(clean_server_sinks)
+    def test_loaded_sink_is_given_server_object(self):
+        self.server.load(FakeSink)
+        assert self.server.sinks[0].server == self.server
+
+    @with_setup(clean_server_sinks)
     def check_load_gets_correct_class(self, name):
         real_class = getattr(sys.modules[__name__], name)
         self.server.load(__name__ + "." + name)
@@ -183,6 +189,30 @@ class TestServer:
         assert self.server.sinks[0].test_messages == [message_li, message_rt,
                                                       message_li]
         assert self.server.sinks[1].test_messages == [message_li, message_li]
+
+    def test_pushback(self):
+        yield self.check_pushback, PushbackSimpleSink, \
+                                   PushbackReceiverSimpleSink
+        yield self.check_pushback, PushbackThreadedSink, \
+                                   PushbackReceiverThreadedSink
+
+    @with_setup(clean_server_sinks)
+    def check_pushback(self, pushback_class, pushbackreceiver_class):
+        self.server.load(pushback_class)
+        self.server.load(pushbackreceiver_class)
+        self.server.push_message(
+            Message(Listener(0), Message.RECEIVED_TELEM, 6293))
+
+        # If the sinks are threaded, flush them
+        for i in self.server.sinks:
+            try:
+                i.queue.join()
+            except AttributeError:
+                pass
+
+        # Now check the results
+        for i in self.server.sinks:
+            assert i.status == 2
 
     @with_setup(clean_server_sinks)
     def test_unload(self):

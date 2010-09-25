@@ -47,7 +47,11 @@ class Sink:
                       process
     """
 
-    def __init__(self):
+    def __init__(self, server):
+        # NB: We can't reject a garbage server since doing so would require
+        # circular-importing Server (since Server imports Sink)
+        self.server = server
+
         self.types = set()
 
         self.add_type = TypeValidator(self.types.add)
@@ -74,6 +78,7 @@ class SimpleSink(Sink):
     tolerate recusrion (i.e., your message() function will indirectly call
     itself.
     """
+
     def push_message(self, message):
         if not isinstance(message, Message):
             raise TypeError("message must be a Message object")
@@ -89,8 +94,8 @@ class ThreadedSink(Sink, threading.Thread):
     achieve this. Therefore, the requirements of a SimpleSink do not apply.
     """
 
-    def __init__(self):
-        Sink.__init__(self)
+    def __init__(self, server):
+        Sink.__init__(self, server)
         threading.Thread.__init__(self)
         self.daemon = True
         self.queue = Queue.Queue()
