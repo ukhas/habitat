@@ -81,6 +81,7 @@ class SimpleSink(Sink):
         Sink.__init__(self)
         self.cv = threading.Condition()
         self.executing_count = 0
+        self.shutdown = self.flush
 
     def push_message(self, message):
         if not isinstance(message, Message):
@@ -110,11 +111,14 @@ class ThreadedSink(Sink, threading.Thread):
     """
 
     def __init__(self):
-        Sink.__init__(self)
         threading.Thread.__init__(self)
         self.daemon = True
+        self.name = "ThreadedSink runner: " + self.__class__.__name__
+
+        Sink.__init__(self)
         self.queue = Queue.Queue()
         self.flush = self.queue.join
+
         self.start()
 
     def push_message(self, message):
@@ -126,10 +130,25 @@ class ThreadedSink(Sink, threading.Thread):
         self.queue.put(message)
 
     def run(self):
-        while True:
+        running = True
+        while running:
             message = self.queue.get()
 
-            if message.type in self.types:
-                self.message(message)
+            if isinstance(message, Message):
+                if message.type in self.types:
+                    self.message(message)
+            elif isinstance(message, ThreadedSinkShutdown):
+                running = False
 
             self.queue.task_done()
+
+    def shutdown(self):
+        self.queue.put(ThreadedSinkShutdown())
+        self.flush()
+        self.join()
+
+class ThreadedSinkShutdown:
+    """
+    A object used to ask the runner of a ThreadedSink to shut down
+    """
+    pass

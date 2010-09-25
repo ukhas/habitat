@@ -30,7 +30,12 @@ from slowsink import *
 class EmptySink(SimpleSink):
     def setup(self):
         pass
+    def message(self):
+        pass
 
+class EmptyThreadedSink(ThreadedSink):
+    def setup(self):
+        pass
     def message(self):
         pass
 
@@ -279,3 +284,28 @@ class TestSink:
         assert not sink.in_message.is_set()
 
         t.join()
+
+    def test_shutdown(self):
+        # For a SimpleSink, flush and shutdown do exactly the same thing.
+        sink = EmptySink()
+        assert sink.flush == sink.shutdown
+
+        # For a ThreadedSink, it should call flush and then kill the thread.
+        def new_flush():
+            new_flush.call_count += 1
+        new_flush.call_count = 0
+
+        sink = EmptyThreadedSink()
+        sink.flush = new_flush
+
+        while not sink.is_alive():
+            pass
+
+        sink.shutdown()
+
+        assert not sink.is_alive()
+        assert sink.flush.call_count == 1
+
+    def test_threadname(self):
+        sink = EmptyThreadedSink()
+        assert sink.name.startswith("ThreadedSink runner: EmptyThreadedSink")

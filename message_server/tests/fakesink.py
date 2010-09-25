@@ -29,10 +29,9 @@ class FakeSink2(SimpleSink):
 class TestSink(SimpleSink):
     def setup(self):
         self.test_messages = []
-        self.message = self.test_messages.append
         self.set_types(set(self.testtypes))
-    def message(self):
-        pass
+    def message(self, message):
+        self.test_messages.append(message)
 
 class TestSinkA(TestSink):
     testtypes = [Message.RECEIVED_TELEM, Message.LISTENER_INFO]
