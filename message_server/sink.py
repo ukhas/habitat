@@ -35,9 +35,11 @@ class Sink:
         Sink.remove_type(type), Sink.remove_types(set([type, type, ...]))
         Sink.set_types(types), Sink.clear_types()
 
-    They also will have the following function, which is used internally by
+    They also will have the following functions, which are used internally by
     the message server
+        Sink.__init__(server)
         Sink.push_message(message)
+        Sink.flush()
 
     A sink must define these functions:
     setup(): called once; the sink must call some of the self.*type* functions
@@ -74,17 +76,35 @@ class SimpleSink(Sink):
     tolerate recusrion (i.e., your message() function will indirectly call
     itself.
     """
+
+    def __init__(self):
+        Sink.__init__(self)
+        self.cv = threading.Condition()
+        self.executing_count = 0
+
     def push_message(self, message):
         if not isinstance(message, Message):
             raise TypeError("message must be a Message object")
 
         if message.type in self.types:
+            with self.cv:
+                self.executing_count += 1
+
             self.message(message)
+
+            with self.cv:
+                self.executing_count -= 1
+                self.cv.notify_all()
+
+    def flush(self):
+        with self.cv:
+            while self.executing_count != 0:
+                self.cv.wait()
 
 class ThreadedSink(Sink, threading.Thread):
     """
     The parent class of a sink that inherits ThreadedSink will execute
-    message() exclusively in a thread for your Sink, and two cals to message
+    message() exclusively in a thread for your Sink, and two calls to message
     will never occur simultaneously. It uses an internal Python Queue to
     achieve this. Therefore, the requirements of a SimpleSink do not apply.
     """
@@ -94,6 +114,7 @@ class ThreadedSink(Sink, threading.Thread):
         threading.Thread.__init__(self)
         self.daemon = True
         self.queue = Queue.Queue()
+        self.flush = self.queue.join
         self.start()
 
     def push_message(self, message):

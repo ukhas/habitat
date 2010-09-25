@@ -20,9 +20,12 @@ Tests the Sink class, found in ../sink.py
 """ 
 
 import threading
+import functools
 from nose.tools import raises
 from message_server import SimpleSink, ThreadedSink
 from message_server import Message, Listener
+
+from slowsink import *
 
 class EmptySink(SimpleSink):
     def setup(self):
@@ -255,3 +258,24 @@ class TestSink:
 
         assert sink.failed == 0
         assert sink.status == 3
+
+    def test_flush(self):
+        yield self.check_flush_race, SlowSimpleSink
+        yield self.check_flush_race, SlowThreadedSink
+
+    def check_flush_race(self, sink_class):
+        # Testing a race condition is quite difficult.
+        # SlowSink.message() will time.sleep(0.02)
+        sink = sink_class()
+
+        push = functools.partial(sink.push_message,
+                                 Message(Listener(0), Message.TELEM, None))
+        t = threading.Thread(target=push)
+        t.start()
+
+        sink.in_message.wait()
+        assert sink.in_message.is_set()
+        sink.flush()
+        assert not sink.in_message.is_set()
+
+        t.join()
