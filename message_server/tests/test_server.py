@@ -214,6 +214,10 @@ class TestServer:
         for i in self.server.sinks:
             assert i.status == 2
 
+        # And clean up
+        for i in self.server.sinks:
+            i.shutdown()
+
     @with_setup(clean_server_sinks)
     def test_unload(self):
         self.server.load(TestSinkA)

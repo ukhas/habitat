@@ -20,14 +20,22 @@ Tests the Sink class, found in ../sink.py
 """ 
 
 import threading
+import functools
 from nose.tools import raises
 from message_server import SimpleSink, ThreadedSink
 from message_server import Message, Listener, Server
 
+from slowsink import *
+
 class EmptySink(SimpleSink):
     def setup(self):
         pass
+    def message(self):
+        pass
 
+class EmptyThreadedSink(ThreadedSink):
+    def setup(self):
+        pass
     def message(self):
         pass
 
@@ -82,17 +90,13 @@ class FakeThreadedSink(ThreadedSink):
             self.test_thread = threading.current_thread()
 
 class ThreadedPush(threading.Thread):
-    def __init__(self, sink, message, event):
+    def __init__(self, sink, message):
         threading.Thread.__init__(self)
         self.sink = sink
         self.message = message
-        self.event = event
 
     def run(self):
-        try:
-            self.sink.push_message(self.message)
-        finally:
-            self.event.set()
+        self.sink.push_message(self.message)
 
 class TestSink:
     def test_types_is_a_set(self):
@@ -232,31 +236,73 @@ class TestSink:
         sink.push_message(Message(Listener(0), Message.LISTENER_INFO, 2))
         sink.push_message(Message(Listener(0), Message.RECEIVED_TELEM, 3))
 
-        try:
-            sink.queue.join()
-        except(AttributeError):
-            pass
+        # Clean up threaded sinks, do nothing to simple sinks.
+        sink.shutdown()
 
         assert sink.status == 2
 
     def test_threaded_sink_executes_in_one_thread(self):
         sink = FakeThreadedSink(None)
-        done_a = threading.Event()
-        done_b = threading.Event()
-        done_c = threading.Event()
 
-        ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 1),
-                     done_a).start()
-        ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 2),
-                     done_b).start()
-        ThreadedPush(sink, Message(Listener(0), Message.RECEIVED_TELEM, 3),
-                     done_c).start()
+        a = ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 1))
+        b = ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 2))
+        c = ThreadedPush(sink, Message(Listener(0), Message.RECEIVED_TELEM, 3))
 
-        done_a.wait()
-        done_b.wait()
-        done_c.wait()
+        for t in [a, b, c]:
+            t.start()
+            t.join()
 
-        sink.queue.join()
+        sink.shutdown()
 
         assert sink.failed == 0
         assert sink.status == 3
+
+    def test_flush(self):
+        yield self.check_flush_race, SlowSimpleSink
+        yield self.check_flush_race, SlowThreadedSink
+
+    def check_flush_race(self, sink_class):
+        # Testing a race condition is quite difficult.
+        # SlowSink.message() will time.sleep(0.02)
+        sink = sink_class(None)
+
+        push = functools.partial(sink.push_message,
+                                 Message(Listener(0), Message.TELEM, None))
+        t = threading.Thread(target=push)
+        t.start()
+
+        sink.in_message.wait()
+        assert sink.in_message.is_set()
+        sink.flush()
+        assert not sink.in_message.is_set()
+
+        t.join()
+
+        # Does nothing to simple sinks, cleans up a threaded sink's thread
+        sink.shutdown()
+
+    def test_shutdown(self):
+        # For a SimpleSink, flush and shutdown do exactly the same thing.
+        sink = EmptySink(None)
+        assert sink.flush == sink.shutdown
+
+        # For a ThreadedSink, it should call flush and then kill the thread.
+        def new_flush():
+            new_flush.call_count += 1
+        new_flush.call_count = 0
+
+        sink = EmptyThreadedSink(None)
+        sink.flush = new_flush
+
+        while not sink.is_alive():
+            pass
+
+        sink.shutdown()
+
+        assert not sink.is_alive()
+        assert sink.flush.call_count == 1
+
+    def test_threadname(self):
+        sink = EmptyThreadedSink(None)
+        assert sink.name.startswith("ThreadedSink runner: EmptyThreadedSink")
+        sink.shutdown()

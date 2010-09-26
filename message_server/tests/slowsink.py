@@ -18,23 +18,20 @@
 # This would confuse an earlier version of of the software that would compare
 # dynamicloader.fullname with a string "loadable".
 
-from message_server import SimpleSink, Message
+import threading
+import time
+from message_server import SimpleSink, ThreadedSink, Message
 
-class FakeSink2(SimpleSink):
+class SlowSink():
     def setup(self):
-        pass
-    def message(self):
-        pass
-
-class TestSink(SimpleSink):
-    def setup(self):
-        self.test_messages = []
-        self.set_types(set(self.testtypes))
+        self.add_type(Message.TELEM)
+        self.in_message = threading.Event()
     def message(self, message):
-        self.test_messages.append(message)
+        self.in_message.set()
+        time.sleep(0.02)
+        self.in_message.clear()
 
-class TestSinkA(TestSink):
-    testtypes = [Message.RECEIVED_TELEM, Message.LISTENER_INFO]
-
-class TestSinkB(TestSink):
-    testtypes = [Message.LISTENER_INFO]
+class SlowSimpleSink(SlowSink, SimpleSink):
+    pass
+class SlowThreadedSink(SlowSink, ThreadedSink):
+    pass
