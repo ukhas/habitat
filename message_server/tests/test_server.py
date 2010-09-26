@@ -21,6 +21,8 @@ Tests the Server class, found in ../server.py
 """ 
 
 import sys
+import time
+import threading
 from nose.tools import raises, with_setup
 from message_server import Sink, SimpleSink, Server, Message, Listener
 from utils.tests.reloadable_module import ReloadableModuleWriter
@@ -45,6 +47,7 @@ class SinkWithoutMessage(SimpleSink):
 # dynamicloader.fullname with a string "loadable".
 from fakesink import *
 from pushback import *
+from slowsink import SlowShutdownSink
 
 class NonSink:
     """
@@ -55,6 +58,9 @@ class NonSink:
 class TestServer:
     def setup(self):
         self.server = Server()
+
+    def teardown(self):
+        self.server.shutdown()
 
     def test_can_load_fakesink(self):
         self.server.load(FakeSink)
@@ -117,22 +123,16 @@ class TestServer:
         for i in ["FakeSink", "FakeSink2"]:
             yield self.check_load_gets_correct_class, i
 
-    def clean_server_sinks(self):
-        self.server.sinks = []
-
-    @with_setup(clean_server_sinks)
     def test_loaded_sink_is_given_server_object(self):
         self.server.load(FakeSink)
         assert self.server.sinks[0].server == self.server
 
-    @with_setup(clean_server_sinks)
     def check_load_gets_correct_class(self, name):
         real_class = getattr(sys.modules[__name__], name)
         self.server.load(__name__ + "." + name)
         loaded = self.server.sinks[0]
         assert isinstance(loaded, real_class)
 
-    @with_setup(clean_server_sinks)
     def test_does_not_load_two_of_the_same_sink(self):
         self.server.load(FakeSink)
         try:
@@ -145,7 +145,6 @@ class TestServer:
         for i in ["FakeSink", "FakeSink2", FakeSink, FakeSink2]:
             yield self.check_load_adds_correct_sink, i
 
-    @with_setup(clean_server_sinks)
     def check_load_adds_correct_sink(self, sink):
         if isinstance(sink, basestring):
             self.server.load(__name__ + "." + sink)
@@ -165,7 +164,6 @@ class TestServer:
                   "", 1, NonSink]:
             yield self.check_failed_load_adds_no_sinks, i
 
-    @with_setup(clean_server_sinks)
     def check_failed_load_adds_no_sinks(self, sink):
         try:
             self.server.load(sink)
@@ -175,7 +173,6 @@ class TestServer:
 
         assert len(self.server.sinks) == 0
 
-    @with_setup(clean_server_sinks)
     def test_pushes_to_sinks(self):
         message_li = Message(Listener(0), Message.LISTENER_INFO, None)
         message_rt = Message(Listener(0), Message.RECEIVED_TELEM, None)
@@ -186,6 +183,8 @@ class TestServer:
         self.server.push_message(message_li)
         assert isinstance(self.server.sinks[0], TestSinkA)
         assert isinstance(self.server.sinks[1], TestSinkB)
+        self.server.sinks[0].flush()
+        self.server.sinks[1].flush()
         assert self.server.sinks[0].test_messages == [message_li, message_rt,
                                                       message_li]
         assert self.server.sinks[1].test_messages == [message_li, message_li]
@@ -196,29 +195,19 @@ class TestServer:
         yield self.check_pushback, PushbackThreadedSink, \
                                    PushbackReceiverThreadedSink
 
-    @with_setup(clean_server_sinks)
     def check_pushback(self, pushback_class, pushbackreceiver_class):
         self.server.load(pushback_class)
         self.server.load(pushbackreceiver_class)
         self.server.push_message(
             Message(Listener(0), Message.RECEIVED_TELEM, 6293))
 
-        # If the sinks are threaded, flush them
         for i in self.server.sinks:
-            try:
-                i.queue.join()
-            except AttributeError:
-                pass
+            i.flush()
 
         # Now check the results
         for i in self.server.sinks:
             assert i.status == 2
 
-        # And clean up
-        for i in self.server.sinks:
-            i.shutdown()
-
-    @with_setup(clean_server_sinks)
     def test_unload(self):
         self.server.load(TestSinkA)
         self.server.load(TestSinkB)
@@ -238,7 +227,6 @@ class TestServer:
         assert len(self.server.sinks) == 1
         assert isinstance(self.server.sinks[0], TestSinkB)
 
-    @with_setup(clean_server_sinks)
     def test_reload(self):
         rmod = ReloadableModuleWriter(__name__, __file__,
                                       'rsink', 'ReloadableSink')
@@ -267,3 +255,55 @@ class TestServer:
                "class ReloadableSink(TestSink):\n" + \
                "    testtypes = [%s]\n"
         return (code % values_string, values)
+
+    def test_unload_shuts_down_sink(self):
+        def f():
+            self.server.unload(FakeSink)
+        self.check_shuts_down_sink(f)
+
+    def test_shutdown_shuts_down_sink(self):
+        def f():
+            self.server.shutdown()
+        self.check_shuts_down_sink(f)
+
+    def test_reload_shuts_down_sink(self):
+        def f():
+            self.server.reload(FakeSink)
+        self.check_shuts_down_sink(f)
+
+    def check_shuts_down_sink(self, unloadfunc):
+        self.server.load(FakeSink)
+
+        # Wrap sink shutdown
+        old_shutdown = self.server.sinks[0].shutdown
+        def new_shutdown(*args, **kwargs):
+            new_shutdown.hits += 1
+            return old_shutdown(*args, **kwargs)
+        new_shutdown.hits = 0
+        self.server.sinks[0].shutdown = new_shutdown
+
+        unloadfunc()
+        assert new_shutdown.hits == 1
+
+    def test_reload_skips_no_messages(self):
+        self.server.load(SlowShutdownSink)
+        m = Message(Listener(0), Message.TELEM, None)
+
+        def f():
+            self.server.reload(SlowShutdownSink)
+
+        old_object = self.server.sinks[0]
+
+        t = threading.Thread(target=f)
+        t.start()
+
+        old_object.shutting_down.wait()
+        self.server.push_message(m)
+        self.server.push_message(m)
+        self.server.push_message(m)
+
+        t.join()
+        new_object = self.server.sinks[0]
+
+        assert old_object.messages == 0
+        assert new_object.messages == 3

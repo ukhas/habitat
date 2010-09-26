@@ -35,3 +35,26 @@ class SlowSimpleSink(SlowSink, SimpleSink):
     pass
 class SlowThreadedSink(SlowSink, ThreadedSink):
     pass
+
+class SlowShutdownSink(SimpleSink):
+    def __init__(self, server):
+        SimpleSink.__init__(self, server)
+        self.shutting_down = threading.Event()
+        self.messages = 0
+
+        # SimpleSink.__init__ sets self.shutdown so we have to override it
+        # like this
+        self.old_shutdown = self.shutdown
+        self.shutdown = self.override_shutdown
+      
+    def setup(self):
+        self.add_type(Message.TELEM)
+
+    def message(self, message):
+        self.messages += 1
+
+    def override_shutdown(self):
+        self.old_shutdown()
+        self.shutting_down.set()
+        time.sleep(0.02)
+        self.shutting_down.clear()

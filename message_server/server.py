@@ -22,12 +22,14 @@ Contains 'Server', the main messager_server class
 
 import sys
 import inspect
+import threading
 from utils import dynamicloader
 from sink import Sink, SimpleSink, ThreadedSink
 
 class Server:
     def __init__(self):
         self.sinks = []
+        self.lock = threading.RLock()
 
     def load(self, new_sink):
         """
@@ -43,24 +45,27 @@ class Server:
         dynamicloader.expecthasmethod(new_sink, "setup")
         dynamicloader.expecthasmethod(new_sink, "message")
 
-        fullnames = (dynamicloader.fullname(s.__class__) for s in self.sinks)
-        new_sink_name = dynamicloader.fullname(new_sink)
+        with self.lock:
+            fullnames = (dynamicloader.fullname(s.__class__)
+                         for s in self.sinks)
+            new_sink_name = dynamicloader.fullname(new_sink)
 
-        if new_sink_name in fullnames:
-            raise ValueError("this sink is already loaded")
+            if new_sink_name in fullnames:
+                raise ValueError("this sink is already loaded")
 
-        sink = new_sink(self)
-        self.sinks.append(sink)
+            sink = new_sink(self)
+            self.sinks.append(sink)
 
     def find_sink(self, sink):
-        # The easiest way is to just search for the name
-        sink_name = dynamicloader.fullname(sink)
+        with self.lock:
+            # The easiest way is to just search for the name
+            sink_name = dynamicloader.fullname(sink)
 
-        for s in self.sinks:
-            if dynamicloader.fullname(s.__class__) == sink_name:
-                return s
+            for s in self.sinks:
+                if dynamicloader.fullname(s.__class__) == sink_name:
+                    return s
 
-        raise ValueError("sink not found")
+            raise ValueError("sink not found")
 
     def unload(self, sink):
         """
@@ -69,7 +74,10 @@ class Server:
         Just like load() this can accept a string instead of a class.
         """
 
-        self.sinks.remove(self.find_sink(sink))
+        with self.lock:
+            sink = self.find_sink(sink)
+            self.sinks.remove(sink)
+            sink.shutdown()
 
     def reload(self, sink):
         """
@@ -78,12 +86,22 @@ class Server:
         of the class reloading.
         """
 
-        sink = self.find_sink(sink)
-        self.sinks.remove(sink)
-        new_sink = dynamicloader.load(sink.__class__, force_reload=True)
-        self.load(new_sink)
+        with self.lock:
+            sink = self.find_sink(sink)
+            self.sinks.remove(sink)
+            sink.shutdown()
+
+            new_sink = dynamicloader.load(sink.__class__, force_reload=True)
+            self.load(new_sink)
+
+    def shutdown(self):
+        with self.lock:
+            for sink in self.sinks:
+                sink.shutdown()
+
+            self.sinks = []
 
     def push_message(self, message):
-        for sink in self.sinks:
-            sink.push_message(message)
-
+        with self.lock:
+            for sink in self.sinks:
+                sink.push_message(message)
