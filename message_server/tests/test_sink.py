@@ -281,25 +281,31 @@ class TestSink:
         # Does nothing to simple sinks, cleans up a threaded sink's thread
         sink.shutdown()
 
-    def test_shutdown(self):
-        # For a SimpleSink, flush and shutdown do exactly the same thing.
-        sink = EmptySink(None)
-        assert sink.flush == sink.shutdown
+    def test_simple_shutdown(self):
+        self.check_shutdown(EmptySink(None), False)
 
+    def test_threaded_shutdown(self):
+        self.check_shutdown(EmptyThreadedSink(None), True)
+
+    def check_shutdown(self, sink, check_thread):
+        # For a SimpleSink, shutdown should just call flush
         # For a ThreadedSink, it should call flush and then kill the thread.
+
         def new_flush():
             new_flush.call_count += 1
         new_flush.call_count = 0
 
-        sink = EmptyThreadedSink(None)
         sink.flush = new_flush
 
-        while not sink.is_alive():
-            pass
+        if check_thread:
+            while not sink.is_alive():
+                time.sleep(0.01)
 
         sink.shutdown()
 
-        assert not sink.is_alive()
+        if check_thread:
+            assert not sink.is_alive()
+
         assert sink.flush.call_count == 1
 
     def test_threadname(self):

@@ -66,6 +66,14 @@ class Message:
         if type not in cls.types:
             raise ValueError("type is not a valid type")
 
+    @classmethod
+    def validate_types(cls, types):
+        if not isinstance(types, (set, frozenset)):
+            raise TypeError("types must be a set")
+
+        for type in types:
+            Message.validate_type(type)
+
 class Listener:
     """
     A Listener objects describes the source from which a message came, by some
@@ -88,40 +96,3 @@ class Listener:
     # compare requests other than __eq__ - we do our best:
     def __cmp__(self, other):
         return self.identifier.__cmp__(other.identifier)
-
-class Validator:
-    """
-    Parent class of TypeValidator and TypesValidator, which are function
-    decorators that ensure that the argument passed to the function passes
-    Message.validate_type(type)
-    """
-
-    def __init__(self, func):
-        self.func = func
-        functools.update_wrapper(self, func)
-
-class TypeValidator(Validator):
-    """
-    A function decorator that ensures that when the function is called the
-    single argument passes Message.validate_type(type)
-    """
-
-    def __call__(self, type):
-        Message.validate_type(type)
-        self.func(type)
-
-class TypesValidator(Validator):
-    """
-    A function decorator that ensures that when the function is called the
-    single argument is a set, and every item of that set passes
-    Message.validate_type(type)
-    """
-
-    def __call__(self, types):
-        if not isinstance(types, (set, frozenset)):
-            raise TypeError("types must be a set")
-
-        for type in types:
-            Message.validate_type(type)
-
-        self.func(types)

@@ -24,7 +24,7 @@ ThreadedSink.
 
 import Queue
 import threading
-from message import Message, TypeValidator, TypesValidator
+from message import Message
 
 class Sink:
     """
@@ -53,16 +53,27 @@ class Sink:
         # NB: We can't reject a garbage server since doing so would require
         # circular-importing Server (since Server imports Sink)
         self.server = server
-
         self.types = set()
-
-        self.add_type = TypeValidator(self.types.add)
-        self.add_types = TypesValidator(self.types.update)
-        self.remove_type = TypeValidator(self.types.discard)
-        self.remove_types = TypesValidator(self.types.difference_update)
-        self.clear_types = self.types.clear
-
         self.setup()
+
+    def add_type(self, type):
+        Message.validate_type(type)
+        self.types.add(type)
+
+    def add_types(self, types):
+        Message.validate_types(types)
+        self.types.update(types)
+
+    def remove_type(self, type):
+        Message.validate_type(type)
+        self.types.discard(type)
+
+    def remove_types(self, types):
+        Message.validate_types(types)
+        self.types.difference_update(types)
+
+    def clear_types(self):
+        self.types.clear()
 
     def set_types(self, types):
         self.clear_types()
@@ -85,7 +96,6 @@ class SimpleSink(Sink):
         Sink.__init__(self, server)
         self.cv = threading.Condition()
         self.executing_count = 0
-        self.shutdown = self.flush
 
     def push_message(self, message):
         if not isinstance(message, Message):
@@ -106,6 +116,9 @@ class SimpleSink(Sink):
             while self.executing_count != 0:
                 self.cv.wait()
 
+    def shutdown(self):
+        self.flush()
+
 class ThreadedSink(Sink, threading.Thread):
     """
     The parent class of a sink that inherits ThreadedSink will execute
@@ -120,7 +133,6 @@ class ThreadedSink(Sink, threading.Thread):
 
         Sink.__init__(self, server)
         self.queue = Queue.Queue()
-        self.flush = self.queue.join
 
         self.start()
 
@@ -144,6 +156,9 @@ class ThreadedSink(Sink, threading.Thread):
                 running = False
 
             self.queue.task_done()
+
+    def flush(self):
+        self.queue.join()
 
     def shutdown(self):
         self.queue.put(ThreadedSinkShutdown())
