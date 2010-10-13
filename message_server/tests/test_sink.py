@@ -99,6 +99,9 @@ class ThreadedPush(threading.Thread):
         self.sink.push_message(self.message)
 
 class TestSink:
+    def setup(self):
+        self.source = Listener("2E0DRX", "1.2.3.4")
+
     def test_types_is_a_set(self):
         sink = EmptySink(None)
         assert isinstance(sink.types, set)
@@ -216,11 +219,11 @@ class TestSink:
         yield self.check_push_requested_message, sink
 
     def check_push_unwanted_message(self, sink):
-        sink.push_message(Message(Listener(0), Message.TELEM, None))
+        sink.push_message(Message(self.source, Message.TELEM, None))
         assert sink.test_messages == []
 
     def check_push_requested_message(self, sink):
-        message = Message(Listener(0), Message.RECEIVED_TELEM, 100)
+        message = Message(self.source, Message.RECEIVED_TELEM, 100)
         sink.push_message(message)
         assert sink.test_messages == [message]
         assert sink.test_messages[0].data == 100
@@ -232,9 +235,9 @@ class TestSink:
     def check_sink_changing_types_push(self, sink_class):
         sink = sink_class(None)
 
-        sink.push_message(Message(Listener(0), Message.LISTENER_INFO, 1))
-        sink.push_message(Message(Listener(0), Message.LISTENER_INFO, 2))
-        sink.push_message(Message(Listener(0), Message.RECEIVED_TELEM, 3))
+        sink.push_message(Message(self.source, Message.LISTENER_INFO, 1))
+        sink.push_message(Message(self.source, Message.LISTENER_INFO, 2))
+        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, 3))
 
         # Clean up threaded sinks, do nothing to simple sinks.
         sink.shutdown()
@@ -244,9 +247,9 @@ class TestSink:
     def test_threaded_sink_executes_in_one_thread(self):
         sink = FakeThreadedSink(None)
 
-        a = ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 1))
-        b = ThreadedPush(sink, Message(Listener(0), Message.LISTENER_INFO, 2))
-        c = ThreadedPush(sink, Message(Listener(0), Message.RECEIVED_TELEM, 3))
+        a = ThreadedPush(sink, Message(self.source, Message.LISTENER_INFO, 1))
+        b = ThreadedPush(sink, Message(self.source, Message.LISTENER_INFO, 2))
+        c = ThreadedPush(sink, Message(self.source, Message.RECEIVED_TELEM, 3))
 
         for t in [a, b, c]:
             t.start()
@@ -267,7 +270,7 @@ class TestSink:
         sink = sink_class(None)
 
         push = functools.partial(sink.push_message,
-                                 Message(Listener(0), Message.TELEM, None))
+                                 Message(self.source, Message.TELEM, None))
         t = threading.Thread(target=push)
         t.start()
 

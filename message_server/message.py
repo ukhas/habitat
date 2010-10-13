@@ -19,7 +19,7 @@
 Contains the 'Message' and 'Listener' classes.
 """
 
-import functools
+import ipaddr
 
 class Message:
     """
@@ -76,23 +76,32 @@ class Message:
 
 class Listener:
     """
-    A Listener objects describes the source from which a message came, by some
-    means. The majority of this class is yet to be implemented.
-    Once initialised, the identifier is then available as listener.identifier
+    A Listener objects describes the source from which a message came.
+    It has two properties: callsign and ip. 'callsign' is chosen by the user
+    that created the message, and must be alphanumeric and uppercase. It
+    cannot be "trusted". 'ip' in typical usage is initalised by the server
+    receiving the message (i.e., where it came from). When comparing two
+    Listener objects (operator overloading), only callsign is considered.
     """
 
-    def __init__(self, identifier):
+    def __init__(self, callsign, ip):
         """
-        Creates a Listener object
-        identifier: to be implemeted. Can be anything that can be compared 
-        using __eq__ and should be the same value for the same listener.
+        Creates a Listener object.
+        callsign: string, must be alphanumeric
+        ip: string, will be converted to an IP object
         """
 
-        self.identifier = identifier
+        if not isinstance(callsign, (str, unicode)):
+            raise TypeError("callsign must be a string")
+
+        if not callsign.isalnum():
+            raise ValueError("callsign must be alphanumeric")
+
+        self.ip = ipaddr.IPAddress(ip)
+        self.callsign = str(callsign).upper()
 
     def __eq__(self, other):
-        return self.identifier == other.identifier
-
-    # compare requests other than __eq__ - we do our best:
-    def __cmp__(self, other):
-        return self.identifier.__cmp__(other.identifier)
+        try:
+            return self.callsign == other.callsign
+        except:
+            return False
