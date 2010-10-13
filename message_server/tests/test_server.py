@@ -58,6 +58,7 @@ class NonSink:
 class TestServer:
     def setup(self):
         self.server = Server()
+        self.source = Listener("2E0DRX", "1.2.3.4")
 
     def teardown(self):
         self.server.shutdown()
@@ -174,8 +175,8 @@ class TestServer:
         assert len(self.server.sinks) == 0
 
     def test_pushes_to_sinks(self):
-        message_li = Message(Listener(0), Message.LISTENER_INFO, None)
-        message_rt = Message(Listener(0), Message.RECEIVED_TELEM, None)
+        message_li = Message(self.source, Message.LISTENER_INFO, None)
+        message_rt = Message(self.source, Message.RECEIVED_TELEM, None)
         self.server.load(TestSinkA)
         self.server.load(TestSinkB)
         self.server.push_message(message_li)
@@ -199,7 +200,7 @@ class TestServer:
         self.server.load(pushback_class)
         self.server.load(pushbackreceiver_class)
         self.server.push_message(
-            Message(Listener(0), Message.RECEIVED_TELEM, 6293))
+            Message(self.source, Message.RECEIVED_TELEM, 6293))
 
         for i in self.server.sinks:
             i.flush()
@@ -287,7 +288,7 @@ class TestServer:
 
     def test_reload_skips_no_messages(self):
         self.server.load(SlowShutdownSink)
-        m = Message(Listener(0), Message.TELEM, None)
+        m = Message(self.source, Message.TELEM, None)
 
         def f():
             self.server.reload(SlowShutdownSink)

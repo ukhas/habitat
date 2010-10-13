@@ -19,8 +19,6 @@
 Tests the Message class, found in ../message.py
 """ 
 
-# TODO: when validation is implemented modify these tests
-
 from nose.tools import raises
 from message_server import Message, Listener
 
@@ -31,6 +29,9 @@ def wrapme(arg):
    pass
 
 class TestMessage:
+    def setup(self):
+        self.source = Listener("2E0DRX", "1.2.3.4")
+
     def test_ids_exist_and_are_unique(self):
         types = set()
         for i in [ "RECEIVED_TELEM", "LISTENER_INFO", "LISTENER_TELEM", 
@@ -40,10 +41,9 @@ class TestMessage:
             types.add(type)
 
     def test_initialiser_accepts_and_stores_data(self):
-        source = Listener(1234)
         mydata = {"asdf": "defg", "hjkl": "yuio"}
-        message = Message(source, Message.RECEIVED_TELEM, mydata)
-        assert message.source == source
+        message = Message(self.source, Message.RECEIVED_TELEM, mydata)
+        assert message.source == self.source
         assert message.type == Message.RECEIVED_TELEM
         assert message.data == mydata
 
@@ -57,14 +57,14 @@ class TestMessage:
 
     @raises(ValueError)
     def test_initialiser_rejects_invalid_type(self):
-        Message(Listener(0), 951, "asdf")
+        Message(self.source, 951, "asdf")
 
     @raises(TypeError)
     def test_initialiser_rejects_garbage_type(self):
-        Message(Listener(0), "asdf", "asdf")
+        Message(self.source, "asdf", "asdf")
 
     def test_initialiser_allows_no_data(self):
-        Message(Listener(0), Message.RECEIVED_TELEM, None)
+        Message(self.source, Message.RECEIVED_TELEM, None)
 
     @raises(TypeError)
     def test_validate_type_rejects_garbage_type(self):
@@ -78,20 +78,53 @@ class TestMessage:
         Message.validate_type(Message.LISTENER_TELEM)
 
 class TestListener:
+    def setup(self):
+        # NB: b & d have different IPs
+        self.listenera = Listener("2E0DRX", "1.2.3.4")
+        self.listenerb = Listener("2E0DRX", "1.2.3.5")
+        self.listenerc = Listener("M0RND", "1.2.3.4")
+        self.listenerd = Listener("M0rnd", "001.2.003.5")
+
     def test_initialiser_accepts_and_stores_data(self):
-        listener = Listener(910)
-        assert listener.identifier == 910
-        listener = Listener(120)
-        assert listener.identifier == 120
+        assert self.listenerb.callsign == "2E0DRX"
+        assert str(self.listenerb.ip) == "1.2.3.5"
+        assert self.listenerc.callsign == "M0RND"
+        assert str(self.listenerc.ip) == "1.2.3.4"
 
-    def test_listener_compares(self):
-        # identifier is still to be implemented, so we'll just try some stuff
-        # NB: "astring".__cmp__() doesn't exist so better hope __eq__ is used
-        for i in [[1,      2, False],
-                  [1,      1, True],
-                  [900,    1, False],
-                  ["asdf", "asdf", True]]:
-            yield self.check_listener_compares, i
+    def test_callsign_compares(self):
+        assert self.listenera.callsign == self.listenerb.callsign
+        assert self.listenera.callsign != self.listenerc.callsign
 
-    def check_listener_compares(self, i):
-        assert (Listener(i[0]) == Listener(i[1])) == i[2]
+    def test_listener_compares_by_callsign(self):
+        """ self.listener compares by callsign (only) """
+        assert self.listenera == self.listenerb
+        assert self.listenera != self.listenerc
+
+    def test_listener_returns_false_on_garbage_compare(self):
+        assert self.listenera != 0
+
+    def test_callsign_toupper(self):
+        assert self.listenerd.callsign == "M0RND"
+        assert self.listenerc == self.listenerd
+
+    @raises(TypeError)
+    def test_rejects_garbage_callsign(self):
+        Listener(0, "1.2.3.4")
+
+    @raises(ValueError)
+    def test_rejects_nonalphanum_callsign(self):
+        Listener("2E0DRX'; DELETE TABLE BALLOONS; --", "1.2.3.4")
+
+    @raises(ValueError) # IPAddress() failures return ValueError
+    def test_rejects_invalid_ip(self):
+        # We use ipaddr which is well tested, so we don't need to spend too
+        # much time making sure it works.
+        Listener("2E0DRX", "1234.1.1.1")
+
+    def test_ip_compares(self):
+        assert self.listenera.ip == self.listenerc.ip
+        assert self.listenera.ip != self.listenerb.ip
+
+    def test_ip_leading_zeros_compare(self):
+        assert self.listenerb.ip == self.listenerd.ip
+        assert str(self.listenerb.ip) == str(self.listenerd.ip)
