@@ -37,7 +37,11 @@ class Message:
         Message.TELEM           - (parsed) telemetry data
     """
 
-    RECEIVED_TELEM, LISTENER_INFO, LISTENER_TELEM, TELEM = types = range(4)
+    type_names = ["RECEIVED_TELEM", "LISTENER_INFO", "LISTENER_TELEM", "TELEM"]
+    types = range(len(type_names))
+    for (type, type_name) in zip(types, type_names):
+        locals()[type_name] = type
+    del type, type_name
 
     def __init__(self, source, type, data):
         """

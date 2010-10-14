@@ -34,11 +34,12 @@ class TestMessage:
 
     def test_ids_exist_and_are_unique(self):
         types = set()
-        for i in [ "RECEIVED_TELEM", "LISTENER_INFO", "LISTENER_TELEM", 
-                   "TELEM" ]:
+        for i in Message.type_names:
             type = getattr(Message, i)
             assert type not in types
             types.add(type)
+        assert types == set(Message.types)
+        assert types == set(range(len(types)))
 
     def test_initialiser_accepts_and_stores_data(self):
         mydata = {"asdf": "defg", "hjkl": "yuio"}
