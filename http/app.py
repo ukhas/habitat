@@ -21,18 +21,44 @@ by a {{f,s,}cgi,http} server.
 """
 
 from message_server import Message, Listener
-import threading
+
+info_message = """
+"habitat" is a web application for tracking the flight path of high altitude
+balloons, relying on a network of users with radios sending in received
+telemetry strings which are parsed into position information and displayed
+on maps.
+
+This is the information message from the HTTP gateway to habitat; a home page
+of sorts. This web application is used to insert messages into the habitat
+message server by HTTP post, and is not meant for direct use.
+
+Source code, documentation, and more information:
+http://github.com/ukhas/habitat
+"""
 
 class InsertApplication:
+    """
+    The InsertApplication class implements the high level functions provided
+    by the http gateway, such as message().
+    """
+
     # We do not allow listeners to insert TELEM messages directly
     FORBIDDEN_TYPES = set([Message.TELEM])
 
-    def __init__(self, server, program, config):
+    # list of methods (below) that requests may call
+    actions = ["message"]
+
+    def __init__(self, server, program):
+        """
+        Creates a new InsertApplication
+        server: message_server.Server object to insert items into
+        program: object with shutdown() and panic() methods
+        """
+
         self.server = server
         self.program = program
-        self.config = config
 
-    def push(self, ip, **kwargs):
+    def message(self, ip, **kwargs):
         """
         Push Action
         ip: string - the IP address of the client
@@ -59,10 +85,3 @@ class InsertApplication:
         message = Message(source, type, kwargs["data"])
 
         self.server.push_message(message)
-
-class FCGIApplication(InsertApplication):
-    def start(self):
-        pass
-
-    def run(self):
-        pass
