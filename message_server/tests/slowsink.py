@@ -20,7 +20,7 @@
 
 import threading
 import time
-from message_server import SimpleSink, ThreadedSink, Message
+from habitat.message_server import SimpleSink, ThreadedSink, Message
 
 class SlowSink():
     def setup(self):

@@ -24,8 +24,8 @@ import sys
 import time
 import threading
 from nose.tools import raises, with_setup
-from message_server import Sink, SimpleSink, Server, Message, Listener
-from utils.tests.reloadable_module import ReloadableModuleWriter
+from habitat.message_server import Sink, SimpleSink, Server, Message, Listener
+from habitat.utils.tests.reloadable_module import ReloadableModuleWriter
 
 class FakeSink(SimpleSink):
     def setup(self):
@@ -252,7 +252,7 @@ class TestServer:
         values = set([getattr(Message, i) for i in types])
         values_string = ", ".join(["Message.%s" % t for t in types])
         code = "from fakesink import TestSink\n" + \
-               "from message_server import Message\n" + \
+               "from habitat.message_server import Message\n" + \
                "class ReloadableSink(TestSink):\n" + \
                "    testtypes = [%s]\n"
         return (code % values_string, values)

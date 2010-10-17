@@ -20,7 +20,7 @@ This module implements the high-level insert operations which will be called
 by a {{f,s,}cgi,http} server.
 """
 
-from message_server import Message, Listener
+from habitat.message_server import Message, Listener
 
 info_message = """
 "habitat" is a web application for tracking the flight path of high altitude

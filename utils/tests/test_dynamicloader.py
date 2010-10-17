@@ -24,15 +24,15 @@ import time
 import os
 import functools
 import datetime
-from utils import dynamicloader
 from nose.tools import raises
-from utils.tests import dynamicloadme
-from utils.tests.reloadable_module import ReloadableModuleWriter
+from habitat.utils import dynamicloader
+from habitat.utils.tests import dynamicloadme
+from habitat.utils.tests.reloadable_module import ReloadableModuleWriter
 
 # For fullname() tests
-from utils.tests.dynamicloadme import AClass
+from habitat.utils.tests.dynamicloadme import AClass
 
-unimp_name = "utils.tests.dynamicloadunimp"
+unimp_name = "habitat.utils.tests.dynamicloadunimp"
 
 class TestLoad:
     """dynamicloader.load():"""

@@ -22,8 +22,8 @@ Tests the Sink class, found in ../sink.py
 import threading
 import functools
 from nose.tools import raises
-from message_server import SimpleSink, ThreadedSink
-from message_server import Message, Listener, Server
+from habitat.message_server import SimpleSink, ThreadedSink
+from habitat.message_server import Message, Listener, Server
 
 from slowsink import *
 

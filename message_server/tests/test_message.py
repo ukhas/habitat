@@ -19,8 +19,8 @@
 Tests the Message class, found in ../message.py
 """ 
 
+from habitat.message_server import Message, Listener
 from nose.tools import raises
-from message_server import Message, Listener
 
 def wrapme(arg):
    """

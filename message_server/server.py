@@ -23,7 +23,7 @@ Contains 'Server', the main messager_server class
 import sys
 import inspect
 import threading
-from utils import dynamicloader
+from habitat.utils import dynamicloader
 from sink import Sink, SimpleSink, ThreadedSink
 
 class Server:

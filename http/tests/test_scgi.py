@@ -19,9 +19,9 @@
 Tests the scgi module app, which creates a scgi application server.
 """
 
-from http.app import info_message
-from http.scgi import SCGIApplication
-from message_server import Message
+from habitat.http.app import info_message
+from habitat.http.scgi import SCGIApplication
+from habitat.message_server import Message
 from nose.tools import raises
 from serverstub import ServerStub
 from do_scgi_request import do_scgi_request

@@ -19,3 +19,5 @@
 The http sub-module provides a way to insert messages into the
 message_server by HTTP Post
 """
+
+from scgi import SCGIApplication

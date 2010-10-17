@@ -20,8 +20,8 @@ Unit tests for the Parser's Sink class.
 """
 
 from nose.tools import raises
-from message_server import Server, Message
-from parser import ParserSink, ParserModule
+from habitat.message_server import Server, Message
+from habitat.parser import ParserSink, ParserModule
 
 class FilterClass:
     def __call__(self, message):

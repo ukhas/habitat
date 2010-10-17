@@ -24,8 +24,8 @@ back.
 
 import inspect
 
-from message_server import SimpleSink, Message
-from parser import ParserModule
+from habitat.message_server import SimpleSink, Message
+from parser_module import ParserModule
 
 class ParserSink(SimpleSink):
     BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = locations = range(3)
