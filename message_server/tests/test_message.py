@@ -96,7 +96,7 @@ class TestListener:
         assert self.listenera.callsign != self.listenerc.callsign
 
     def test_listener_compares_by_callsign(self):
-        """ self.listener compares by callsign (only) """
+        """self.listener compares by callsign (only)"""
         assert self.listenera == self.listenerb
         assert self.listenera != self.listenerc
 
