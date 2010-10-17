@@ -175,7 +175,7 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
             response += "Content-Type: text/plain\r\n"
             response += "\r\n"
             response += "Action not found. Try one of these: "
-            response += " ".join(self.actions)
+            response += " ".join(self.server.actions)
             response += "\r\n"
             self.request.sendall(response)
             return
@@ -184,7 +184,7 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
             args = json.loads(self.post_data)
             action_function = getattr(self.server, action)
             action_function(self.environ["REMOTE_ADDR"], **args)
-        except ValueError:
+        except (TypeError, ValueError):
             self.request.sendall("Status: 400 Bad Request\r\n\r\n")
             raise
 

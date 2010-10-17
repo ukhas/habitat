@@ -68,6 +68,9 @@ def do_scgi_request(socket_type, socket_addr, url, data=None, headers=None):
 
     client.close()
 
+    if len(response) == 0:
+        raise ValueError("empty response")
+
     pos = 0
     headers = {}
     while True:

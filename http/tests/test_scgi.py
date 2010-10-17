@@ -157,6 +157,11 @@ class TestSCGIBehaviour:
         assert headers["Content-Type"] == "text/plain"
         assert body == info_message
 
+    def test_handles_nonexistant_action(self):
+        (headers, body) = scgi_req("/raaaaawr", test_message)
+        assert headers["Status"].startswith("404")
+        assert len(self.messages) == 0
+
     def test_message_action_passes_all_information(self):
         (headers, body) = scgi_req("/message", test_message)
         assert headers["Status"].startswith("200")
@@ -171,11 +176,16 @@ class TestSCGIBehaviour:
 
     def test_catches_invalid_requests(self):
         self.check_catches_invalid_requests({"callsign": "invalid:::"})
+        self.check_catches_invalid_requests({"callsign": 1})
+        self.check_catches_invalid_requests({"callsign": False})
         self.check_catches_invalid_requests({"type": "TELEM"})
         self.check_catches_invalid_requests({"type": "asdf"})
+        self.check_catches_invalid_requests({"type": 2})
+        self.check_catches_invalid_requests({"type": None})
 
     def check_catches_invalid_requests(self, mod):
         self.ignore_exceptions.append(ValueError)
+        self.ignore_exceptions.append(TypeError)
         modded_test_message = test_message_d.copy()
         modded_test_message.update(mod)
         modded_test_message = json.dumps(modded_test_message)
