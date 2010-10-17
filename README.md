@@ -15,4 +15,3 @@ libraries are required in order to use habitat
 
  - python-ipaddr
  - nosetests
-
