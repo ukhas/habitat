@@ -46,6 +46,11 @@ class TestSCGIStartupShutdown:
     def teardown(self):
         self.scgiapp.shutdown()
 
+        # Git won't clean, touch, or acknowledge the existance of the socket
+        # We may as well clean up after ourselves. This should not fail,
+        # so there isn't an ENOENT check.
+        os.unlink(socket_file)
+
     def test_start_does_not_fork(self):
         old_fork = os.fork
         def new_fork(*args, **kwargs):
