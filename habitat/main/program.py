@@ -16,9 +16,27 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The code in this module drives the "main" method; it gets called when 
-`habitat` is run.
+The code in this module drives the "main" function itself, depending on the
+sub-modules of habitat.main.
 """
 
+from habitat.message_server import Server
+from habitat.http import SCGIApplication
 from options import get_options
-from program import Program
+
+class Program:
+    def main(self):
+        self.options = get_options()
+        self.server = Server(None, self)
+        self.scgiapp = SCGIApplication(self.server, self,
+                                       self.options["socket_file"])
+        self.scgiapp.start()
+
+    def reload(self):
+        pass
+
+    def shutdown(self):
+        pass
+
+    def panic(self):
+        pass
