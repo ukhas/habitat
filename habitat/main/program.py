@@ -23,6 +23,7 @@ sub-modules of habitat.main.
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
 from options import get_options
+from signals import SignalListener
 
 class Program:
     def main(self):
@@ -30,7 +31,11 @@ class Program:
         self.server = Server(None, self)
         self.scgiapp = SCGIApplication(self.server, self,
                                        self.options["socket_file"])
+        self.signallistener = SignalListener(self)
+
+        self.signallistener.setup()
         self.scgiapp.start()
+        self.signallistener.listen()
 
     def reload(self):
         pass

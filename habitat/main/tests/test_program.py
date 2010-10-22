@@ -21,11 +21,12 @@ function spends most of its time calling functions in other modules in
 habitat.main, so the tests are fairly boring.
 """
 
-from habitat.main import Program
+from habitat.main import Program, SignalListener
 from habitat.main.options import get_options
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
 import habitat.main.program as program_module
+from nose.tools import raises
 import sys
 
 # Replace get_options
@@ -61,7 +62,28 @@ class DumbSCGIApplication:
 # in its own unit test, and provided Program.main() calls it and
 # Program.shutdown()/Program.reload()/Program.panic() work, it's good -
 # the signal watching function isn't going to return in the real thing
-# TODO
+
+# listen() will block, so it should be the last thing program calls.
+# Therefore we raise this in listen; and check that it has been raised
+# (and the test's asserts check things that have happened before it was
+# raised)
+class Listening(Exception):
+    pass
+
+dumbsignallisteners = []
+class DumbSignalListener:
+    def __init__(self, program):
+        self.program = program
+        self.setup_hits = 0
+        self.listen_hits = 0
+        dumbsignallisteners.append(self)
+
+    def setup(self):
+        self.setup_hits += 1
+
+    def listen(self):
+        self.listen_hits += 1
+        raise Listening
 
 class TestProgram:
     def setup(self):
@@ -69,14 +91,17 @@ class TestProgram:
         assert program_module.get_options == get_options
         assert program_module.Server == Server
         assert program_module.SCGIApplication == SCGIApplication
+        assert program_module.SignalListener == SignalListener
         program_module.get_options = new_get_options
         program_module.Server = DumbServer
         program_module.SCGIApplication = DumbSCGIApplication
+        program_module.SignalListener = DumbSignalListener
 
         # Clear the list, reset the counter
+        new_get_options.hits = 0
         dumbservers[:] = []
         dumbscgiapps[:] = []
-        new_get_options.hits = 0
+        dumbsignallisteners[:] = []
 
         # Replace argv
         self.old_argv = sys.argv
@@ -92,39 +117,32 @@ class TestProgram:
         assert program_module.get_options == new_get_options
         assert program_module.Server == DumbServer
         assert program_module.SCGIApplication == DumbSCGIApplication
+        assert program_module.SignalListener == DumbSignalListener
         program_module.get_options = get_options
         program_module.Server = Server
         program_module.SCGIApplication = SCGIApplication
+        program_module.SignalListener = SignalListener
 
     def test_main(self):
         # Run main
         p = Program()
-        p.main()
+        raises(Listening)(p.main)()
 
         # uses_options
         assert new_get_options.hits == 1
 
-        # creates_message_server
+        # TODO:connects_to_couch
+
         assert len(dumbservers) == 1
-
-        # gives_message_server_program_object
         assert dumbservers[0].program == p
+        # TODO:gives_server_correct_config_document
 
-        # creates_scgi_application
         assert len(dumbscgiapps) == 1
-
-        # gives_scgi_application_server_and_program_objects
         assert dumbscgiapps[0].program == p
         assert dumbscgiapps[0].server == dumbservers[0]
-
-        # gives_scgi_application_socket_file
         assert dumbscgiapps[0].socket_file == "socketfile"
-
-        # starts_scgi_server
         assert dumbscgiapps[0].start_hits == 1
 
-        # connects_to_couch
-        pass
-
-        # gives_server_correct_config_document
-        pass
+        assert len(dumbsignallisteners) == 1
+        assert dumbsignallisteners[0].setup_hits == 1
+        assert dumbsignallisteners[0].listen_hits == 1

@@ -21,4 +21,5 @@ The code in this module drives the "main" method; it gets called when
 """
 
 from program import Program
+from signals import SignalListener
 import options
