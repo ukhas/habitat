@@ -21,7 +21,7 @@ reads command line options and a configuration file to set up the couch
 connection.
 """
 
-import habitat.main.options as options
+from habitat.main import options
 from nose.tools import raises
 import sys
 import os
@@ -37,13 +37,19 @@ invalid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 missing_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             "habitat_missing.cfg")
 
-assert options.default_configuration_file == "/etc/habitat/habitat.cfg"
-options.default_configuration_file = default_file
 
 class CaughtError(Exception):
     pass
 
 class TestOptions:
+    def setup(self):
+        assert options.default_configuration_file == "/etc/habitat/habitat.cfg"
+        options.default_configuration_file = default_file
+
+    def teardown(self):
+        assert options.default_configuration_file == default_file
+        options.default_configuration_file = "/etc/habitat/habitat.cfg"
+
     def test_optparse_is_setup_correctly(self):
         expect_options = [ ("-f", "--config-file"),
                            ("-c", "--couch"),

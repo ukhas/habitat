@@ -21,7 +21,8 @@ function spends most of its time calling functions in other modules in
 habitat.main, so the tests are fairly boring.
 """
 
-from habitat.main import Program, get_options
+from habitat.main import Program
+from habitat.main.options import get_options
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
 import habitat.main.program as program_module
@@ -34,9 +35,6 @@ def new_get_options():
     return old_get_options()
 new_get_options.hits = 0
 
-assert program_module.get_options == get_options
-program_module.get_options = new_get_options
-
 # Replace the Server class with something that does nothing
 dumbservers = []
 class DumbServer:
@@ -44,9 +42,6 @@ class DumbServer:
         self.config = config
         self.program = program
         dumbservers.append(self)
-
-assert program_module.Server == Server
-program_module.Server = DumbServer
 
 # Replace SCGIApplication with something that does nothing
 dumbscgiapps = []
@@ -62,9 +57,6 @@ class DumbSCGIApplication:
     def start(self):
         self.start_hits += 1
 
-assert program_module.SCGIApplication == SCGIApplication
-program_module.SCGIApplication = DumbSCGIApplication
-
 # Replace signal with something that returns instantly. Signal is tested
 # in its own unit test, and provided Program.main() calls it and
 # Program.shutdown()/Program.reload()/Program.panic() work, it's good -
@@ -73,6 +65,14 @@ program_module.SCGIApplication = DumbSCGIApplication
 
 class TestProgram:
     def setup(self):
+        # Do the replacing:
+        assert program_module.get_options == get_options
+        assert program_module.Server == Server
+        assert program_module.SCGIApplication == SCGIApplication
+        program_module.get_options = new_get_options
+        program_module.Server = DumbServer
+        program_module.SCGIApplication = DumbSCGIApplication
+
         # Clear the list, reset the counter
         dumbservers[:] = []
         dumbscgiapps[:] = []
@@ -80,7 +80,21 @@ class TestProgram:
 
         # Replace argv
         self.old_argv = sys.argv
-        sys.argv = ["habitat", "-c", "couchserver", "-s", "socketfile"]
+        self.new_argv = ["habitat", "-c", "couchserver", "-s", "socketfile"]
+        sys.argv = self.new_argv
+
+    def teardown(self):
+        # Restore argv
+        assert sys.argv == self.new_argv
+        sys.argv = self.old_argv
+
+        # Restore options, Server, SCGIApplication
+        assert program_module.get_options == new_get_options
+        assert program_module.Server == DumbServer
+        assert program_module.SCGIApplication == DumbSCGIApplication
+        program_module.get_options = get_options
+        program_module.Server = Server
+        program_module.SCGIApplication = SCGIApplication
 
     def test_main(self):
         # Run main
@@ -114,7 +128,3 @@ class TestProgram:
 
         # gives_server_correct_config_document
         pass
-
-    def teardown(self):
-        # Restore argv
-        sys.argv = self.old_argv

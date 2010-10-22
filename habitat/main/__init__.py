@@ -20,5 +20,5 @@ The code in this module drives the "main" method; it gets called when
 `habitat` is run.
 """
 
-from options import get_options
 from program import Program
+import options
