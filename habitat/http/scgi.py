@@ -36,7 +36,7 @@ import json
 class SCGIApplication(InsertApplication,
                       SocketServer.UnixStreamServer):
 
-    def __init__(self, server, program, socket_file, timeout):
+    def __init__(self, server, program, socket_file, timeout=1):
         InsertApplication.__init__(self, server, program)
         SocketServer.UnixStreamServer.__init__(self, socket_file, 
                                                SCGIHandler, False)
@@ -60,7 +60,7 @@ class SCGIApplication(InsertApplication,
         self.server_activate()
         self.accept_thread.start()
 
-        # Fix for http://pastie.org/1227636; this is a bit ugly.
+        # Fix for http://pastie.org/1227636 - this is a bit ugly.
         try:
             while not self._BaseServer__serving:
                 time.sleep(0.001)
