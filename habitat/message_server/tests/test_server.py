@@ -57,7 +57,7 @@ class NonSink:
 
 class TestServer:
     def setup(self):
-        self.server = Server()
+        self.server = Server(None, None)
         self.source = Listener("2E0DRX", "1.2.3.4")
 
     def teardown(self):

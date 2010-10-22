@@ -107,7 +107,7 @@ class TestSink:
         assert isinstance(sink.types, set)
 
     def test_sink_stores_server(self):
-        server = Server()
+        server = Server(None, None)
         sink = EmptySink(server)
         assert sink.server == server
 

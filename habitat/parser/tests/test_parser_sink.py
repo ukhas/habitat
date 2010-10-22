@@ -42,7 +42,7 @@ class Module2(ParserModule):
 
 class TestParserSink:
     def setUp(self):
-        self.sink = ParserSink(Server())
+        self.sink = ParserSink(Server(None, None))
 
     def test_parser_has_RECEIVED_TELEM_type(self):
         """sink has RECEIVED_TELEM type"""

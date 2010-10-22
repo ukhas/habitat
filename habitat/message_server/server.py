@@ -27,7 +27,10 @@ from habitat.utils import dynamicloader
 from sink import Sink, SimpleSink, ThreadedSink
 
 class Server:
-    def __init__(self):
+    def __init__(self, config, program):
+        self.config = config
+        self.program = program
+
         self.sinks = []
         self.lock = threading.RLock()
 
