@@ -21,10 +21,11 @@ reads command line options and a configuration file to set up the couch
 connection.
 """
 
-from habitat.main import options
-from nose.tools import raises, with_setup
+import habitat.main.options as options
+from nose.tools import raises
 import sys
 import os
+import errno
 import ConfigParser
 
 default_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -36,8 +37,8 @@ invalid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 missing_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             "habitat_missing.cfg")
 
-assert options.parser.get_option("-f").default == "/etc/habitat/habitat.cfg"
-options.parser.set_defaults(config_file=default_file)
+assert options.default_configuration_file == "/etc/habitat/habitat.cfg"
+options.default_configuration_file = default_file
 
 class CaughtError(Exception):
     pass
@@ -45,7 +46,8 @@ class CaughtError(Exception):
 class TestOptions:
     def test_optparse_is_setup_correctly(self):
         expect_options = [ ("-f", "--config-file"),
-                           ("-c", "--couch") ]
+                           ("-c", "--couch"),
+                           ("-s", "--socket") ]
         for (short, long) in expect_options:
             assert options.parser.get_option(short).get_opt_string() == long
 
@@ -53,6 +55,7 @@ class TestOptions:
         config = ConfigParser.RawConfigParser()
         config.add_section("habitat")
         config.set("habitat", "couch", value)
+        config.set("habitat", "socket_file", "socket")
 
         with open(name, "wb") as f:
             config.write(f)
@@ -82,7 +85,7 @@ class TestOptions:
         result = options.get_options()
         sys.argv = old_argv
 
-        assert result.couch == expect
+        assert result["couch"] == expect
 
     def check_get_options_fails(self, argv):
         old_argv = sys.argv
@@ -98,3 +101,33 @@ class TestOptions:
 
         options.parser.error = self.old_error
         sys.argv = old_argv
+
+    def remove_default(self):
+        try:
+            os.unlink(default_file)
+        except OSError, e:
+            if e.errno != errno.ENOENT:
+                raise
+
+    def test_missing_default_file_does_not_fail(self):
+        self.remove_default()
+        self.check_get_options(["-c", "cmdline", "-s", "scmdline"], "cmdline")
+
+    def test_missing_explicitly_stated_default_file_does_fail(self):
+        self.remove_default()
+        self.check_get_options_fails(["-c", "irrelevant", "-f", default_file])
+
+    def test_lack_of_enough_information_fails(self):
+        flags = {"-c": "couch", "-s": "socket"}
+        self.remove_default()
+
+        for i in flags.keys():
+            new_flags = flags.copy()
+            del new_flags[i]
+
+            argv = []
+            for (f, v) in new_flags.items():
+                argv.append(f)
+                argv.append(v)
+
+            self.check_get_options_fails(argv)

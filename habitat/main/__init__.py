@@ -20,4 +20,4 @@ The code in this module drives the "main" method; it gets called when
 `habitat` is run.
 """
 
-import options
+from options import get_options
