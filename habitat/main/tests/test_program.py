@@ -28,6 +28,9 @@ from habitat.http import SCGIApplication
 import habitat.main.program as program_module
 from nose.tools import raises
 import sys
+import Queue
+import threading
+import signal
 
 # Replace get_options
 old_get_options = get_options
@@ -42,7 +45,11 @@ class DumbServer:
     def __init__(self, config, program):
         self.config = config
         self.program = program
+        self.shutdown_hits = 0
         dumbservers.append(self)
+
+    def shutdown(self):
+        self.shutdown_hits += 1
 
 # Replace SCGIApplication with something that does nothing
 dumbscgiapps = []
@@ -53,10 +60,14 @@ class DumbSCGIApplication:
         self.socket_file = socket_file
         self.timeout = timeout
         self.start_hits = 0
+        self.shutdown_hits = 0
         dumbscgiapps.append(self)
 
     def start(self):
         self.start_hits += 1
+
+    def shutdown(self):
+        self.shutdown_hits += 1
 
 # Replace signal with something that returns instantly. Signal is tested
 # in its own unit test, and provided Program.main() calls it and
@@ -76,6 +87,7 @@ class DumbSignalListener:
         self.program = program
         self.setup_hits = 0
         self.listen_hits = 0
+        self.exit_hits = 0
         dumbsignallisteners.append(self)
 
     def setup(self):
@@ -84,6 +96,16 @@ class DumbSignalListener:
     def listen(self):
         self.listen_hits += 1
         raise Listening
+
+    def exit(self):
+        self.exit_hits += 1
+
+# Replacement for run so we can keep track of the threads we spawn.
+# Anything that tests main will want to replace run first; run is not replaced
+# in setup() since it's the initialised object that must be modified
+def new_run():
+    new_run.queue.put(threading.current_thread())
+new_run.queue = Queue.Queue()
 
 class TestProgram:
     def setup(self):
@@ -123,9 +145,14 @@ class TestProgram:
         program_module.SCGIApplication = SCGIApplication
         program_module.SignalListener = SignalListener
 
+    def test_init(self):
+        p = Program()
+        assert isinstance(p.queue, Queue.Queue)
+
     def test_main(self):
         # Run main
         p = Program()
+        p.run = new_run
         raises(Listening)(p.main)()
 
         # uses_options
@@ -146,3 +173,38 @@ class TestProgram:
         assert len(dumbsignallisteners) == 1
         assert dumbsignallisteners[0].setup_hits == 1
         assert dumbsignallisteners[0].listen_hits == 1
+
+        assert new_run.queue.get() == p.thread
+        assert new_run.queue.qsize() == 0
+        p.thread.join()
+
+    def test_shutdown(self):
+        p = Program()
+        p.shutdown()
+        assert p.queue.qsize() == 1
+        assert p.queue.get() == Program.SHUTDOWN
+
+    def test_reload(self):
+        p = Program()
+        p.reload()
+        assert p.queue.qsize() == 1
+        assert p.queue.get() == Program.RELOAD
+
+    def test_panic(self):
+        p = Program()
+        p.panic()
+        assert p.queue.qsize() == 1
+        assert p.queue.get() == Program.SHUTDOWN
+        assert signal.alarm(0) > 50
+
+    def test_shutdown_fullrun(self):
+        p = Program()
+        # We did not replace p.run, so a new thread will be started:
+        raises(Listening)(p.main)()
+
+        p.shutdown()
+        p.thread.join()
+
+        assert dumbsignallisteners[0].exit_hits == 1
+        assert dumbscgiapps[0].shutdown_hits == 1
+        assert dumbservers[0].shutdown_hits == 1

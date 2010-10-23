@@ -34,6 +34,7 @@ import os
 class SignalListener:
     def __init__(self, program):
         self.program = program
+        self.shutdown_event = threading.Event()
 
     def check_thread(self):
         assert threading.current_thread().name == "MainThread"
@@ -63,8 +64,12 @@ class SignalListener:
 
         self.check_thread()
 
-        while True:
-            signal.pause()
+        try:
+            while True:
+                signal.pause()
+        except SystemExit:
+            self.shutdown_event.set()
+            raise
 
     def exit(self):
         """
@@ -72,6 +77,7 @@ class SignalListener:
         loop to exit (the handler will call sys.exit())
         """
         os.kill(os.getpid(), signal.SIGUSR1)
+        self.shutdown_event.wait()
 
     def handle(self, signum, stack):
         if signum == signal.SIGTERM or signum == signal.SIGINT:

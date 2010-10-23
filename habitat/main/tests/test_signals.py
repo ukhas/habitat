@@ -26,6 +26,7 @@ from nose.tools import raises
 import signal
 import threading
 import os
+import time
 
 class PausedManyTimes(Exception):
     pass
@@ -40,14 +41,18 @@ class FakeSignalModule:
     def __init__(self):
         self.signals = {}
         self.pause_hits = 0
+        self.emulate_sysexit = False
 
     def signal(self, signal, handler):
         assert not signal in self.signals
         self.signals[signal] = handler
 
     def pause(self):
+        if self.emulate_sysexit:
+            raise SystemExit
+
         self.pause_hits += 1
-        if self.pause_hits == 50:
+        if self.pause_hits >= 50:
             raise PausedManyTimes
 
 class FakeOSModule:
@@ -113,9 +118,29 @@ class TestSignalListener:
         self.signal_listener.listen()
 
     def test_exit_raises_usr1(self):
+        self.signal_listener.shutdown_event.set()
         self.signal_listener.exit()
         assert len(self.fakeos.sent_signals) == 1
         assert self.fakeos.sent_signals[0] == signal.SIGUSR1
+
+    def test_listen_passes_sysexit_and_sets_event(self):
+        raises(PausedManyTimes)(self.signal_listener.listen)()
+        assert not self.signal_listener.shutdown_event.is_set()
+        self.fakesignal.emulate_sysexit = True
+        raises(SystemExit)(self.signal_listener.listen)()
+        assert self.signal_listener.shutdown_event.is_set()
+
+    def test_exit_waits_for_event(self):
+        t = threading.Thread(target=self.signal_listener.exit)
+        t.start()
+        while not t.is_alive():
+            time.sleep(0.001)
+        assert not self.signal_listener.shutdown_event.is_set()
+        time.sleep(0.001)
+        assert t.is_alive()
+        self.signal_listener.shutdown_event.set()
+        time.sleep(0.001)
+        assert not t.is_alive()
 
     def test_handle_term_calls_shutdown(self):
         """handle(TERM|INT) calls shutdown"""
@@ -131,6 +156,7 @@ class TestSignalListener:
 
     @raises(SystemExit)
     def test_handle_usr1_calls_sys_exit(self):
+        """handle(USR1) calls sys.exit"""
         self.signal_listener.handle(signal.SIGUSR1, None)
 
     def check_method_checks_thread(self, method):

@@ -24,24 +24,53 @@ from habitat.message_server import Server
 from habitat.http import SCGIApplication
 from options import get_options
 from signals import SignalListener
+import Queue
+import threading
+import signal
+import sys
 
 class Program:
+    (RELOAD, SHUTDOWN) = range(2)
+
+    def __init__(self):
+        self.queue = Queue.Queue()
+
     def main(self):
         self.options = get_options()
         self.server = Server(None, self)
         self.scgiapp = SCGIApplication(self.server, self,
                                        self.options["socket_file"])
         self.signallistener = SignalListener(self)
+        self.thread = threading.Thread(target=self.run,
+                                       name="Shutdown Handling Thread")
 
         self.signallistener.setup()
         self.scgiapp.start()
+        self.thread.start()
+
         self.signallistener.listen()
 
     def reload(self):
-        pass
+        self.queue.put(Program.RELOAD)
 
     def shutdown(self):
-        pass
+        self.queue.put(Program.SHUTDOWN)
 
     def panic(self):
-        pass
+        signal.alarm(60)
+        self.shutdown()
+
+    # run() does not require an item to terminate its thread. When shutdown
+    # is called, after having cleaned up the Program.run() thread should be
+    # the only one remaining, and it will then exit, killing the process.
+    def run(self):
+        while True:
+            item = self.queue.get()
+
+            if item == Program.SHUTDOWN:
+                self.signallistener.exit()
+                self.scgiapp.shutdown()
+                self.server.shutdown()
+                sys.exit()
+            elif item == Program.RELOAD:
+                pass
