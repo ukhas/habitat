@@ -18,10 +18,18 @@
 """
 This class listens for signals forever and calls the appropriate methods
 of Program when it receives one that it is looking for.
+
+It responds to the following signals:
+ - SIGTERM, SIGINT: calls Program.shutdown()
+ - SIGHUP: calls Program.reload()
+ - SIGUSR1: exits the listen() loop by calling sys.exit/raising SystemExit
+   (NB: the listen() loop will be running in MainThread)
 """
 
 import signal
 import threading
+import sys
+import os
 
 class SignalListener:
     def __init__(self, program):
@@ -31,19 +39,44 @@ class SignalListener:
         assert threading.current_thread().name == "MainThread"
 
     def setup(self):
+        """
+        setup() installs signal handlers for the signals that we want to
+        catch.
+
+        Must be called in the MainThread
+        """
+
         self.check_thread()
 
-        for signum in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
+        for signum in [signal.SIGTERM, signal.SIGINT,
+                       signal.SIGHUP, signal.SIGUSR1]:
             signal.signal(signum, self.handle)
 
     def listen(self):
+        """
+        listen() calls signal.pause() indefinitely, meaning that any
+        signal sent to the process can be caught instantly and unobtrusivly
+        (and without messing up someone's system call)
+
+        Must be called in the MainThread
+        """
+
         self.check_thread()
 
         while True:
             signal.pause()
+
+    def exit(self):
+        """
+        exit() raises SIGUSR1 in this process, causing the infinite listen()
+        loop to exit (the handler will call sys.exit())
+        """
+        os.kill(os.getpid(), signal.SIGUSR1)
 
     def handle(self, signum, stack):
         if signum == signal.SIGTERM or signum == signal.SIGINT:
             self.program.shutdown()
         elif signum == signal.SIGHUP:
             self.program.reload()
+        elif signum == signal.SIGUSR1:
+            sys.exit()

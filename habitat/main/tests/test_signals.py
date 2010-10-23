@@ -25,6 +25,7 @@ import habitat.main.signals as signals_module
 from nose.tools import raises
 import signal
 import threading
+import os
 
 class PausedManyTimes(Exception):
     pass
@@ -32,7 +33,9 @@ class PausedManyTimes(Exception):
 # I know this is actually a class. But think of it as a module,
 # in that I can call FakeSignalModule.signal(sig, handler) and .pause()
 class FakeSignalModule:
-    (SIGTERM, SIGINT, SIGHUP) = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)
+    for sig in ["SIGTERM", "SIGINT", "SIGHUP", "SIGUSR1"]:
+        locals()[sig] = getattr(signal, sig)
+    del sig
 
     def __init__(self):
         self.signals = {}
@@ -46,6 +49,17 @@ class FakeSignalModule:
         self.pause_hits += 1
         if self.pause_hits == 50:
             raise PausedManyTimes
+
+class FakeOSModule:
+    def __init__(self):
+        self.sent_signals = []
+
+    def kill(self, pid, signum):
+        assert pid == 1337
+        self.sent_signals.append(signum)
+
+    def getpid(self):
+        return 1337
 
 class DumbProgram:
     def __init__(self):
@@ -68,29 +82,40 @@ class DumbProgram:
 class TestSignalListener:
     def setup(self):
         self.fakesignal = FakeSignalModule()
+        self.fakeos = FakeOSModule()
         self.dumbprogram = DumbProgram()
 
         assert signals_module.signal == signal
+        assert signals_module.os == os
         signals_module.signal = self.fakesignal
+        signals_module.os = self.fakeos
 
         self.signal_listener = SignalListener(self.dumbprogram)
 
     def teardown(self):
         assert signals_module.signal == self.fakesignal
+        assert signals_module.os == self.fakeos
         signals_module.signal = signal
+        signals_module.os = os
 
     def test_setup_installs_handlers(self):
         self.signal_listener.setup()
         sigs = self.fakesignal.signals
         handle = self.signal_listener.handle
-        assert len(sigs) == 3
+        assert len(sigs) == 4
         assert sigs[signal.SIGHUP] == handle
         assert sigs[signal.SIGTERM] == handle
         assert sigs[signal.SIGINT] == handle
+        assert sigs[signal.SIGUSR1] == handle
 
     @raises(PausedManyTimes)
     def test_listen_calls_pause_repeatedly(self):
         self.signal_listener.listen()
+
+    def test_exit_raises_usr1(self):
+        self.signal_listener.exit()
+        assert len(self.fakeos.sent_signals) == 1
+        assert self.fakeos.sent_signals[0] == signal.SIGUSR1
 
     def test_handle_term_calls_shutdown(self):
         """handle(TERM|INT) calls shutdown"""
@@ -103,6 +128,10 @@ class TestSignalListener:
         """handle(HUP) calls reload"""
         self.signal_listener.handle(signal.SIGHUP, None)
         assert self.dumbprogram.hits() == (1, 0, 0)
+
+    @raises(SystemExit)
+    def test_handle_usr1_calls_sys_exit(self):
+        self.signal_listener.handle(signal.SIGUSR1, None)
 
     def check_method_checks_thread(self, method):
         assert threading.current_thread().name == "MainThread"
