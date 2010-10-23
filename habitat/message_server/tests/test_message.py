@@ -22,12 +22,6 @@ Tests the Message class, found in ../message.py
 from habitat.message_server import Message, Listener
 from nose.tools import raises
 
-def wrapme(arg):
-   """
-   Test Docstring
-   """
-   pass
-
 class TestMessage:
     def setup(self):
         self.source = Listener("2E0DRX", "1.2.3.4")

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Copyright 2010 (C) Daniel Richman
 #
 # This file is part of habitat.
@@ -15,19 +16,5 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-habitat is a web application for tracking the flight path of high altitude
-balloons, relying on a network of users with radios sending in received
-telemetry strings which are parsed into position information and displayed
-on maps.
-"""
-
-__name__ = "habitat"
-__version__ = "0.0.1"
-__copyright__ = "Copyright 2010 (C) Adam Greig, Daniel Richman"
-
-import main
-import http
-import message_server
-import parser
-import utils
+import habitat
+habitat.main.Program().main()

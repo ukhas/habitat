@@ -16,18 +16,10 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-habitat is a web application for tracking the flight path of high altitude
-balloons, relying on a network of users with radios sending in received
-telemetry strings which are parsed into position information and displayed
-on maps.
+The code in this module drives the "main" method; it gets called when 
+`habitat` is run.
 """
 
-__name__ = "habitat"
-__version__ = "0.0.1"
-__copyright__ = "Copyright 2010 (C) Adam Greig, Daniel Richman"
-
-import main
-import http
-import message_server
-import parser
-import utils
+from program import Program
+from signals import SignalListener
+import options
