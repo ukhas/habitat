@@ -20,14 +20,15 @@ The code in this module drives the "main" function itself, depending on the
 sub-modules of habitat.main.
 """
 
+import sys
+import signal
+import threading
+import Queue
+
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
-from options import get_options
-from signals import SignalListener
-import Queue
-import threading
-import signal
-import sys
+from habitat.main.options import get_options
+from habitat.main.signals import SignalListener
 
 class Program:
     (RELOAD, SHUTDOWN) = range(2)

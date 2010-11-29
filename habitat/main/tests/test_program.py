@@ -21,16 +21,18 @@ function spends most of its time calling functions in other modules in
 habitat.main, so the tests are fairly boring.
 """
 
-from habitat.main import Program, SignalListener
-from habitat.main.options import get_options
+import sys
+import signal
+import threading
+import Queue
+
+from nose.tools import raises
+
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
+from habitat.main import Program, SignalListener
+from habitat.main.options import get_options
 import habitat.main.program as program_module
-from nose.tools import raises
-import sys
-import Queue
-import threading
-import signal
 
 # Replace get_options
 old_get_options = get_options

@@ -20,12 +20,15 @@ Tests the Dynamic Loader module, ../dynamicloader.py
 """ 
 
 import sys
-import time
 import os
+import time
 import functools
 import datetime
+
 from nose.tools import raises
+
 from habitat.utils import dynamicloader
+
 from habitat.utils.tests import dynamicloadme
 from habitat.utils.tests.reloadable_module import ReloadableModuleWriter
 

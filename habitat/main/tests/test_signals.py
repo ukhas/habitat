@@ -20,13 +20,15 @@ Tests signals.listen, which listens for signals forever and calls methods
 of Program when it receives one that it is looking for.
 """
 
-from habitat.main import SignalListener
-import habitat.main.signals as signals_module
-from nose.tools import raises
-import signal
-import threading
 import os
 import time
+import signal
+import threading
+
+from nose.tools import raises
+
+from habitat.main import SignalListener
+import habitat.main.signals as signals_module
 
 class PausedManyTimes(Exception):
     pass

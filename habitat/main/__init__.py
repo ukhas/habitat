@@ -20,6 +20,6 @@ The code in this module drives the "main" method; it gets called when
 `habitat` is run.
 """
 
-from program import Program
-from signals import SignalListener
-import options
+from .program import Program
+from .signals import SignalListener
+from . import options

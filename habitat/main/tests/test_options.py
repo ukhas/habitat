@@ -21,12 +21,14 @@ reads command line options and a configuration file to set up the couch
 connection.
 """
 
-from habitat.main import options
-from nose.tools import raises
 import sys
 import os
 import errno
 import ConfigParser
+
+from nose.tools import raises
+
+from habitat.main import options
 
 default_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             "habitat_default.cfg")

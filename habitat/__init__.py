@@ -26,8 +26,8 @@ __name__ = "habitat"
 __version__ = "0.0.1"
 __copyright__ = "Copyright 2010 (C) Adam Greig, Daniel Richman"
 
-import main
-import http
-import message_server
-import parser
-import utils
+from . import main
+from . import http
+from . import message_server
+from . import parser
+from . import utils

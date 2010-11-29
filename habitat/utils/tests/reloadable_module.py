@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import inspect
-import time
 import sys
+import os
+import time
+import inspect
 
 class ReloadableModuleWriter:
     def __init__(self, parent_name, parent_file, modname, itemname):

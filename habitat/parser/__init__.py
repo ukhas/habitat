@@ -19,5 +19,5 @@
 The parser interprets incoming telemetry strings into useful telemetry data.
 """
 
-from parser_module import ParserModule
-from parser_sink import ParserSink
+from .parser_module import ParserModule
+from .parser_sink import ParserSink

@@ -43,7 +43,7 @@ an object of which is callable (ie. the class has __call__(self, ...)). In that
 case you may need to create an object:
     if isclass(loadable):
         loadable = loadable()
-Of course if you've used expectiscallable then you will be creating an object
+Of course if you've used expectisclass then you will be creating an object
 anyway.
 """
 

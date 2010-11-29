@@ -20,10 +20,11 @@ The function here reads command line options and a configuration file to set
 up the couch connection.
 """
 
-import habitat
-import optparse
 import errno
+import optparse
 import ConfigParser
+
+import habitat
 
 usage = "%prog [-f config_file | -c couch_server]"
 version = "{0} {1}".format(habitat.__name__, habitat.__version__)

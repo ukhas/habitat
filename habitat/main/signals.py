@@ -26,10 +26,10 @@ It responds to the following signals:
    (NB: the listen() loop will be running in MainThread)
 """
 
-import signal
-import threading
 import sys
 import os
+import signal
+import threading
 
 class SignalListener:
     def __init__(self, program):

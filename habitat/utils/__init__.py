@@ -20,4 +20,4 @@ Various utilities for general use by habitat. See individual modules
 for documentation.
 """
 
-import dynamicloader
+from . import dynamicloader
