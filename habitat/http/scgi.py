@@ -47,8 +47,8 @@ class SCGIApplication(InsertApplication,
         self.serve_forever(poll_interval=self.shutdown_timeout)
 
     def start(self):
-        self.accept_thread = threading.Thread(target=self.serve_forever_thread)
-        self.accept_thread.name = "SCGI accept thread"
+        self.accept_thread = threading.Thread(target=self.serve_forever_thread,
+                                              name="SCGI accept thread")
 
         try:
             os.unlink(self.server_address)
@@ -90,9 +90,9 @@ class SCGIApplication(InsertApplication,
 
     def process_request(self, request, client_address):
         request.settimeout(self.shutdown_timeout)
-        t = threading.Thread(target = self.process_request_thread,
-                             args = (request, client_address),
-                             name = "SCGI Handler Thread")
+        t = threading.Thread(target=self.process_request_thread,
+                             args=(request, client_address),
+                             name="SCGI Handler Thread")
         self.threads.add(t)
         t.start()
 

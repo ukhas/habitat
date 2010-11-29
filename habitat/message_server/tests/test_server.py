@@ -295,7 +295,8 @@ class TestServer:
 
         old_object = self.server.sinks[0]
 
-        t = threading.Thread(target=f)
+        t = threading.Thread(target=f,
+                             name="Test Thread: test_reload_skips_no_messages")
         t.start()
 
         old_object.shutting_down.wait()

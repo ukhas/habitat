@@ -92,6 +92,7 @@ class FakeThreadedSink(ThreadedSink):
 class ThreadedPush(threading.Thread):
     def __init__(self, sink, message):
         threading.Thread.__init__(self)
+        self.name = "Test Thread: ThreadedPush"
         self.sink = sink
         self.message = message
 
@@ -271,7 +272,7 @@ class TestSink:
 
         push = functools.partial(sink.push_message,
                                  Message(self.source, Message.TELEM, None))
-        t = threading.Thread(target=push)
+        t = threading.Thread(target=push, name="Test Thread: check_flush_race")
         t.start()
 
         sink.in_message.wait()

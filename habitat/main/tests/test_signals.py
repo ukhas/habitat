@@ -131,7 +131,8 @@ class TestSignalListener:
         assert self.signal_listener.shutdown_event.is_set()
 
     def test_exit_waits_for_event(self):
-        t = threading.Thread(target=self.signal_listener.exit)
+        t = threading.Thread(target=self.signal_listener.exit,
+                             name="Test thread: test_exit_waits_for_event")
         t.start()
         while not t.is_alive():
             time.sleep(0.001)
