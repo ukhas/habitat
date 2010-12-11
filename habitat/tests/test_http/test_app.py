@@ -19,10 +19,10 @@
 Tests the habitat http app, which creates a {{f,s,}cgi,http} server.
 """
 
-from habitat.message_server import Message
-from habitat.http.app import InsertApplication
 from nose.tools import raises
+from habitat.message_server import Message
 from serverstub import ServerStub
+from habitat.http import InsertApplication
 
 class TestInsertApplication:
     """Application (base class)"""

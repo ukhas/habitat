@@ -16,18 +16,21 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The parser sink is the interface between the message server and the
-parser. It is responsible for receiving raw telemetry from the message
-server, turning it into beautiful telemetry data, and then sending that
-back.
+The parser interprets incoming telemetry strings into useful telemetry data.
 """
 
 import inspect
 
 from habitat.message_server import SimpleSink, Message
-from parser_module import ParserModule
 
 class ParserSink(SimpleSink):
+    """
+    The parser sink is the interface between the message server and the
+    parser. It is responsible for receiving raw telemetry from the message
+    server, turning it into beautiful telemetry data, and then sending that
+    back.
+    """
+
     BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = locations = range(3)
 
     def setup(self):
@@ -119,3 +122,12 @@ class ParserSink(SimpleSink):
             message = filter(message)
         for filter in self.after_filters:
             message = filter(message)
+
+class ParserModule:
+    """
+    ParserModules are classes which actually turn radio strings into
+    useful data. They can be given various configuration parameters.
+    All modules inherit from ParserModule.
+    """
+
+    pass

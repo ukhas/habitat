@@ -28,7 +28,7 @@ import threading
 from nose.tools import raises
 
 from habitat.main import SignalListener
-import habitat.main.signals as signals_module
+import habitat.main as signals_module
 
 class PausedManyTimes(Exception):
     pass

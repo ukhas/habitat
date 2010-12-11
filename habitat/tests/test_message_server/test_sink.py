@@ -16,16 +16,18 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tests the Sink class, found in ../sink.py
+Tests the Sink class, found in
 """ 
 
 import threading
 import functools
-from nose.tools import raises
-from habitat.message_server import SimpleSink, ThreadedSink
-from habitat.message_server import Message, Listener, Server
 
+from nose.tools import raises
+
+from habitat.message_server import Message, Listener, Server
 from slowsink import *
+
+from habitat.message_server import SimpleSink, ThreadedSink
 
 class EmptySink(SimpleSink):
     def setup(self):

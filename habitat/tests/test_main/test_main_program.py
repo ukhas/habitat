@@ -30,9 +30,8 @@ from nose.tools import raises
 
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
-from habitat.main import Program, SignalListener
-from habitat.main.options import get_options
-import habitat.main.program as program_module
+from habitat.main import Program, SignalListener, get_options
+import habitat.main as program_module
 
 # Replace get_options
 old_get_options = get_options

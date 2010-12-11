@@ -16,11 +16,12 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tests the Message class, found in ../message.py
+Tests the Message class
 """ 
 
-from habitat.message_server import Message, Listener
 from nose.tools import raises
+
+from habitat.message_server import Message, Listener
 
 class TestMessage:
     def setup(self):
