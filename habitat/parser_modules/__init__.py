@@ -1,4 +1,5 @@
-# Copyright 2010 (C) Daniel Richman, Adam Greig
+
+# Copyright 2010 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -16,9 +17,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Various utilities for general use by habitat. See individual modules
-for documentation.
+Parser modules for specific protocols.
 """
 
-from . import dynamicloader
-from . import checksums
+import ukhas_parser
