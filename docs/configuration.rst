@@ -1,4 +1,4 @@
-Installing
-==========
+Configuration
+=============
 
 Mmmm tasty
