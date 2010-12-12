@@ -1,0 +1,227 @@
+# Copyright 2010 (C) Adam Greig
+#
+# This file is part of habitat.
+#
+# habitat is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# habitat is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with habitat.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Test the UKHAS protocol parser.
+"""
+
+base_config = {
+    "protocol": "UKHAS",
+    "checksum": "crc16-ccitt",
+    "fields": [
+        {
+            "name": "message_count",
+            "type": "int"
+        }, {
+            "name": "time",
+            "type": "time"
+        }, {
+            "name": "latitude",
+            "type": "coordinate",
+            "format": "dd.dddd"
+        }, {
+            "name": "longitude",
+            "type": "coordinate",
+            "format": "dd.dddd"
+        }, {
+            "name": "altitude",
+            "type": "int"
+        }, {
+            "name": "speed",
+            "type": "float"
+        }, {
+            "name": "custom_string",
+            "type": "string"
+        }
+    ]
+}
+
+from nose.tools import assert_raises
+from copy import deepcopy
+
+from habitat.parser_modules.ukhas_parser import UKHASParser
+
+bad_sentences = ["", "bad", "$$bad*", "bad*CC", "bad*CCCC",
+    "$$bad*GH", "$$bad,bad*GHIJ"]
+
+good_sentences = ["$$good,data", "$$good,data*CC", "$$good,data*CCCC",
+        "$$good,lots,of,1234,5678.90,data$CCCC"]
+
+config_no_protocol = deepcopy(base_config)
+del config_no_protocol["protocol"]
+
+config_invalid_protocol = deepcopy(base_config)
+config_invalid_protocol["protocol"] = "invalid"
+
+config_no_checksum = deepcopy(base_config)
+del config_no_checksum["checksum"]
+
+config_no_fields = deepcopy(base_config)
+del config_no_fields["fields"]
+
+config_empty_fields = deepcopy(base_config)
+config_empty_fields["fields"] = {}
+
+config_field_without_name = deepcopy(base_config)
+del config_field_without_name["fields"][0]["name"]
+
+config_field_without_type = deepcopy(base_config)
+del config_field_without_type["fields"][0]["type"]
+
+config_field_without_format = deepcopy(base_config)
+del config_field_without_format["fields"][2]["format"]
+
+config_checksum_crc16_ccitt = deepcopy(base_config)
+config_checksum_crc16_ccitt["checksum"] = "crc16-ccitt"
+
+config_checksum_xor = deepcopy(base_config)
+config_checksum_xor["checksum"] = "xor"
+
+config_checksum_fletcher_16 = deepcopy(base_config)
+config_checksum_fletcher_16["checksum"] = "fletcher-16"
+
+config_checksum_fletcher_16_256 = deepcopy(base_config)
+config_checksum_fletcher_16_256["checksum"] = "fletcher-16-256"
+
+config_checksum_none = deepcopy(base_config)
+config_checksum_none["checksum"] = "none"
+
+config_checksum_invalid = deepcopy(base_config)
+config_checksum_invalid = "invalid"
+
+config_field_type_invalid = deepcopy(base_config)
+config_field_type_invalid["fields"][0]["type"] = "invalid"
+
+config_format_invalid = deepcopy(base_config)
+config_field_type_invalid["fields"][2]["format"] = "invalid"
+
+config_minutes = deepcopy(base_config)
+config_minutes["fields"][2]["format"] = "ddmm.mm"
+config_minutes["fields"][3]["format"] = "ddmm.mm"
+
+sentence_no_checksum = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab"
+sentence_crc16_ccitt = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*EE5E"
+sentence_xor = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*0b"
+sentence_fletcher_16 = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*e3a6"
+sentence_fletcher_16_256 = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*DBF5"
+
+sentence_bad_crc16_ccitt = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*abcd"
+sentence_bad_xor = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*9g"
+sentence_bad_fletcher_16 = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*abcd"
+sentence_bad_fletcher_16_256 = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*dcba"
+
+sentence_bad_int = "$$habitat,a,00:00:00,0.0,0.0,0,0.0,hab"
+sentence_bad_time = "$$habitat,1,aa:bb:cc,0.0,0.0,0,0.0,hab"
+sentence_bad_time_2 = "$$habitat,1,123,0.0,0.0,0,0.0,hab"
+sentence_bad_float = "$$habitat,1,00:00:00,abc,0.0,0,0.0,hab"
+
+sentence_bad_minutes = "$$habitat,1,00:00:00,087.123,0.0,0,0.0,hab"
+
+sentence_good = "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681"
+sentence_good_2 = "$$habitat,123,12:45,-35.1032,138.8568,4285,3.6,hab*8e78"
+sentence_good_3 = \
+    "$$habitat,123,12:45:06,-3506.192,13851.408,4285,3.6,hab*6139"
+sentence_good_4 = \
+    "$$habitat,123,12:45:06, -35.1032,138.8568,4285,3.6,hab*96A2"
+sentence_good_5 = \
+    "$$habitat,123,12:45:06,-035.1032,138.8568,4285,3.6,hab*C5CA"
+sentence_good_6 = \
+    "$$habitat,123,12:45:06,035.1032,0138.8568,4285,3.6,hab*D856"
+
+output_checksum_test = {
+    "payload": "habitat", "message_count": 1,
+    "time": {"hour": 0, "minute": 0, "second": 0},
+    "latitude": 0.0, "longitude": 0.0, "altitude": 0,
+    "speed": 0.0, "custom_string": "hab"}
+
+output_good = {
+    "payload": "habitat", "message_count": 123,
+    "time": {"hour": 12, "minute": 45, "second": 06},
+    "latitude": -35.1032, "longitude": 138.8568,
+    "altitude": 4285, "speed": 3.6, "custom_string": "hab"}
+
+output_good_2 = deepcopy(output_good)
+del output_good_2["time"]["second"]
+
+output_good_6 = deepcopy(output_good)
+output_good_6["latitude"] = 35.1032
+
+class M:
+    def __init__(self, data):
+        self.data = data
+
+class TestUKHASParser:
+    """UKHAS Parser"""
+    def setUp(self):
+        self.p = UKHASParser()
+    def test_pre_parse_rejects_bad_sentences(self):
+        for sentence in bad_sentences:
+            assert_raises(ValueError, self.p.pre_parse, M(sentence))
+    def test_pre_parse_accepts_good_setences(self):
+        for sentence in good_sentences:
+            assert self.p.pre_parse(M(sentence)) == "good"
+    def test_parse_rejects_bad_sentences(self):
+        for sentence in bad_sentences:
+            assert_raises(ValueError, self.p.parse, M(sentence), base_config)
+    def test_parse_rejects_invalid_configs(self):
+        for config in [
+                config_no_protocol, config_no_checksum, config_no_fields,
+                config_empty_fields, config_field_without_name,
+                config_field_without_type, config_field_without_format,
+                config_checksum_invalid, config_field_type_invalid,
+                config_format_invalid, config_invalid_protocol
+            ]:
+            assert_raises(ValueError, self.p.parse, M("$$good,good"), config)
+    def test_parse_parses_correct_checksums(self):
+        for sentence, config in [
+                [sentence_no_checksum, config_checksum_none],
+                [sentence_crc16_ccitt, config_checksum_crc16_ccitt],
+                [sentence_xor, config_checksum_xor],
+                [sentence_fletcher_16, config_checksum_fletcher_16],
+                [sentence_fletcher_16_256, config_checksum_fletcher_16_256]
+            ]:
+            assert self.p.parse(M(sentence), config) == output_checksum_test
+    def test_parse_rejects_incorrect_checksums(self):
+        for sentence, config in [
+                [sentence_bad_crc16_ccitt, config_checksum_crc16_ccitt],
+                [sentence_no_checksum, config_checksum_crc16_ccitt],
+                [sentence_bad_xor, config_checksum_xor],
+                [sentence_no_checksum, config_checksum_xor],
+                [sentence_bad_fletcher_16, config_checksum_fletcher_16],
+                [sentence_no_checksum, config_checksum_fletcher_16],
+                [sentence_no_checksum, config_checksum_fletcher_16_256],
+                [sentence_bad_fletcher_16_256, config_checksum_fletcher_16_256]
+            ]:
+            assert_raises(ValueError, self.p.parse, M(sentence), config)
+    def test_parse_rejects_invalid_values(self):
+        for sentence in [
+                sentence_bad_int, sentence_bad_float, sentence_bad_time]:
+            assert_raises(ValueError, self.p.parse, M(sentence),
+                    config_checksum_none)
+    def test_parse_rejects_bad_minutes(self):
+        assert_raises(ValueError, self.p.parse, M(sentence_bad_minutes),
+                config_minutes)
+    def test_parse_parses_good_sentences(self):
+        for sentence, output, config in [
+                [sentence_good, output_good, base_config],
+                [sentence_good_2, output_good_2, base_config],
+                [sentence_good_3, output_good, config_minutes],
+                [sentence_good_4, output_good, base_config],
+                [sentence_good_5, output_good, base_config],
+                [sentence_good_6, output_good_6, base_config]
+            ]:
+            assert self.p.parse(M(sentence), config) == output
