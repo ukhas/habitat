@@ -63,7 +63,7 @@ class TestInsertApplication:
         self.app.message("2.7.5.8", callsign="2E0DRX", type="NOT_A_TYPE",
                          data="haxx")
 
-    # So that it's easy to extend/update later 
+    # So that it's easy to extend/update later
     def test_message_allows_other_args(self):
         self.app.message("2.7.5.8", callsign="2E0DRX", type="RECEIVED_TELEM",
                          data="some$data", cookieplease=True)
@@ -76,7 +76,7 @@ class TestInsertApplication:
 
     @raises(ValueError)
     def check_message_requires_arg(self, arg):
-        kwargs = { "callsign": "2E0DRX", "type": "RECEIVED_TELEM", 
+        kwargs = { "callsign": "2E0DRX", "type": "RECEIVED_TELEM",
                    "data": "some$data" }
         del kwargs[arg]
         self.app.message("2.7.5.8", **kwargs)

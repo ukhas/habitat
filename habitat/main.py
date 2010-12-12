@@ -16,7 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The code in this module drives the "main" method; it gets called when 
+The code in this module drives the "main" method; it gets called when
 `habitat` is run.
 """
 

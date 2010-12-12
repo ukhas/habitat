@@ -146,7 +146,7 @@ from inspect import isclass, isfunction, isgeneratorfunction
 from __builtin__ import issubclass, hasattr
 
 # Some are very simple
-isstandardfunction = lambda loadable: (isfunction(loadable) and not 
+isstandardfunction = lambda loadable: (isfunction(loadable) and not
                                        isgeneratorfunction(loadable))
 
 # The following we have to implement ourselves
@@ -199,7 +199,7 @@ def iscallable(loadable):
     else:
         return inspect.isroutine(loadable)
 
-# Generate an expect function decorator, which will wrap a function and 
+# Generate an expect function decorator, which will wrap a function and
 # raise error rather than return false.
 def expectgenerator(error):
     def decorator(function):

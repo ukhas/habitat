@@ -17,7 +17,7 @@
 
 """
 Tests the Sink class, found in
-""" 
+"""
 
 import threading
 import functools
@@ -131,7 +131,7 @@ class TestSink:
 
     def check_add_types(self, sink):
         sink.add_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
-        assert sink.types == set([Message.RECEIVED_TELEM, 
+        assert sink.types == set([Message.RECEIVED_TELEM,
                                   Message.LISTENER_INFO])
 
     def check_remove_type_a(self, sink):
@@ -175,35 +175,35 @@ class TestSink:
         sink.remove_type(Message.RECEIVED_TELEM)
         sink.remove_type(Message.RECEIVED_TELEM)
         # Should not produce a KeyError
-    
+
     def test_rejects_garbage(self):
         sink = EmptySink(None)
         for i in [sink.add_type, sink.remove_type]:
             yield self.check_rejects_garbage_type, i
             yield self.check_rejects_invalid_type, i
-    
+
         for i in [sink.add_types, sink.remove_types,
                   sink.set_types]:
             yield self.check_rejects_garbage_types, i
             yield self.check_rejects_garbage_set, i
             yield self.check_rejects_invalid_types, i
-    
+
     @raises(TypeError)
     def check_rejects_garbage_type(self, func):
         func("asdf")
-    
+
     @raises(TypeError)
     def check_rejects_garbage_types(self, func):
         func(set(["asdf", Message.RECEIVED_TELEM]))
-    
+
     @raises(TypeError)
     def check_rejects_garbage_set(self, func):
         func(1337) # An int, not a set
-    
+
     @raises(ValueError)
     def check_rejects_invalid_type(self, func):
         func(951)
-    
+
     @raises(ValueError)
     def check_rejects_invalid_types(self, func):
         func(set([Message.RECEIVED_TELEM, 952]))

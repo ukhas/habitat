@@ -17,7 +17,7 @@
 
 """
 Tests the Message class
-""" 
+"""
 
 from nose.tools import raises
 

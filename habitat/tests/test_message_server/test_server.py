@@ -18,7 +18,7 @@
 
 """
 Tests the Server class
-""" 
+"""
 
 import sys
 import time

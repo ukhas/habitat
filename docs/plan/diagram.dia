@@ -2192,7 +2192,7 @@ UI abtraction layer#</dia:string>
         <dia:composite type="text">
           <dia:attribute name="string">
             <dia:string>#Browser: Complete copy of
-habhub homepage, w/o GMaps 
+habhub homepage, w/o GMaps
 and with local (hdd) OSM or
  OS data#</dia:string>
           </dia:attribute>
@@ -3447,7 +3447,7 @@ the points game.
         <dia:composite type="text">
           <dia:attribute name="string">
             <dia:string>#ajax on port 80
-(possibility for use of "flash-js sockets" 
+(possibility for use of "flash-js sockets"
 for pushing data rather than polling)#</dia:string>
           </dia:attribute>
           <dia:attribute name="font">

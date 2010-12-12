@@ -17,7 +17,7 @@
 
 """
 The message server receives messages and pushes each message to one
-or more 'sinks'. 
+or more 'sinks'.
 """
 
 import sys
@@ -32,7 +32,7 @@ class Server:
     """
     The 'Server', the main messager_server class, is the class in which the
     magic happens. A Server manages the loading, unloading and reloading of
-    'Sinks', and pushes messages to each and every sink when message() is 
+    'Sinks', and pushes messages to each and every sink when message() is
     called.
     """
 

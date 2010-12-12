@@ -76,7 +76,7 @@ class InsertApplication:
         required: "callsign", "type", "data". All are user supplied strings
         """
 
-        # "superset" operation: requires every item in the second set to 
+        # "superset" operation: requires every item in the second set to
         # exist in the first.
         if not set(kwargs.keys()) >= set(["callsign", "type", "data"]):
             raise ValueError("required arguments: callsign, type, data")
@@ -104,7 +104,7 @@ class SCGIApplication(InsertApplication,
 
     def __init__(self, server, program, socket_file, timeout=1):
         InsertApplication.__init__(self, server, program)
-        SocketServer.UnixStreamServer.__init__(self, socket_file, 
+        SocketServer.UnixStreamServer.__init__(self, socket_file,
                                                SCGIHandler, False)
         self.shutdown_timeout = timeout
         self.threads = set()

@@ -56,7 +56,7 @@ class ParserSink(SimpleSink):
         filter: a function (or a __call__able class) to run, with
             the single parameter message and which returns a message
         """
-        
+
         if not hasattr(filter, '__call__'):
             raise TypeError("filter must be callable")
 
@@ -68,7 +68,7 @@ class ParserSink(SimpleSink):
             args = len(inspect.getargspec(filter).args)
         else:
             raise TypeError("filter must be a class or a function")
-        
+
         if args != 1:
             raise ValueError("filter must only take one argument")
 
@@ -99,7 +99,7 @@ class ParserSink(SimpleSink):
             self.modules.remove(module)
         else:
             raise ValueError("Module was not loaded")
-    
+
     def reload_module(self, module):
         for loaded_module in self.modules:
             if loaded_module.__name__ == module.__name__:
