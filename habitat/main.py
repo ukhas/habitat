@@ -16,8 +16,12 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The code in this module drives the "main" method; it gets called when
-`habitat` is run.
+The code in this module drives the "main" method
+
+``bin/habitat`` simply does the following::
+
+    import habitat
+    habitat.main.Program().main()
 """
 
 import sys
@@ -38,7 +42,10 @@ version = "{0} {1}".format(habitat.__name__, habitat.__version__)
 header = "{0} is {1}".format(habitat.__name__, habitat.__copyright__)
 
 default_configuration_file = "/etc/habitat/habitat.cfg"
+"""The default location to search for a configuration file"""
+
 config_section = "habitat"
+"""The section in the config file to search for options"""
 
 parser = optparse.OptionParser(usage=usage, version=version,
                                description=header)
@@ -54,8 +61,18 @@ parser.add_option("-s", "--socket", metavar="SCGI_SOCKET",
 
 def get_options():
     """
-    get_options reads command line options and a configuration file to set
-    up the couch connection.
+    ``get_options`` reads command line options and a configuration file
+
+    This function parses command line options, and reads a
+    configuration file (which must be in the :py:mod:`ConfigParser`
+    format).
+
+    It will read :py:data:`default_configuration_file` and will ignore
+    any errors that occur while doing so, unless a different config
+    file is specified at the command line (failures on an explicitly
+    stated config file will raise an execption).
+
+    Command line options have priority over options from a config file.
     """
 
     (option_values, args) = parser.parse_args()
@@ -101,7 +118,8 @@ def get_options():
 
 class Program:
     """
-    The code in this class drives the "main" function itself
+    Program provides the :py:meth:`main`, :py:meth:`shutdown`, \
+    :py:meth:`reload` and :py:meth:`panic` methods
     """
 
     (RELOAD, SHUTDOWN) = range(2)
@@ -110,6 +128,21 @@ class Program:
         self.queue = Queue.Queue()
 
     def main(self):
+        """
+        The main method of habitat
+
+        This method does the following:
+
+         - calls :py:func:`get_options`
+         - creates a :py:class:`habitat.message_server.Server`
+         - creates a :py:class:`habitat.http.SCGIApplication`
+         - creates a :py:class:`SignalListener`
+         - starts the SCGI app thread
+         - starts the Program thread (see :py:meth:`Program.run`)
+         - starts the SignalListner thread
+
+        """
+
         self.options = get_options()
         self.server = Server(None, self)
         self.scgiapp = SCGIApplication(self.server, self,
@@ -125,19 +158,40 @@ class Program:
         self.signallistener.listen()
 
     def reload(self):
+        """asks the Program thread to process a **RELOAD** event"""
         self.queue.put(Program.RELOAD)
 
     def shutdown(self):
+        """asks the Program thread to process a **SHUTDOWN** event"""
         self.queue.put(Program.SHUTDOWN)
 
     def panic(self):
+        """
+        calls :py:func:`signal.alarm` as a failsafe and then \
+        :py:meth:`shutdown`
+        """
+
         signal.alarm(60)
         self.shutdown()
 
-    # run() does not require an item to terminate its thread. When shutdown
-    # is called, after having cleaned up the Program.run() thread should be
-    # the only one remaining, and it will then exit, killing the process.
     def run(self):
+        """
+        The Program thread processes **SHUTDOWN** and **RELOAD** events
+
+        In order to make :py:meth:`shutdown`, :py:meth:`reload` and
+        :py:meth:`panic` return instantly, the actual work requested
+        by calling those methods is done by this thread.
+
+         - **RELOAD**: To be implemented
+         - **SHUTDOWN**: shuts down the :py:class:`SignalListener`,
+           :py:class:`habitat.http.SCGIApplication` and the
+           :py:class:`habitat.message_server.Server`, then calls
+           :py:func:`sys.exit`. Having shut down the above three,
+           this should be the only thread executing, so the process
+           will exit.
+
+        """
+
         while True:
             item = self.queue.get()
 
@@ -147,18 +201,29 @@ class Program:
                 self.server.shutdown()
                 sys.exit()
             elif item == Program.RELOAD:
+                # TODO
                 pass
 
 class SignalListener:
     """
-    This class listens for signals forever and calls the appropriate methods
-    of Program when it receives one that it is looking for.
+    This class listens for signals
 
-    It responds to the following signals:
-     - SIGTERM, SIGINT: calls Program.shutdown()
-     - SIGHUP: calls Program.reload()
-     - SIGUSR1: exits the listen() loop by calling sys.exit/raising SystemExit
-       (NB: the listen() loop will be running in MainThread)
+    It responds to the following signals. When it receives one, it
+    calls the appropriate method of Program
+
+    The documentation for the :py:mod:`signal` module contains
+    information on the various signal constant definitions.
+
+     - **SIGTERM**, **SIGINT**: calls :py:meth:`Program.shutdown`
+     - **SIGHUP**: calls :py:meth:`Program.reload`
+     - **SIGUSR1**: exits the py:meth:`listen` loop by
+       calling :py:func:`sys.exit`/raising :py:exc:`exceptions.SystemExit`
+       (NB: the :py:meth:`listen` loop will be running in **MainThread**)
+
+    **SIGUSR1** is meant for internal use only, and is
+    used to terminate the signal-listening thread when the program wishes
+    to shut down.
+    (see :py:meth:`SignalListener.exit`)
     """
 
     def __init__(self, program):
@@ -170,10 +235,9 @@ class SignalListener:
 
     def setup(self):
         """
-        setup() installs signal handlers for the signals that we want to
-        catch.
+        **setup()** installs signal handlers for the signals that we want
 
-        Must be called in the MainThread
+        Must be called in the **MainThread**
         """
 
         self.check_thread()
@@ -184,11 +248,13 @@ class SignalListener:
 
     def listen(self):
         """
-        listen() calls signal.pause() indefinitely, meaning that any
-        signal sent to the process can be caught instantly and unobtrusivly
-        (and without messing up someone's system call)
+        **listen()** listens for signals delivered to the process forever
 
-        Must be called in the MainThread
+        It calls :py:func:`signal.pause` indefinitely, meaning that
+        any signal sent to the process can be caught instantly and
+        unobtrusivly.
+
+        Must be called in the **MainThread**
         """
 
         self.check_thread()
@@ -202,13 +268,20 @@ class SignalListener:
 
     def exit(self):
         """
-        exit() raises SIGUSR1 in this process, causing the infinite listen()
-        loop to exit (the handler will call sys.exit())
+        **exit()** terminates the :py:meth:`listen` loop
+
+        It raises **SIGUSR1** in this process, causing
+        the infinite listen() loop to exit
+        (:py:meth:`SignalListener.handle` will call
+        :py:func:`sys.exit`)
         """
+
         os.kill(os.getpid(), signal.SIGUSR1)
         self.shutdown_event.wait()
 
     def handle(self, signum, stack):
+        """handles a received signal"""
+
         if signum == signal.SIGTERM or signum == signal.SIGINT:
             self.program.shutdown()
         elif signum == signal.SIGHUP:

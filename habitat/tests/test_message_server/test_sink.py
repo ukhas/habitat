@@ -105,8 +105,12 @@ class TestSink:
     def setup(self):
         self.source = Listener("2E0DRX", "1.2.3.4")
 
+    @raises(TypeError)
+    def test_init_rejects_garbage_server(self):
+        EmptySink("asdf")
+
     def test_types_is_a_set(self):
-        sink = EmptySink(None)
+        sink = EmptySink(Server(None, None))
         assert isinstance(sink.types, set)
 
     def test_sink_stores_server(self):
@@ -115,7 +119,7 @@ class TestSink:
         assert sink.server == server
 
     def test_types(self):
-        sink = EmptySink(None)
+        sink = EmptySink(Server(None, None))
 
         # We need these executed in this precise order but it'd be nice if
         # they were printed by spec as separate tests:
@@ -170,14 +174,14 @@ class TestSink:
         assert sink.types == set([])
 
     def test_can_remove_type_twice(self):
-        sink = EmptySink(None)
+        sink = EmptySink(Server(None, None))
         sink.add_type(Message.RECEIVED_TELEM)
         sink.remove_type(Message.RECEIVED_TELEM)
         sink.remove_type(Message.RECEIVED_TELEM)
         # Should not produce a KeyError
 
     def test_rejects_garbage(self):
-        sink = EmptySink(None)
+        sink = EmptySink(Server(None, None))
         for i in [sink.add_type, sink.remove_type]:
             yield self.check_rejects_garbage_type, i
             yield self.check_rejects_invalid_type, i
@@ -209,13 +213,13 @@ class TestSink:
         func(set([Message.RECEIVED_TELEM, 952]))
 
     def test_setup_called(self):
-        sink = FakeSink(None)
+        sink = FakeSink(Server(None, None))
         assert sink.types == set([Message.RECEIVED_TELEM,
                                   Message.LISTENER_INFO])
         assert sink.message == sink.test_messages.append
 
     def test_push_message(self):
-        sink = FakeSink(None)
+        sink = FakeSink(Server(None, None))
 
         # Same story as test_types
         yield self.check_push_unwanted_message, sink
@@ -236,7 +240,7 @@ class TestSink:
         yield self.check_sink_changing_types_push, ChangeyThreadedSink
 
     def check_sink_changing_types_push(self, sink_class):
-        sink = sink_class(None)
+        sink = sink_class(Server(None, None))
 
         sink.push_message(Message(self.source, Message.LISTENER_INFO, 1))
         sink.push_message(Message(self.source, Message.LISTENER_INFO, 2))
@@ -248,7 +252,7 @@ class TestSink:
         assert sink.status == 2
 
     def test_threaded_sink_executes_in_one_thread(self):
-        sink = FakeThreadedSink(None)
+        sink = FakeThreadedSink(Server(None, None))
 
         a = ThreadedPush(sink, Message(self.source, Message.LISTENER_INFO, 1))
         b = ThreadedPush(sink, Message(self.source, Message.LISTENER_INFO, 2))
@@ -270,7 +274,7 @@ class TestSink:
     def check_flush_race(self, sink_class):
         # Testing a race condition is quite difficult.
         # SlowSink.message() will time.sleep(0.02)
-        sink = sink_class(None)
+        sink = sink_class(Server(None, None))
 
         push = functools.partial(sink.push_message,
                                  Message(self.source, Message.TELEM, None))
@@ -288,10 +292,10 @@ class TestSink:
         sink.shutdown()
 
     def test_simple_shutdown(self):
-        self.check_shutdown(EmptySink(None), False)
+        self.check_shutdown(EmptySink(Server(None, None)), False)
 
     def test_threaded_shutdown(self):
-        self.check_shutdown(EmptyThreadedSink(None), True)
+        self.check_shutdown(EmptyThreadedSink(Server(None, None)), True)
 
     def check_shutdown(self, sink, check_thread):
         # For a SimpleSink, shutdown should just call flush
@@ -315,6 +319,6 @@ class TestSink:
         assert sink.flush.call_count == 1
 
     def test_threadname(self):
-        sink = EmptyThreadedSink(None)
+        sink = EmptyThreadedSink(Server(None, None))
         assert sink.name.startswith("ThreadedSink runner: EmptyThreadedSink")
         sink.shutdown()

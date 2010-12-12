@@ -9,6 +9,7 @@ Contents:
 
    intro
    installing
+   configuration
    reference/index
 
 Indices and tables

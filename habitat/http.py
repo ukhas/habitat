@@ -17,8 +17,10 @@
 
 
 """
-The http sub-module provides a way to insert messages into the
-message_server by HTTP Post
+``habitat.http``: a HTTP Gateway.
+
+This module lets clients insert messages into the a
+:py:class:`habitat.message_server.Server` by HTTP POST
 """
 
 import os
@@ -43,26 +45,36 @@ message server by HTTP post, and is not meant for direct use.
 
 Source code, documentation, and more information:
 http://github.com/ukhas/habitat
+http://habitat.habhub.org/
 """
 
 class InsertApplication:
     """
-    The InsertApplication class implements the high level functions provided
-    by the http gateway, such as message().
+    **InsertApplication** contains high level "actions" of the HTTP gateway
+
+    The methods in this class are the ones that carry out the action
+    requested by the HTTP client, and are independent of the
+    CGI or HTTP server or protocol used.
     """
 
     # We do not allow listeners to insert TELEM messages directly
     FORBIDDEN_TYPES = set([Message.TELEM])
 
-    # list of methods (below) that requests may call
     actions = ["message"]
+    """a list of methods that a client is allowed to invoke"""
 
     def __init__(self, server, program):
         """
-        Creates a new InsertApplication
-        server: message_server.Server object to insert items into
-        program: object with shutdown() and panic() methods
+        *server*: a :py:class:`habitat.message_server.Server` object into
+        which the message action will insert items.
+
+        *program*: a :py:class:`habitat.main.Program` object, of which the
+        :py:meth:`habitat.main.Program.shutdown` and
+        :py:meth:`habitat.main.Program.panic` methods are used.
         """
+
+        # TODO: Raise error if these are not the correct type of object?
+        # It would break all the tests that use InsertApplication(None, None)
 
         self.server = server
         self.program = program
@@ -70,7 +82,8 @@ class InsertApplication:
     def message(self, ip, **kwargs):
         """
         Push Action
-        ip: string - the IP address of the client
+
+        *ip*: string - the IP address of the client
 
         Arguments should be supplied in kwargs; the following three are
         required: "callsign", "type", "data". All are user supplied strings
@@ -98,21 +111,40 @@ class InsertApplication:
 class SCGIApplication(InsertApplication,
                       SocketServer.UnixStreamServer):
     """
-    This class uses SocketServer to create a threaded scgi server inside
-    the main message server process, that can be shut down gracefully.
+    **SCGIApplication** is a simple, threaded SCGI server.
+
+    This class uses :py:mod:`SocketServer` to create a threaded SCGI
+    server inside the main message server process, that can be shut down
+    gracefully.
+    It listens on a UNIX socket.
     """
 
     def __init__(self, server, program, socket_file, timeout=1):
+        """
+        The following arguments to **__init__** are passed to the
+        initialiser of InsertApplication:
+
+         - *server*: the :py:class:`habitat.message_server.Server`
+         - *program*: the :py:class:`habitat.main.Program` object
+
+        The following arguments to **__init__** are passed to the
+        initialiser of SocketServer.UnixStreamServer
+
+         - *socket_file*: string - the path of the socket to listen on
+
+        *timeout*: the timeout for all connections handled by
+        the SCGI server.
+        """
+
         InsertApplication.__init__(self, server, program)
         SocketServer.UnixStreamServer.__init__(self, socket_file,
                                                SCGIHandler, False)
         self.shutdown_timeout = timeout
         self.threads = set()
 
-    def serve_forever_thread(self):
-        self.serve_forever(poll_interval=self.shutdown_timeout)
-
     def start(self):
+        """start the SCGI server"""
+
         self.accept_thread = threading.Thread(target=self.serve_forever_thread,
                                               name="SCGI accept thread")
 
@@ -126,7 +158,9 @@ class SCGIApplication(InsertApplication,
         self.server_activate()
         self.accept_thread.start()
 
-        # Fix for http://pastie.org/1227636 - this is a bit ugly.
+        # Fix for a deadlock. This is a bit ugly, see
+        # docs/reference/http.rst "SocketServer.py hack"
+
         try:
             while not self._BaseServer__serving:
                 time.sleep(0.001)
@@ -134,6 +168,8 @@ class SCGIApplication(InsertApplication,
             pass
 
     def shutdown(self):
+        """gracefully shutdown the SCGI server and join every thread"""
+
         SocketServer.UnixStreamServer.shutdown(self)
 
         for t in self.threads.copy():
@@ -141,6 +177,9 @@ class SCGIApplication(InsertApplication,
 
         self.accept_thread.join()
         self.server_close()
+
+    def serve_forever_thread(self):
+        self.serve_forever(poll_interval=self.shutdown_timeout)
 
     # As in SocketServer.ThreadingMixIn but we want to keep track of our
     # threads
@@ -166,14 +205,23 @@ class SCGIApplication(InsertApplication,
 
 class SCGIHandler(SocketServer.BaseRequestHandler):
     """
-    This class parses and handles a single SCGI request, and returns a
-    response to the client. self.server.action_function (e.g., message())
-    is called to perform the action requested by the client, where
-    self.server typically is SCGIApplication, which is a subclass of
-    InsertApplication, where those action methods are defined.
+    **SCGIHandler** objects are responsible for handling a single request
+
+    This class parses and handles the SCGI request, then returns a
+    response to the client. An action (``self.server.action_method``,
+    e.g., :py:meth:`InsertApplication.message`) is
+    called to perform the action requested by the client, where
+    ``self.server`` typically is a :py:class:`SCGIApplication` object,
+    which is a subclass of :py:class:`InsertApplication`, where those
+    action methods are defined.
     """
 
     def setup(self):
+        """
+        prepares the SCGIHandler object for use, and calls
+        :py:meth:`read_scgi_req`
+        """
+
         self.environ = {}
         self.post_data = ""
         self.buf = ""
@@ -186,6 +234,8 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
         self.buf += new_data
 
     def read_scgi_req(self):
+        """called by :py:meth:`setup`: parses the whole SCGI request"""
+
         while self.buf.find(":") == -1:
             self.read_more()
 
@@ -219,6 +269,13 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
         assert self.buf == ""
 
     def handle(self):
+        """
+        Perform the action requested by the user and return a response
+
+        This is called after :py:meth:`setup` (and therefore
+        :py:meth:`read_scgi_req`) have been called.
+        """
+
         try:
             keys = set(self.environ.keys())
             assert keys >= set(["REMOTE_ADDR", "REQUEST_METHOD", "PATH_INFO"])

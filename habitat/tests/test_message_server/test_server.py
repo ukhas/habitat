@@ -312,3 +312,7 @@ class TestServer:
 
         assert old_object.messages == 0
         assert new_object.messages == 3
+
+    @raises(TypeError)
+    def test_push_message_rejects_non_message(self):
+        self.server.load(123)
