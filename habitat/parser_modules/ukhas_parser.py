@@ -16,88 +16,99 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Implement a parser for the UKHAS telemetry protocol format.
-$$<payload>,<data>,<data>,...,<last data>*<checksum>
+This module contains the parser for the UKHAS telemetry protocol format.
+
+``$$<payload>,<data>,<data>,...,<last data>*<checksum>``
 
 Should be at least:
-$$<payload>,<message number>,<time>,<latitude>,<longitude>,<altitude>,
-    <data>,...,<last data>*<checksum>
+``$$<payload>,<message number>,<time>,<latitude>,<longitude>,<altitude>,\
+<data>,...,<last data>*<checksum>``
 
 Data fields are typically human readable (or at the least ASCII) readings
 of sensors or other system information.
 
-Time is in HH:MM:SS.
+Time is in ``HH:MM:SS``.
+
 Latitude and longitude are in ddmm.mm or dd.dddd, configurable.
 The number of custom data fields and their units are configurable.
 
-Checksums work on the message content between the $$ and the *, non-inclusive,
-and are given as hexadecimal (upper or lower case) after the * in the message.
+Checksums work on the message content between the $$ and the ``*``,
+non-inclusive, and are given as hexadecimal (upper or lower case) after
+the ``*`` in the message.
+
 Supported checksums are CRC16-CCITT with polynomial 0x1021 and start 0xFFFF,
 Fletcher-16 and an 8bit XOR over the characters. The corresponding values
 for configuration are 'crc16-ccitt', 'fletcher-16' and 'xor'.
 For compatibility, a varient of Fletcher16 using modulus 256 is also provided,
 as 'fletcher-16-256'. Don't use it for new payloads.
 'none' may also be specified as a checksum type if no checksum is used; in
-this case the message should not include a terminating *.
+this case the message should not include a terminating ``*``.
 
-Typical configuration (CouchDB doc in `payloads' DB):
-{
-    "_id": "mypayload",
-    "radio": {
-        "frequency": 434.075,
-        "mode": "usb",
-    },
-    "telemetry": {
-        "modulation": "rtty",
-        "shift": 425,
-        "encoding": "ascii-8",
-        "baud": 50,
-        "parity": "none",
-        "stop": 1
-    },
-    "sentence": {
-        "protocol": "UKHAS",
-        "callsign": "habitat",
-        "checksum": "crc16-ccitt",
-        "fields": [
-            {
-                "name": "message_count",
-                "type": "int"
-            }, {
-                "name": "time",
-                "type": "time"
-            }, {
-                "name": "latitude",
-                "type": "coordinate",
-                "format": "dd.dddd"
-            }, {
-                "name": "longitude",
-                "type": "coordinate",
-                "format": "dd.dddd"
-            }, {
-                "name": "altitude",
-                "type": "int"
-            }, {
-                "name": "speed",
-                "type": "float"
-            }, {
-                "name": "internal_temperature",
-                "type": "float"
-            }
-        ]
+Typical configuration (CouchDB doc in ``payloads`` DB)::
+
+    {
+        "_id": "mypayload",
+        "radio": {
+            "frequency": 434.075,
+            "mode": "usb",
+        },
+        "telemetry": {
+            "modulation": "rtty",
+            "shift": 425,
+            "encoding": "ascii-8",
+            "baud": 50,
+            "parity": "none",
+            "stop": 1
+        },
+        "sentence": {
+            "protocol": "UKHAS",
+            "callsign": "habitat",
+            "checksum": "crc16-ccitt",
+            "fields": [
+                {
+                    "name": "message_count",
+                    "type": "int"
+                }, {
+                    "name": "time",
+                    "type": "time"
+                }, {
+                    "name": "latitude",
+                    "type": "coordinate",
+                    "format": "dd.dddd"
+                }, {
+                    "name": "longitude",
+                    "type": "coordinate",
+                    "format": "dd.dddd"
+                }, {
+                    "name": "altitude",
+                    "type": "int"
+                }, {
+                    "name": "speed",
+                    "type": "float"
+                }, {
+                    "name": "internal_temperature",
+                    "type": "float"
+                }
+            ]
+        }
     }
-}
 
 Supported types include:
-    string, float, int, time, coordinate
+
+ - string
+ - float
+ - int
+ - time
+ - coordinate
 
 The parser uses the 'sentence' object to parse incoming data.
 """
-from string import hexdigits
+
 import time
 import math
+from string import hexdigits
 
-from habitat.parser.parser_module import ParserModule
+from habitat.parser import ParserModule
 from habitat.utils import checksums
 
 checksum_algorithms = [
@@ -108,12 +119,17 @@ coordinate_formats = [
     "dd.dddd", "ddmm.mm"]
 
 class UKHASParser(ParserModule):
+    """The UKHAS Parser Module"""
+
     def _split_checksum(self, string):
-        """Splits off a two or four digit checksum from the end of the string.
-        Returns a list of the start of the string and the checksum, discarding
-        the * separator between the two. Returns None for the checksum if no
-        * was found.
         """
+        Splits off a two or four digit checksum from the end of the string.
+
+        Returns a list of the start of the string and the checksum, discarding
+        the ``*`` separator between the two. Returns :py:data:`None` for the
+        checksum if no ``*`` was found.
+        """
+
         if string[-3] == '*':
             return [string[:-3], string[-2:]]
         elif string[-5] == '*':
@@ -122,9 +138,13 @@ class UKHASParser(ParserModule):
             return [string, None]
         
     def _extract_fields(self, string):
-        """Split the string into comma-separated fields.
-        Raises a ValueError if no fields were found.
         """
+        Splits the string into comma-separated fields.
+
+        Raises a :py:exc:`ValueError <exceptions.ValueError>` if no
+        fields were found.
+        """
+
         string = string[2:]
         string, checksum = self._split_checksum(string)
         fields = string.split(",")
@@ -133,9 +153,13 @@ class UKHASParser(ParserModule):
         return fields
 
     def _verify_basic_format(self, string):
-        """Check the string starts with $$, ends with * and a checksum.
+        """
+        Check the string starts with $$, ends with * and a checksum.
+
         Verify that the string is at least long enough to not trip up later,
-        which means 7 characters. Raises ValueError on error.
+        which means 7 characters.
+
+        Raises :py:exc:`ValueError <exceptions.ValueError>` on error.
         """
         if len(string) < 7:
             raise ValueError("String is less than 7 characters.")
@@ -149,9 +173,15 @@ class UKHASParser(ParserModule):
                         "Checksum found but contained non-hexadecimal digits.")
 
     def _verify_config(self, config):
-        """Check that the provided config dict contains all the required
-        information. Raises ValueError otherwise.
         """
+        Checks the provided *config* dict.
+
+        This method checks that the *config* dict contains all the
+        required information.
+
+        Raises :py:exc:`ValueError <exceptions.ValueError>` otherwise.
+        """
+
         try:
             if config["protocol"] != "UKHAS":
                 raise ValueError(
@@ -173,9 +203,15 @@ class UKHASParser(ParserModule):
 
     
     def _verify_checksum(self, string, checksum, algorithm):
-        """Computes the checksum defined by algorithm over string and compares
-        it to that given in checksum. Raises ValueError on discrepancy.
         """
+        Verifies *string*'s checksum.
+
+        Computes the checksum defined by *algorithm* over *string*
+        and compares it to that given in *checksum*.
+        Raises :py:exc:`ValueError <exceptions.ValueError>`
+        on discrepancy.
+        """
+
         if checksum == None and algorithm != "none":
             raise ValueError("No checksum found but config specifies one.")
         elif algorithm == "crc16-ccitt":
@@ -192,10 +228,14 @@ class UKHASParser(ParserModule):
                 raise ValueError("Invalid Fletcher-16-256 checksum.")
     
     def _parse_field(self, field, field_config):
-        """Parse a field string using its configuration dictionary.
-        Return the name from the config and the appropriately parsed data.
-        ValueError is raised in invalid inputs.
         """
+        Parse a *field* string using its configuration dictionary.
+
+        Return the name from the config and the appropriately parsed data.
+        :py:exc:`ValueError <exceptions.ValueError>` is raised in invalid
+        inputs.
+        """
+
         field_name = field_config["name"]
         field_type = field_config["type"]
         if field_type == "string":
@@ -232,18 +272,27 @@ class UKHASParser(ParserModule):
         return [field_name, field_data]
 
     def pre_parse(self, string):
-        """Check if this message is parsable by this module, and if so
-        extract the payload name and return it. Otherwise, raise a ValueError.
         """
+        Check if this message is parsable by this module.
+
+        If the message is pasable, **pre_parse** extracts the payload
+        name and return it. Otherwise, raise a
+        :py:exc:`ValueError <exceptions.ValueError>`.
+        """
+
         self._verify_basic_format(string)
         fields = self._extract_fields(string)
         return fields[0]
         
     def parse(self, string, config):
-        """Parse the message, extracting processed field data.
-        `config' is a dictionary containing the sentence dictionary
+        """
+        Parse the message, extracting processed field data.
+
+        *config* is a dictionary containing the sentence dictionary
         from the payload's configuration document.
-        Raise ValueError on invalid messages. Return a dict of name:data.
+
+        Raise :py:exc:`ValueError <exceptions.ValueError>` on invalid
+        messages. Return a dict of name:data.
         """
         self._verify_config(config)
         self._verify_basic_format(string)

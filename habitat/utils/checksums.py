@@ -14,9 +14,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
-"""
-Various checksum calculation utilities.
-"""
+
+"""Various checksum calculation utilities."""
 
 import crcmod
 from operator import xor as op_xor
