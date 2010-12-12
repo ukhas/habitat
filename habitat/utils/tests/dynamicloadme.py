@@ -17,7 +17,7 @@
 
 """
 Mock classes to load in test_dynamicloader.py
-""" 
+"""
 
 class Parent:
     pass

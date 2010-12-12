@@ -28,7 +28,7 @@ import ConfigParser
 
 from nose.tools import raises
 
-from habitat.main import options
+from habitat import main
 
 default_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                             "habitat_default.cfg")
@@ -45,19 +45,19 @@ class CaughtError(Exception):
 
 class TestOptions:
     def setup(self):
-        assert options.default_configuration_file == "/etc/habitat/habitat.cfg"
-        options.default_configuration_file = default_file
+        assert main.default_configuration_file == "/etc/habitat/habitat.cfg"
+        main.default_configuration_file = default_file
 
     def teardown(self):
-        assert options.default_configuration_file == default_file
-        options.default_configuration_file = "/etc/habitat/habitat.cfg"
+        assert main.default_configuration_file == default_file
+        main.default_configuration_file = "/etc/habitat/habitat.cfg"
 
     def test_optparse_is_setup_correctly(self):
         expect_options = [ ("-f", "--config-file"),
                            ("-c", "--couch"),
                            ("-s", "--socket") ]
         for (short, long) in expect_options:
-            assert options.parser.get_option(short).get_opt_string() == long
+            assert main.parser.get_option(short).get_opt_string() == long
 
     def create_config_file(self, name, value):
         config = ConfigParser.RawConfigParser()
@@ -90,24 +90,24 @@ class TestOptions:
     def check_get_options(self, argv, expect):
         old_argv = sys.argv
         sys.argv = ["habitat"] + argv
-        result = options.get_options()
+        result = main.get_options()
         sys.argv = old_argv
 
         assert result["couch"] == expect
 
     def check_get_options_fails(self, argv):
         old_argv = sys.argv
-        self.old_error = options.parser.error
+        self.old_error = main.parser.error
 
         def new_error(string):
             raise CaughtError
 
-        options.parser.error = new_error
+        main.parser.error = new_error
         sys.argv = ["habitat"] + argv
 
-        raises(CaughtError)(options.get_options)()
+        raises(CaughtError)(main.get_options)()
 
-        options.parser.error = self.old_error
+        main.parser.error = self.old_error
         sys.argv = old_argv
 
     def remove_default(self):

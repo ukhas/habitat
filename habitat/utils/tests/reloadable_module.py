@@ -35,7 +35,7 @@ class ReloadableModuleWriter:
     # pyc file if the embedded mtime matches that of the py file. That's
     # typically going to be fine, however, if you load, modify, reload
     # within one second then the updated module won't be read.
-    # We won't be reloading that fast, but the test will. So hack the 
+    # We won't be reloading that fast, but the test will. So hack the
     # mtime two seconds into the future every time.
 
     def is_loaded(self):

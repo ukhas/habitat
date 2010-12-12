@@ -52,12 +52,12 @@ class TestParserSink:
         assert len(self.sink.before_filters) == 0
         assert len(self.sink.during_filters) == 0
         assert len(self.sink.after_filters) == 0
-    
+
     def test_parser_does_not_load_filters_with_too_many_args(self):
         for filter in [BadFilterFunc, BadFilterClass, WorseFilterClass]:
             for location in ParserSink.locations:
                 yield self.check_fails_to_load_filter, location, filter
-    
+
     def test_parser_does_not_load_filters_with_invalid_locations(self):
         invalid_location = ParserSink.locations[-1] + 1
         yield self.check_fails_to_load_filter, invalid_location, FilterFunc
@@ -73,7 +73,7 @@ class TestParserSink:
 
     def test_parser_does_not_load_non_modules(self):
         yield self.check_fails_to_load_module, FilterClass
-    
+
     def test_parser_loads_modules(self):
         yield self.check_loads_module, Module
 
@@ -97,11 +97,11 @@ class TestParserSink:
         self.sink.add_filter(location, filter)
         assert len(self.sink.filters[location]) == 1
         assert self.sink.filters[location][0] == filter
-    
+
     @raises(TypeError, ValueError)
     def check_fails_to_load_filter(self, location, filter):
         self.sink.add_filter(location, filter)
-    
+
     def check_removes_filter(self, location):
         self.check_loads_filter(location, FilterFunc)
         self.sink.remove_filter(location, FilterFunc)

@@ -16,18 +16,23 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The parser sink is the interface between the message server and the
-parser. It is responsible for receiving raw telemetry from the message
-server, turning it into beautiful telemetry data, and then sending that
-back.
+The parser interprets incoming telemetry strings into useful telemetry data.
 """
 
 import inspect
 
 from habitat.message_server import SimpleSink, Message
-from parser_module import ParserModule
 
 class ParserSink(SimpleSink):
+    """
+    The Parser Sink
+
+    The parser sink is the interface between the message server and the
+    parser. It is responsible for receiving raw telemetry from the message
+    server, turning it into beautiful telemetry data, and then sending that
+    back.
+    """
+
     BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = locations = range(3)
 
     def setup(self):
@@ -47,13 +52,15 @@ class ParserSink(SimpleSink):
     def add_filter(self, location, filter):
         """
         Add a new filter to the Parser.
-        location: when the filter should be run. one of
-            ParserSink.BEFORE_FILTER, ParserSink.DURING_FILTER or
-            ParserSink.AFTER_FILTER
-        filter: a function (or a __call__able class) to run, with
-            the single parameter message and which returns a message
+
+        *location*: when the filter should be run. one of
+        **ParserSink.BEFORE_FILTER**, **ParserSink.DURING_FILTER** or
+        **ParserSink.AFTER_FILTER**
+
+        *filter*: a function (or a __call__able class) to run, with
+        the single parameter message and which returns a message
         """
-        
+
         if not hasattr(filter, '__call__'):
             raise TypeError("filter must be callable")
 
@@ -65,7 +72,7 @@ class ParserSink(SimpleSink):
             args = len(inspect.getargspec(filter).args)
         else:
             raise TypeError("filter must be a class or a function")
-        
+
         if args != 1:
             raise ValueError("filter must only take one argument")
 
@@ -78,6 +85,7 @@ class ParserSink(SimpleSink):
         """
         Remove a filter from the Parser.
         """
+
         if location in self.filters.keys():
             if filter in self.filters[location]:
                 self.filters[location].remove(filter)
@@ -96,7 +104,7 @@ class ParserSink(SimpleSink):
             self.modules.remove(module)
         else:
             raise ValueError("Module was not loaded")
-    
+
     def reload_module(self, module):
         for loaded_module in self.modules:
             if loaded_module.__name__ == module.__name__:
@@ -107,9 +115,12 @@ class ParserSink(SimpleSink):
 
     def message(self, message):
         """
-        Parse an incoming message from the message server. It should be
-        a raw telemetry string.
+        Parse an incoming message from the message server.
+
+        *message*: a :py:class:`habitat.message_server.Message` object.
+        ``message.type`` should be **RECEIVED_TELEM**
         """
+
         if message.type != Message.RECEIVED_TELEM:
             return
 
@@ -119,3 +130,16 @@ class ParserSink(SimpleSink):
             message = filter(message)
         for filter in self.after_filters:
             message = filter(message)
+
+class ParserModule:
+    """
+    **ParserModules** are classes which turn radio strings into useful data.
+
+    ParserModules
+
+     - can be given various configuration parameters.
+     - inherit from **ParserModule**.
+
+    """
+
+    pass

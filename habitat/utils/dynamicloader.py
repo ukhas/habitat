@@ -17,34 +17,47 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Implements a generic dynamic loader. The main function to call is load().
-In addition, several functions to quickly test the loaded object are provided:
-    isclass
-    isfunction
-    isgeneratorfunction
-    isstandardfunction (isfunction and not isgeneratorfunction)
-    iscallable
-    issubclass
-    hasnumargs
-    hasmethod
-    hasattr
-Further to that, functions expectisclass, expectisfunction are provided which
-are identical to the above except they raise either a ValueError or a TypeError
-where the original function would have returned false.
+A generic dynamic python module loader.
 
-Example use:
-def loadsomething(loadable):
-    loadable = dynamicloader.load(loadable)
-    expectisstandardfunction(loadable)
-    expecthasattr(loadable, 2)
+The main function to call is load(). In addition, several functions
+to quickly test the loaded object for certain conditions are provided:
 
-If you use expectiscallable note that you may get either a function or a class,
-an object of which is callable (ie. the class has __call__(self, ...)). In that
-case you may need to create an object:
+ - **isclass**
+ - **isfunction**
+ - **isgeneratorfunction**
+ - **isstandardfunction** (``isfunction and not isgeneratorfunction``)
+ - **iscallable**
+ - **issubclass**
+ - **hasnumargs**
+ - **hasmethod**
+ - **hasattr**
+
+Further to that, functions expectisclass, expectisfunction, e.t.c, are
+provided which are identical to the above except they raise either a
+ValueError or a TypeError where the original function would have
+returned false.
+
+Example use::
+
+    def loadsomething(loadable):
+        loadable = dynamicloader.load(loadable)
+        expectisstandardfunction(loadable)
+        expecthasattr(loadable, 2)
+
+If you use expectiscallable note that you may get either a function
+or a class, an object of which is callable (ie. the class has
+``__call__(self, ...))``. In that case you may need to create an object::
+
     if isclass(loadable):
         loadable = loadable()
+
 Of course if you've used expectisclass then you will be creating an object
-anyway.
+anyway. Note that classes are technically "callable" in that calling them
+creates objects. expectiscallable ignores this.
+
+A lot of the provided tests are imported straight from inspect and are
+therefore not documented here. The ones implemented as a part of this
+module are.
 """
 
 import sys
@@ -55,16 +68,19 @@ import imp
 
 def load(loadable, force_reload=False):
     """
-    Attempts to dynamically load "loadable", which is either a class,
-    a function, a module, or a string: a dotted-path to one of those.
+    Attempts to dynamically load *loadable*
 
-    e,g.:
-        load(MyClass) returns MyClass
-        load(MyFunction) returns MyFunction
-        load("mypackage") returns the mypackage module
-        load("packagea.packageb") returns the packageb module
-        load("packagea.packageb.aclass") returns aclass
-        e.t.c.
+    *loadable*: a class, a function, a module, or a string that is a
+    dotted-path to one a class function or module
+
+    Some examples::
+
+        load(MyClass) # returns MyClass
+        load(MyFunction) # returns MyFunction
+        load("mypackage") # returns the mypackage module
+        load("packagea.packageb") # returns the packageb module
+        load("packagea.packageb.aclass") # returns aclass
+
     """
 
     old_modules = sys.modules.keys()
@@ -119,10 +135,12 @@ def load(loadable, force_reload=False):
 
 def fullname(loadable):
     """
-    Determines the full name in module.module.class form of loadable,
-    which can be a class, module or function.
-    If fullname is given a string it will load() it in order to resolve it to
-    its true full name.
+    Determines the full name in ``module.module.class`` form
+
+    *loadable*: a class, module or function.
+
+    If fullname is given a string it will :py:func:`load` it in order to
+    resolve it to its true full name.
     """
 
     # You can import things into classes from all over the place. Therefore
@@ -146,7 +164,7 @@ from inspect import isclass, isfunction, isgeneratorfunction
 from __builtin__ import issubclass, hasattr
 
 # Some are very simple
-isstandardfunction = lambda loadable: (isfunction(loadable) and not 
+isstandardfunction = lambda loadable: (isfunction(loadable) and not
                                        isgeneratorfunction(loadable))
 
 # The following we have to implement ourselves
@@ -156,8 +174,8 @@ def hasnumargs(thing, num):
 
     If thing is a function, the positional arguments are simply counted up.
     If thing is a method, the positional arguments are counted up and one
-    is subtracted in order to account for method(self, ...)
-    If thing is a class, the positional arguments of cls.__call__ are
+    is subtracted in order to account for ``method(self, ...)``
+    If thing is a class, the positional arguments of ``cls.__call__`` are
     counted up and one is subtracted (self), giving the number of arguments
     a callable object created from that class would have.
     """
@@ -176,9 +194,7 @@ def hasnumargs(thing, num):
     return args == num
 
 def hasmethod(loadable, name):
-    """
-    Returns true if loadable.name is callable
-    """
+    """Returns true if *loadable*.*name* is callable """
     try:
         expecthasattr(loadable, name)
         expectiscallable(getattr(loadable, name))
@@ -190,16 +206,18 @@ def hasmethod(loadable, name):
 # class oboject
 def iscallable(loadable):
     """
-    Returns true if loadable is a method or function, OR if it is a class
-    with a __call__ method (i.e., when an object is created from the class
-    the object is callable)
+    Returns true if *loadable* is a method, function or callable class.
+
+    For *loadable* to be a callable class, an object created from it must
+    be callable (i.e., it has a ``__call__`` method)
     """
+
     if inspect.isclass(loadable):
         return hasmethod(loadable, "__call__")
     else:
         return inspect.isroutine(loadable)
 
-# Generate an expect function decorator, which will wrap a function and 
+# Generate an expect function decorator, which will wrap a function and
 # raise error rather than return false.
 def expectgenerator(error):
     def decorator(function):

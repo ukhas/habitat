@@ -19,12 +19,6 @@
 Tests the scgi module app, which creates a scgi application server.
 """
 
-from habitat.http.app import info_message
-from habitat.http.scgi import SCGIApplication
-from habitat.message_server import Message
-from nose.tools import raises
-from serverstub import ServerStub
-from do_scgi_request import do_scgi_request
 import os
 import sys
 import threading
@@ -33,6 +27,16 @@ import socket
 import functools
 import json
 import traceback
+
+from nose.tools import raises
+
+from serverstub import ServerStub
+from do_scgi_request import do_scgi_request
+
+from habitat.message_server import Message
+
+from habitat.http import info_message
+from habitat.http import SCGIApplication
 
 socket_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sock")
 scgi_req = functools.partial(do_scgi_request, socket.AF_UNIX, socket_file)

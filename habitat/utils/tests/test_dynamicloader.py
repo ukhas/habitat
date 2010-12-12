@@ -17,7 +17,7 @@
 
 """
 Tests the Dynamic Loader module, ../dynamicloader.py
-""" 
+"""
 
 import sys
 import os
@@ -272,7 +272,7 @@ class TestInspectors:
         acl = dynamicloadme.AClass
         ccl = dynamicloadme.CClass
         dcl = dynamicloadme.DClass
-        
+
         self.check_function_success(fnn, exn, afn)
         self.check_function_success(fnn, exn, gfn)
         self.check_function_failure(fnn, exn, acl, TypeError)
@@ -298,8 +298,8 @@ class TestInspectors:
                            (dynamicloadme.CClass, 2),
                            (dynamicloadme.DClass, 2),
                            (dynamicloadme.BClass.a_method, 0) ]:
-            
-            self.check_value_function(dynamicloader.hasnumargs, 
+
+            self.check_value_function(dynamicloader.hasnumargs,
                                       dynamicloader.expecthasnumargs,
                                       func, val, val + 1, ValueError)
 

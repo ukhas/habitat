@@ -17,15 +17,18 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tests the Server class, found in ../server.py
-""" 
+Tests the Server class
+"""
 
 import sys
 import time
 import threading
+
 from nose.tools import raises, with_setup
-from habitat.message_server import Sink, SimpleSink, Server, Message, Listener
+
+from habitat.message_server import Sink, SimpleSink, Message, Listener
 from habitat.utils.tests.reloadable_module import ReloadableModuleWriter
+from habitat.message_server import Server
 
 class FakeSink(SimpleSink):
     def setup(self):
@@ -309,3 +312,7 @@ class TestServer:
 
         assert old_object.messages == 0
         assert new_object.messages == 3
+
+    @raises(TypeError)
+    def test_push_message_rejects_non_message(self):
+        self.server.load(123)
