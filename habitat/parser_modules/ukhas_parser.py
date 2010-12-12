@@ -231,23 +231,21 @@ class UKHASParser(ParserModule):
                 field_data = degrees
         return [field_name, field_data]
 
-    def pre_parse(self, message):
+    def pre_parse(self, string):
         """Check if this message is parsable by this module, and if so
         extract the payload name and return it. Otherwise, raise a ValueError.
         """
-        string = message.data
         self._verify_basic_format(string)
         fields = self._extract_fields(string)
         return fields[0]
         
-    def parse(self, message, config):
+    def parse(self, string, config):
         """Parse the message, extracting processed field data.
         `config' is a dictionary containing the sentence dictionary
         from the payload's configuration document.
         Raise ValueError on invalid messages. Return a dict of name:data.
         """
         self._verify_config(config)
-        string = message.data
         self._verify_basic_format(string)
         fields = self._extract_fields(string)
         string, checksum = self._split_checksum(string[2:])

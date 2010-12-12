@@ -189,26 +189,19 @@ del output_good_2["time"]["second"]
 output_good_6 = deepcopy(output_good)
 output_good_6["latitude"] = 35.1032
 
-class M:
-    """Store the constructor argument in self.data, to fake being a message
-    for the purposes of testing the parser modules
-    """
-    def __init__(self, data):
-        self.data = data
-
 class TestUKHASParser:
     """UKHAS Parser"""
     def setUp(self):
         self.p = UKHASParser()
     def test_pre_parse_rejects_bad_sentences(self):
         for sentence in bad_sentences:
-            assert_raises(ValueError, self.p.pre_parse, M(sentence))
+            assert_raises(ValueError, self.p.pre_parse, sentence)
     def test_pre_parse_accepts_good_setences(self):
         for sentence in good_sentences:
-            assert self.p.pre_parse(M(sentence)) == "good"
+            assert self.p.pre_parse(sentence) == "good"
     def test_parse_rejects_bad_sentences(self):
         for sentence in bad_sentences:
-            assert_raises(ValueError, self.p.parse, M(sentence), base_config)
+            assert_raises(ValueError, self.p.parse, sentence, base_config)
     def test_parse_rejects_invalid_configs(self):
         for config in [
                 config_no_protocol, config_no_checksum, config_no_fields,
@@ -217,7 +210,7 @@ class TestUKHASParser:
                 config_checksum_invalid, config_field_type_invalid,
                 config_format_invalid, config_invalid_protocol
             ]:
-            assert_raises(ValueError, self.p.parse, M("$$good,good"), config)
+            assert_raises(ValueError, self.p.parse, "$$good,good", config)
     def test_parse_parses_correct_checksums(self):
         for sentence, config in [
                 [sentence_no_checksum, config_checksum_none],
@@ -226,7 +219,7 @@ class TestUKHASParser:
                 [sentence_fletcher_16, config_checksum_fletcher_16],
                 [sentence_fletcher_16_256, config_checksum_fletcher_16_256]
             ]:
-            assert self.p.parse(M(sentence), config) == output_checksum_test
+            assert self.p.parse(sentence, config) == output_checksum_test
     def test_parse_rejects_incorrect_checksums(self):
         for sentence, config in [
                 [sentence_bad_crc16_ccitt, config_checksum_crc16_ccitt],
@@ -238,14 +231,14 @@ class TestUKHASParser:
                 [sentence_no_checksum, config_checksum_fletcher_16_256],
                 [sentence_bad_fletcher_16_256, config_checksum_fletcher_16_256]
             ]:
-            assert_raises(ValueError, self.p.parse, M(sentence), config)
+            assert_raises(ValueError, self.p.parse, sentence, config)
     def test_parse_rejects_invalid_values(self):
         for sentence in [
                 sentence_bad_int, sentence_bad_float, sentence_bad_time]:
-            assert_raises(ValueError, self.p.parse, M(sentence),
+            assert_raises(ValueError, self.p.parse, sentence,
                     config_checksum_none)
     def test_parse_rejects_bad_minutes(self):
-        assert_raises(ValueError, self.p.parse, M(sentence_bad_minutes),
+        assert_raises(ValueError, self.p.parse, sentence_bad_minutes,
                 config_minutes)
     def test_parse_parses_good_sentences(self):
         for sentence, output, config in [
@@ -256,4 +249,5 @@ class TestUKHASParser:
                 [sentence_good_5, output_good, base_config],
                 [sentence_good_6, output_good_6, base_config]
             ]:
-            assert self.p.parse(M(sentence), config) == output
+            assert self.p.parse(sentence, config) == output
+
