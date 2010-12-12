@@ -21,17 +21,20 @@ import crcmod
 from operator import xor as op_xor
 
 def crc16_ccitt(data):
-    """Calculate the CRC16 CCITT (start 0xFFFF, poly 0x1021) checksum"""
+    """Calculate the CRC16 CCITT (start 0xFFFF, poly 0x1021) checksum of
+    *data*.
+    """
     crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
     return hex(crc16(data))[2:].upper().zfill(4)
 
 def xor(data):
-    """Calculate the simple XOR checksum of data"""
+    """Calculate the XOR checksum of *data*.
+    """
     numbers = map(ord, data)
     return hex(reduce(op_xor, numbers))[2:].upper().zfill(2)
 
 def fletcher_16(data, modulus=255):
-    """Calculate the Fletcher-16 checksum of data, default modulus 255"""
+    """Calculate the Fletcher-16 checksum of *data, default modulus 255."""
     numbers = map(ord, data)
     a = b = 0
     for number in numbers:

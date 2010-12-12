@@ -20,7 +20,7 @@ This module contains the parser for the UKHAS telemetry protocol format.
 
 ``$$<payload>,<data>,<data>,...,<last data>*<checksum>``
 
-Should be at least:
+The typical minimum telemetry string is:
 ``$$<payload>,<message number>,<time>,<latitude>,<longitude>,<altitude>,\
 <data>,...,<last data>*<checksum>``
 
@@ -29,10 +29,10 @@ of sensors or other system information.
 
 Time is in ``HH:MM:SS``.
 
-Latitude and longitude are in ddmm.mm or dd.dddd, configurable.
-The number of custom data fields and their units are configurable.
+Latitude and longitude are in ``ddmm.mm`` or ``dd.dddd``.
+The number of custom data fields and their types are configurable.
 
-Checksums work on the message content between the $$ and the ``*``,
+Checksums work on the message content between the ``$$`` and the ``*``,
 non-inclusive, and are given as hexadecimal (upper or lower case) after
 the ``*`` in the message.
 
@@ -62,7 +62,6 @@ Typical configuration (CouchDB doc in ``payloads`` DB)::
         },
         "sentence": {
             "protocol": "UKHAS",
-            "callsign": "habitat",
             "checksum": "crc16-ccitt",
             "fields": [
                 {
@@ -101,7 +100,6 @@ Supported types include:
  - time
  - coordinate
 
-The parser uses the 'sentence' object to parse incoming data.
 """
 
 import time
@@ -276,8 +274,8 @@ class UKHASParser(ParserModule):
         Check if this message is parsable by this module.
 
         If the message is pasable, **pre_parse** extracts the payload
-        name and return it. Otherwise, raise a
-        :py:exc:`ValueError <exceptions.ValueError>`.
+        name and return it. Otherwise, a
+        :py:exc:`ValueError <exceptions.ValueError>` is raised.
         """
 
         self._verify_basic_format(string)
@@ -291,7 +289,7 @@ class UKHASParser(ParserModule):
         *config* is a dictionary containing the sentence dictionary
         from the payload's configuration document.
 
-        Raise :py:exc:`ValueError <exceptions.ValueError>` on invalid
+        :py:exc:`ValueError <exceptions.ValueError>` is raised on invalid
         messages. Return a dict of name:data.
         """
         self._verify_config(config)
