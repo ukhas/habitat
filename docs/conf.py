@@ -20,7 +20,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 project = habitat.__name__
-copyright = habitat.__copyright__
+copyright = habitat.__short_copyright__
 
 # The short X.Y version.
 version = habitat.__version__

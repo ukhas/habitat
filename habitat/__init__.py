@@ -25,7 +25,8 @@ on maps.
 __name__ = "habitat"
 __version__ = "0.0.1"
 __authors__ = "Adam Greig, Daniel Richman"
-__copyright__ = "Copyright 2010 " + __authors__
+__short_copyright__ = "2010 " + __authors__
+__copyright__ = "Copyright " + __short_copyright__
 
 from . import main
 from . import http
