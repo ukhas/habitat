@@ -20,6 +20,8 @@
 import crcmod
 from operator import xor as op_xor
 
+__all__ = ["crc16_ccitt", "xor", "fletcher_16"]
+
 def crc16_ccitt(data):
     """
     Calculate the CRC16 CCITT checksum of *data*.

@@ -37,6 +37,8 @@ import habitat
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
 
+__all__ = ["get_options", "Program", "SignalListener"]
+
 usage = "%prog [-f config_file | -c couch_server]"
 version = "{0} {1}".format(habitat.__name__, habitat.__version__)
 header = "{0} is {1}".format(habitat.__name__, habitat.__copyright__)

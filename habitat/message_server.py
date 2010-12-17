@@ -28,6 +28,9 @@ import ipaddr
 
 from habitat.utils import dynamicloader
 
+__all__ = ["Server", "Sink", "SimpleSink",
+           "ThreadedSink", "Message", "Listener"]
+
 class Server:
     """
     The **Server** is the main message server class.
@@ -363,7 +366,7 @@ class ThreadedSink(Sink, threading.Thread):
 
 class ThreadedSinkShutdown:
     """
-    A object used to ask the runner of a :py:class`ThreadedSink` \
+    A object used to ask the runner of a :py:class:`ThreadedSink` \
     to shut down
     """
     pass

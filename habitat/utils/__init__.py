@@ -19,5 +19,7 @@
 Various utilities for general use by ``habitat``.
 """
 
-from . import dynamicloader
+__all__ = ["checksums", "dynamicloader"]
+
 from . import checksums
+from . import dynamicloader

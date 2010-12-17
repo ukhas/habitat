@@ -23,6 +23,8 @@ import inspect
 
 from habitat.message_server import SimpleSink, Message
 
+__all__ = ["ParserSink", "ParserModule"]
+
 class ParserSink(SimpleSink):
     """
     The Parser Sink

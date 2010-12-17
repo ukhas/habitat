@@ -33,6 +33,8 @@ import json
 
 from habitat.message_server import Message, Listener
 
+__all__ = ["InsertApplication", "SCGIApplication", "SCGIHandler"]
+
 info_message = """
 "habitat" is a web application for tracking the flight path of high altitude
 balloons, relying on a network of users with radios sending in received

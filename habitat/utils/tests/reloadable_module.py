@@ -40,7 +40,8 @@ class ReloadableModuleWriter:
 
     def is_loaded(self):
         if self.fullmodname in sys.modules:
-            raise ValueError("modname %s is already in sys.modules")
+            raise ValueError("modname %s is already in sys.modules" %
+                             self.fullmodname)
 
     def write_code(self, code):
         try:

@@ -109,6 +109,8 @@ from string import hexdigits
 from habitat.parser import ParserModule
 from habitat.utils import checksums
 
+__all__ = ["UKHASParser"]
+
 checksum_algorithms = [
     "crc16-ccitt", "xor", "fletcher-16", "fletcher-16-256", "none"]
 field_types = [
