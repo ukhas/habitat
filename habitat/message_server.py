@@ -51,6 +51,8 @@ class Server:
         self.program = program
 
         self.sinks = []
+        self.message_count = 0
+
         self.lock = threading.RLock()
 
     def load(self, new_sink):
@@ -156,8 +158,38 @@ class Server:
             raise TypeError("message must be a Message object")
 
         with self.lock:
+            self.message_count += 1
+
             for sink in self.sinks:
                 sink.push_message(message)
+
+    def __repr__(self):
+        """
+        Concisely describes the current state of the **Server**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        If another thread holds the internal server lock, then a string
+        similar to ``<habitat.message_server.Server: locked>` is
+        returned. Otherwise, something like
+        ``<habitat.message_server.Server: 5 sinks loaded, \
+        52 messages so far>`` is returned.
+        """
+
+        general_format = "<habitat.message_server.Server: %s>"
+        locked_format = general_format % "locked"
+        info_format = general_format % "%s sinks loaded, %s messages so far"
+
+        acquired = self.lock.acquire(blocking=False)
+
+        if not acquired:
+            return locked_format
+
+        try:
+            return info_format % (len(self.sinks), self.message_count)
+        finally:
+            self.lock.release()
 
 class Sink:
     """

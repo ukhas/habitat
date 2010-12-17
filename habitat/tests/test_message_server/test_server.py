@@ -63,6 +63,65 @@ class TestServer:
         self.server = Server(None, None)
         self.source = Listener("2E0DRX", "1.2.3.4")
 
+    def test_message_counter(self):
+        message_rt = Message(self.source, Message.RECEIVED_TELEM, None)
+        assert self.server.message_count == 0
+        self.server.push_message(message_rt)
+        assert self.server.message_count == 1
+        for i in xrange(10):
+            self.server.push_message(message_rt)
+        assert self.server.message_count == 11
+
+    def test_repr(self):
+        # TODO Move this into test libs when it's created.
+        class LockTroll(threading.Thread):
+            def __init__(self, lock):
+                threading.Thread.__init__(self)
+                self.name = "Test Thread: test_repr.LockTroll"
+                self.lock = lock
+                self.stop = threading.Event()
+                self.started = threading.Event()
+            def start(self):
+                threading.Thread.start(self)
+                self.started.wait()
+            def run(self):
+                with self.lock:
+                    self.started.set()
+                    self.stop.wait()
+            def release(self):
+                self.stop.set()
+                self.join()
+
+        assert self.server.__class__.__name__ == "Server"
+        assert self.server.__class__.__module__ == "habitat.message_server"
+        expect_format = "<habitat.message_server.Server: %s>"
+        info_format = expect_format % "%s sinks loaded, %s messages so far"
+        locked_format = expect_format % "locked"
+
+        assert repr(self.server) == info_format % (0, 0)
+        troll = LockTroll(self.server.lock)
+        troll.start()
+        assert repr(self.server) == locked_format
+        troll.release()
+
+        message_rt = Message(self.source, Message.RECEIVED_TELEM, None)
+        self.server.push_message(message_rt)
+        assert repr(self.server) == info_format % (0, 1)
+
+        self.server.load(TestSinkA)
+        assert repr(self.server) == info_format % (1, 1)
+
+        self.server.push_message(message_rt)
+        self.server.load(TestSinkB)
+        self.server.push_message(message_rt)
+        self.server.push_message(message_rt)
+        assert repr(self.server) == info_format % (2, 4)
+
+        troll = LockTroll(self.server.lock)
+        troll.start()
+        assert repr(self.server) == locked_format
+        troll.release()
+
     def teardown(self):
         self.server.shutdown()
 
