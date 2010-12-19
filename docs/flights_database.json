@@ -14,7 +14,7 @@
         /*
             Name is used to refer to this flight in various user interfaces.
         */
-        "name": "Nova 20",
+        "name": "Habitat Test Launch",
         
         /*
             Launch time, timezone and location reflect when and where the launch
@@ -36,9 +36,9 @@
         */
         "metadata": {
             "location": "Churchill College, Cambridge, UK",
-            "predicted_landing": "Near Bury-St-Edmunds",
-            "project": "Nova",
-            "group": "CUSF"
+            "predicted_landing": "Washed up at sea",
+            "project": "Habitat",
+            "group": "HabHub"
         },
         
         /*
@@ -46,7 +46,7 @@
             This includes radio settings and telemetry format.
         */
         "payloads": [
-            "nova20": {
+            "habitat": {
                 /*
                     Radio contains information for actually tuning a radio to receive the
                     payload.
@@ -82,7 +82,7 @@
                 "sentence": {
                     "protocol": "UKHAS",
                     "checksum": "crc16-ccitt",
-                    "payload": "NOVA",
+                    "payload": "habitat",
                     "fields": [
                         {
                             "name": "message_count",
@@ -102,8 +102,11 @@
                             "name": "altitude",
                             "type": "int",
                         }, {
-                            "name": "internal_temperature",
+                            "name": "speed",
                             "type": "float"
+                        }, {
+                            "name": "custom_string",
+                            "type": "string"
                         }
                     ],
                 },
