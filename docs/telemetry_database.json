@@ -51,12 +51,6 @@
                 "uploaded_time": 1292772131,
                 "latest_telemetry": "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
             }
-        },
-        
-        /*
-            Flight refers to the document in the Flights database about the flight this
-            telemetry came from.
-        */
-        "flight": "c89860d6f68b1f31ac9480ff9f95bb62"
+        }
     }
 ]
