@@ -81,32 +81,32 @@ class InsertApplication:
         self.server = server
         self.program = program
 
-    def message(self, ip, **kwargs):
+    def message(self, ip, args):
         """
         Push Action
 
         *ip*: string - the IP address of the client
 
-        Arguments should be supplied in kwargs; the following three are
+        Arguments should be supplied in ``args``; the following three are
         required: "callsign", "type", "data". All are user supplied strings
         """
 
         # "superset" operation: requires every item in the second set to
         # exist in the first.
-        if not set(kwargs.keys()) >= set(["callsign", "type", "data"]):
+        if not set(args.keys()) >= set(["callsign", "type", "data"]):
             raise ValueError("required arguments: callsign, type, data")
 
-        source = Listener(kwargs["callsign"], ip)
+        source = Listener(args["callsign"], ip)
 
-        if kwargs["type"] not in Message.type_names:
+        if args["type"] not in Message.type_names:
             raise ValueError("invalid type")
 
-        type = getattr(Message, kwargs["type"])
+        type = getattr(Message, args["type"])
 
         if type in self.FORBIDDEN_TYPES:
             raise ValueError("type forbidden for direct insertion")
 
-        message = Message(source, type, kwargs["data"])
+        message = Message(source, type, args["data"])
 
         self.server.push_message(message)
 
@@ -316,7 +316,7 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
         try:
             args = json.loads(self.post_data)
             action_function = getattr(self.server, action)
-            action_function(self.environ["REMOTE_ADDR"], **args)
+            action_function(self.environ["REMOTE_ADDR"], args)
         except (TypeError, ValueError):
             self.request.sendall("Status: 400 Bad Request\r\n\r\n")
             raise

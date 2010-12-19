@@ -30,8 +30,9 @@ class TestInsertApplication:
         server = ServerStub()
         self.messages = server.messages
         self.app = InsertApplication(server, None)
-        self.app.message("2.7.5.8", callsign="2E0DRX", type="RECEIVED_TELEM",
-                         data="some$data")
+        args = {"callsign": "2E0DRX", "type": "RECEIVED_TELEM",
+                "data": "some$data"}
+        self.app.message("2.7.5.8", args)
 
     def test_message_pushes_message(self):
         assert len(self.messages) == 1
@@ -50,23 +51,25 @@ class TestInsertApplication:
 
     @raises(ValueError)
     def test_message_refuses_forbidden_types(self):
-        self.app.message("2.7.5.8", callsign="2E0DRX", type="TELEM",
-                         data="haxx")
+        args = {"callsign": "2E0DRX", "type": "TELEM", "data": "haxx"}
+        self.app.message("2.7.5.8", args)
 
     @raises(ValueError)
     def test_message_raises_listener_callsign_errors(self):
-        self.app.message("2.7.5.8", callsign="invalid char:",
-                         type="RECEIVED_TELEM", data="haxx")
+        args = {"callsign": "invalid char:", "type": "RECEIVED_TELEM",
+                "data": "haxx"}
+        self.app.message("2.7.5.8", args)
 
     @raises(ValueError)
     def test_message_raises_message_type_errors(self):
-        self.app.message("2.7.5.8", callsign="2E0DRX", type="NOT_A_TYPE",
-                         data="haxx")
+        args = {"callsign": "2E0DRX", "type": "NOT_A_TYPE", "data": "haxx"}
+        self.app.message("2.7.5.8", args)
 
     # So that it's easy to extend/update later
     def test_message_allows_other_args(self):
-        self.app.message("2.7.5.8", callsign="2E0DRX", type="RECEIVED_TELEM",
-                         data="some$data", cookieplease=True)
+        args = {"callsign": "2E0DRX", "type": "RECEIVED_TELEM",
+                "data": "some$data", "cookieplease": True}
+        self.app.message("2.7.5.8", args)
         assert len(self.messages) == 2
         self.messages.pop(1)
 
@@ -76,7 +79,7 @@ class TestInsertApplication:
 
     @raises(ValueError)
     def check_message_requires_arg(self, arg):
-        kwargs = { "callsign": "2E0DRX", "type": "RECEIVED_TELEM",
-                   "data": "some$data" }
-        del kwargs[arg]
-        self.app.message("2.7.5.8", **kwargs)
+        args = { "callsign": "2E0DRX", "type": "RECEIVED_TELEM",
+                 "data": "some$data" }
+        del args[arg]
+        self.app.message("2.7.5.8", args)
