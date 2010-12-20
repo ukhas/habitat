@@ -19,21 +19,21 @@ import threading
 
 class LockTroll(threading.Thread):
     def __init__(self, lock):
-	threading.Thread.__init__(self)
-	self.name = "Test Thread: LockTroll"
-	self.lock = lock
-	self.stop = threading.Event()
-	self.started = threading.Event()
+        threading.Thread.__init__(self)
+        self.name = "Test Thread: LockTroll"
+        self.lock = lock
+        self.stop = threading.Event()
+        self.started = threading.Event()
 
     def start(self):
-	threading.Thread.start(self)
-	self.started.wait()
+        threading.Thread.start(self)
+        self.started.wait()
 
     def run(self):
-	with self.lock:
-	    self.started.set()
-	    self.stop.wait()
+        with self.lock:
+            self.started.set()
+            self.stop.wait()
 
     def release(self):
-	self.stop.set()
-	self.join()
+        self.stop.set()
+        self.join()

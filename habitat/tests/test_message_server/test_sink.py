@@ -156,11 +156,12 @@ class TestSink:
     def test_repr_simple(self):
         sink = DelayableSink(Server(None, None))
 
-        expect_format = "<" + fullname(sink.__class__) + ": %s>"
+        expect_format = "<" + fullname(sink.__class__) + " (SimpleSink): %s>"
         info_format = expect_format % "%s messages so far, %s executing now"
         locked_format = expect_format % "locked"
 
         assert repr(sink) == info_format % (0, 0)
+
         troll = LockTroll(sink.cv)
         troll.start()
         assert repr(sink) == locked_format
@@ -189,20 +190,25 @@ class TestSink:
         sink.shutdown()
 
     def test_repr_threaded(self):
-        # TODO: Evaluate the thread safety of this when I'm not tired.
         sink = DelayableThreadedSink(Server(None, None))
 
-        info_format = "<" + fullname(sink.__class__)  + \
-                      ": %s messages so far, roughly %s queued>"
+        base_format = "<" + fullname(sink.__class__)  + " (ThreadedSink): %s>"
+        info_format = base_format % "%s messages so far, roughly %s queued%s"
+        locked_format = base_format % "locked"
 
-        assert repr(sink) == info_format % (0, 0)
+        assert repr(sink) == info_format % (0, 0, "")
+
+        troll = LockTroll(sink.stats_lock)
+        troll.start()
+        assert repr(sink) == locked_format
+        troll.release()
 
         message = Message(self.source, Message.RECEIVED_TELEM, None)
 
         sink.push_message(message)
         sink.push_message(message)
         sink.flush()
-        assert repr(sink) == info_format % (2, 0)
+        assert repr(sink) == info_format % (2, 0, "")
 
         thread_a = ThreadedPush(sink, message)
         thread_b = ThreadedPush(sink, message)
@@ -214,14 +220,17 @@ class TestSink:
         thread_b.start()
         thread_b.join()
 
-        # Since there's "one" executing and one in the queue, only one is
-        # queued. TODO add a lock, make it accurate.
-        assert repr(sink) == info_format % (2, 1)
+        assert repr(sink) == info_format % (2, 1, ", currently executing")
+
+        troll = LockTroll(sink.stats_lock)
+        troll.start()
+        assert repr(sink) == locked_format
+        troll.release()
 
         sink.go.set()
         sink.flush()
 
-        assert repr(sink) == info_format % (4, 0)
+        assert repr(sink) == info_format % (4, 0, "")
 
         sink.shutdown()
 

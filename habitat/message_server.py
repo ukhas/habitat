@@ -363,12 +363,14 @@ class SimpleSink(Sink):
         console.
 
         If another thread holds the internal server lock, then a string
-        similar to ``<module.class: locked>`` is returned. Otherwise,
-        something like ``<module.class: 5 messages so far, 2 executing now>``
+        similar to ``<module.class (SimpleSink): locked>`` is returned.
+        Otherwise, something like
+        ``<module.class (SimpleSink): 5 messages so far, 2 executing now>``
         is returned.
         """
 
-        general_format = "<%s: %%s>" % dynamicloader.fullname(self.__class__)
+        general_format = "<%s (SimpleSink): %%s>" % \
+                         dynamicloader.fullname(self.__class__)
         locked_format = general_format % "locked"
         info_format = general_format % "%s messages so far, %s executing now"
 
@@ -400,6 +402,9 @@ class ThreadedSink(Sink, threading.Thread):
         Sink.__init__(self, server)
         self.queue = Queue.Queue()
 
+        self.stats_lock = threading.RLock()
+        self.executing = 0
+
         self.start()
 
     def push_message(self, message):
@@ -417,8 +422,15 @@ class ThreadedSink(Sink, threading.Thread):
 
             if isinstance(message, Message):
                 if message.type in self.types:
+                    with self.stats_lock:
+                        self.executing = 1
+
                     self.message(message)
-                    self.message_count += 1
+
+                    with self.stats_lock:
+                        self.message_count += 1
+                        self.executing = 0
+
             elif isinstance(message, ThreadedSinkShutdown):
                 running = False
 
@@ -439,14 +451,31 @@ class ThreadedSink(Sink, threading.Thread):
         This is primarily for help debugging from PDB or the python
         console.
 
-        Something like ``<module.class: 5 messages so far, roughly 2 queued>``
+        If another thread holds the internal server lock, then a string
+        similar to ``<module.class (ThreadedSink): locked>`` is returned.
+        Otherwise, something like
+        ``<module.class (ThreadedSink): 5 messages so far, roughly 2 queued>``
         is returned.
         """
 
-        return "<%s: %s messages so far, roughly %s queued>" % \
-               (dynamicloader.fullname(self.__class__),
-                self.message_count,
-                self.queue.qsize())
+        general_format = "<%s (ThreadedSink): %%s>" % \
+                         dynamicloader.fullname(self.__class__)
+        info = "%s messages so far, roughly %s queued"
+        locked_format = general_format % "locked"
+        info_format = general_format % info
+        einfo_format = general_format % (info + ", currently executing")
+
+        acquired = self.stats_lock.acquire(blocking=False)
+
+        if not acquired:
+            return locked_format
+
+        try:
+            if self.executing:
+                info_format = einfo_format
+            return info_format % (self.message_count, self.queue.qsize())
+        finally:
+            self.stats_lock.release()
 
 class ThreadedSinkShutdown:
     """
