@@ -63,7 +63,7 @@ class NonSink:
 class TestServer:
     def setup(self):
         self.server = Server(None, None)
-        self.source = Listener("2E0DRX", "1.2.3.4")
+        self.source = Listener("M0ZDR", "1.2.3.4")
 
     def test_message_counter(self):
         message_rt = Message(self.source, Message.RECEIVED_TELEM, None)

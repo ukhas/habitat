@@ -133,7 +133,7 @@ class TestSCGIStartupShutdown:
         client.close()
 
 test_message_d = {}
-test_message_d["callsign"] = "2E0DRX"
+test_message_d["callsign"] = "M0ZDR"
 test_message_d["type"] = "RECEIVED_TELEM"
 test_message_d["data"] = "$$Garbage"
 test_message = json.dumps(test_message_d)
@@ -175,7 +175,7 @@ class TestSCGIBehaviour:
         (headers, body) = scgi_req("/message", test_message)
         assert headers["Status"].startswith("200")
         assert len(self.messages) == 1
-        assert self.messages[0].source.callsign == "2E0DRX"
+        assert self.messages[0].source.callsign == "M0ZDR"
         assert self.messages[0].type == Message.RECEIVED_TELEM
         assert self.messages[0].data == "$$Garbage"
 

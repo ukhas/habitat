@@ -218,7 +218,7 @@ class SignalListener:
 
      - **SIGTERM**, **SIGINT**: calls :py:meth:`Program.shutdown`
      - **SIGHUP**: calls :py:meth:`Program.reload`
-     - **SIGUSR1**: exits the py:meth:`listen` loop by
+     - **SIGUSR1**: exits the :py:meth:`listen` loop by
        calling :py:func:`sys.exit` / raising
        :py:exc:`SystemExit <exceptions.SystemExit>`
        (NB: the :py:meth:`listen` loop will be running in **MainThread**)

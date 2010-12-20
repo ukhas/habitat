@@ -124,7 +124,7 @@ class ThreadedPush(threading.Thread):
 
 class TestSink:
     def setup(self):
-        self.source = Listener("2E0DRX", "1.2.3.4")
+        self.source = Listener("M0ZDR", "1.2.3.4")
 
     @raises(TypeError)
     def test_init_rejects_garbage_server(self):

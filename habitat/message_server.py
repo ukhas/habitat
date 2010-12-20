@@ -528,6 +528,22 @@ class Message:
         self.type = type
         self.data = data
 
+    def __repr__(self):
+        """
+        Concisely describes the **Message**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        Returns something like:
+        ``<RECEIVED_TELEM habitat.message_server.Message from \
+        <habitat.message_server.Listener M0ZDR at 127.0.0.1>: \
+        {"data": "test"}``
+        """
+
+        return "<habitat.message_server.Message (%s) from %s: %s>" % \
+               (self.type_names[self.type], repr(self.source), repr(self.data))
+
     @classmethod
     def validate_type(cls, type):
         """Checks that type is an integer and a valid message type"""
@@ -582,3 +598,17 @@ class Listener:
             return self.callsign == other.callsign
         except:
             return False
+
+    def __repr__(self):
+        """
+        Concisely describes the **Listener**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        Returns something like:
+        ``<habitat.message_server.Listener M0ZDR at 127.0.0.1>``
+        """
+
+        return "<habitat.message_server.Listener %s at %s>" % \
+               (self.callsign, str(self.ip))
