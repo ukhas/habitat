@@ -25,7 +25,7 @@ from habitat.message_server import Message, Listener
 
 class TestMessage:
     def setup(self):
-        self.source = Listener("2E0DRX", "1.2.3.4")
+        self.source = Listener("M0ZDR", "1.2.3.4")
 
     def test_ids_exist_and_are_unique(self):
         types = set()
@@ -73,16 +73,30 @@ class TestMessage:
     def test_validate_type_accepts_valid_type(self):
         Message.validate_type(Message.LISTENER_TELEM)
 
+    def test_repr(self):
+        repr_format = "<habitat.message_server.Message (%s) from %s: %s>"
+
+        for type in Message.types:
+            for data in [None, 123, "testing", {"data": 123, "more": "asdf"}]:
+                assert repr(Message(self.source, type, data)) == \
+                    repr_format % (Message.type_names[type],
+                                   repr(self.source), repr(data))
+
 class TestListener:
     def setup(self):
         # NB: b & d have different IPs
-        self.listenera = Listener("2E0DRX", "1.2.3.4")
-        self.listenerb = Listener("2E0DRX", "1.2.3.5")
+        self.listenera = Listener("M0ZDR", "1.2.3.4")
+        self.listenerb = Listener("M0ZDR", "1.2.3.5")
         self.listenerc = Listener("M0RND", "1.2.3.4")
         self.listenerd = Listener("M0rnd", "001.2.003.5")
 
+    def test_repr(self):
+        repr_format = "<habitat.message_server.Listener %s at %s>"
+        assert repr(self.listenera) == repr_format % ("M0ZDR", "1.2.3.4")
+        assert repr(self.listenerd) == repr_format % ("M0RND", "1.2.3.5")
+
     def test_initialiser_accepts_and_stores_data(self):
-        assert self.listenerb.callsign == "2E0DRX"
+        assert self.listenerb.callsign == "M0ZDR"
         assert str(self.listenerb.ip) == "1.2.3.5"
         assert self.listenerc.callsign == "M0RND"
         assert str(self.listenerc.ip) == "1.2.3.4"
@@ -109,13 +123,13 @@ class TestListener:
 
     @raises(ValueError)
     def test_rejects_nonalphanum_callsign(self):
-        Listener("2E0DRX'; DELETE TABLE BALLOONS; --", "1.2.3.4")
+        Listener("M0ZDR'; DELETE TABLE BALLOONS; --", "1.2.3.4")
 
     @raises(ValueError) # IPAddress() failures return ValueError
     def test_rejects_invalid_ip(self):
         # We use ipaddr which is well tested, so we don't need to spend too
         # much time making sure it works.
-        Listener("2E0DRX", "1234.1.1.1")
+        Listener("M0ZDR", "1234.1.1.1")
 
     def test_ip_compares(self):
         assert self.listenera.ip == self.listenerc.ip

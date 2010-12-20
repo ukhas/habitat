@@ -51,6 +51,8 @@ class Server:
         self.program = program
 
         self.sinks = []
+        self.message_count = 0
+
         self.lock = threading.RLock()
 
     def load(self, new_sink):
@@ -156,8 +158,38 @@ class Server:
             raise TypeError("message must be a Message object")
 
         with self.lock:
+            self.message_count += 1
+
             for sink in self.sinks:
                 sink.push_message(message)
+
+    def __repr__(self):
+        """
+        Concisely describes the current state of the **Server**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        If another thread holds the internal server lock, then a string
+        similar to ``<habitat.message_server.Server: locked>`` is
+        returned. Otherwise, something like
+        ``<habitat.message_server.Server: 5 sinks loaded, \
+        52 messages so far>`` is returned.
+        """
+
+        general_format = "<habitat.message_server.Server: %s>"
+        locked_format = general_format % "locked"
+        info_format = general_format % "%s sinks loaded, %s messages so far"
+
+        acquired = self.lock.acquire(blocking=False)
+
+        if not acquired:
+            return locked_format
+
+        try:
+            return info_format % (len(self.sinks), self.message_count)
+        finally:
+            self.lock.release()
 
 class Sink:
     """
@@ -209,6 +241,13 @@ class Sink:
 
         self.server = server
         self.types = set()
+
+        # message_count is initialised here but must be incremented
+        # by the subclass if it is to be useful. Only messages that
+        # match self.types (and are therefore processed) should
+        # increment the counter, and only after processing has completed.
+        self.message_count = 0
+
         self.setup()
 
     def add_type(self, type):
@@ -304,6 +343,7 @@ class SimpleSink(Sink):
             self.message(message)
 
             with self.cv:
+                self.message_count += 1
                 self.executing_count -= 1
                 self.cv.notify_all()
 
@@ -314,6 +354,35 @@ class SimpleSink(Sink):
 
     def shutdown(self):
         self.flush()
+
+    def __repr__(self):
+        """
+        Concisely describes the current state of the **Sink**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        If another thread holds the internal server lock, then a string
+        similar to ``<module.class (SimpleSink): locked>`` is returned.
+        Otherwise, something like
+        ``<module.class (SimpleSink): 5 messages so far, 2 executing now>``
+        is returned.
+        """
+
+        general_format = "<%s (SimpleSink): %%s>" % \
+                         dynamicloader.fullname(self.__class__)
+        locked_format = general_format % "locked"
+        info_format = general_format % "%s messages so far, %s executing now"
+
+        acquired = self.cv.acquire(blocking=False)
+
+        if not acquired:
+            return locked_format
+
+        try:
+            return info_format % (self.message_count, self.executing_count)
+        finally:
+            self.cv.release()
 
 class ThreadedSink(Sink, threading.Thread):
     """
@@ -333,6 +402,9 @@ class ThreadedSink(Sink, threading.Thread):
         Sink.__init__(self, server)
         self.queue = Queue.Queue()
 
+        self.stats_lock = threading.RLock()
+        self.executing = 0
+
         self.start()
 
     def push_message(self, message):
@@ -350,7 +422,15 @@ class ThreadedSink(Sink, threading.Thread):
 
             if isinstance(message, Message):
                 if message.type in self.types:
+                    with self.stats_lock:
+                        self.executing = 1
+
                     self.message(message)
+
+                    with self.stats_lock:
+                        self.message_count += 1
+                        self.executing = 0
+
             elif isinstance(message, ThreadedSinkShutdown):
                 running = False
 
@@ -363,6 +443,39 @@ class ThreadedSink(Sink, threading.Thread):
         self.queue.put(ThreadedSinkShutdown())
         self.flush()
         self.join()
+
+    def __repr__(self):
+        """
+        Concisely describes the current state of the **Sink**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        If another thread holds the internal server lock, then a string
+        similar to ``<module.class (ThreadedSink): locked>`` is returned.
+        Otherwise, something like
+        ``<module.class (ThreadedSink): 5 messages so far, roughly 2 queued>``
+        is returned.
+        """
+
+        general_format = "<%s (ThreadedSink): %%s>" % \
+                         dynamicloader.fullname(self.__class__)
+        info = "%s messages so far, roughly %s queued"
+        locked_format = general_format % "locked"
+        info_format = general_format % info
+        einfo_format = general_format % (info + ", currently executing")
+
+        acquired = self.stats_lock.acquire(blocking=False)
+
+        if not acquired:
+            return locked_format
+
+        try:
+            if self.executing:
+                info_format = einfo_format
+            return info_format % (self.message_count, self.queue.qsize())
+        finally:
+            self.stats_lock.release()
 
 class ThreadedSinkShutdown:
     """
@@ -414,6 +527,22 @@ class Message:
         self.source = source
         self.type = type
         self.data = data
+
+    def __repr__(self):
+        """
+        Concisely describes the **Message**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        Returns something like:
+        ``<RECEIVED_TELEM habitat.message_server.Message from \
+        <habitat.message_server.Listener M0ZDR at 127.0.0.1>: \
+        {"data": "test"}``
+        """
+
+        return "<habitat.message_server.Message (%s) from %s: %s>" % \
+               (self.type_names[self.type], repr(self.source), repr(self.data))
 
     @classmethod
     def validate_type(cls, type):
@@ -469,3 +598,17 @@ class Listener:
             return self.callsign == other.callsign
         except:
             return False
+
+    def __repr__(self):
+        """
+        Concisely describes the **Listener**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        Returns something like:
+        ``<habitat.message_server.Listener M0ZDR at 127.0.0.1>``
+        """
+
+        return "<habitat.message_server.Listener %s at %s>" % \
+               (self.callsign, str(self.ip))

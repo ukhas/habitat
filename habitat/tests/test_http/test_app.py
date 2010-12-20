@@ -30,7 +30,7 @@ class TestInsertApplication:
         server = ServerStub()
         self.messages = server.messages
         self.app = InsertApplication(server, None)
-        args = {"callsign": "2E0DRX", "type": "RECEIVED_TELEM",
+        args = {"callsign": "M0ZDR", "type": "RECEIVED_TELEM",
                 "data": "some$data"}
         self.app.message("2.7.5.8", args)
 
@@ -38,7 +38,7 @@ class TestInsertApplication:
         assert len(self.messages) == 1
 
     def test_message_pushes_callsign_correctly(self):
-        assert self.messages[0].source.callsign == "2E0DRX"
+        assert self.messages[0].source.callsign == "M0ZDR"
 
     def test_message_pushes_ip_correctly(self):
         assert str(self.messages[0].source.ip) == "2.7.5.8"
@@ -51,7 +51,7 @@ class TestInsertApplication:
 
     @raises(ValueError)
     def test_message_refuses_forbidden_types(self):
-        args = {"callsign": "2E0DRX", "type": "TELEM", "data": "haxx"}
+        args = {"callsign": "M0ZDR", "type": "TELEM", "data": "haxx"}
         self.app.message("2.7.5.8", args)
 
     @raises(ValueError)
@@ -62,12 +62,12 @@ class TestInsertApplication:
 
     @raises(ValueError)
     def test_message_raises_message_type_errors(self):
-        args = {"callsign": "2E0DRX", "type": "NOT_A_TYPE", "data": "haxx"}
+        args = {"callsign": "M0ZDR", "type": "NOT_A_TYPE", "data": "haxx"}
         self.app.message("2.7.5.8", args)
 
     # So that it's easy to extend/update later
     def test_message_allows_other_args(self):
-        args = {"callsign": "2E0DRX", "type": "RECEIVED_TELEM",
+        args = {"callsign": "M0ZDR", "type": "RECEIVED_TELEM",
                 "data": "some$data", "cookieplease": True}
         self.app.message("2.7.5.8", args)
         assert len(self.messages) == 2
@@ -79,7 +79,7 @@ class TestInsertApplication:
 
     @raises(ValueError)
     def check_message_requires_arg(self, arg):
-        args = { "callsign": "2E0DRX", "type": "RECEIVED_TELEM",
+        args = { "callsign": "M0ZDR", "type": "RECEIVED_TELEM",
                  "data": "some$data" }
         del args[arg]
         self.app.message("2.7.5.8", args)
