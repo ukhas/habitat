@@ -171,7 +171,7 @@ class Server:
         console.
 
         If another thread holds the internal server lock, then a string
-        similar to ``<habitat.message_server.Server: locked>` is
+        similar to ``<habitat.message_server.Server: locked>`` is
         returned. Otherwise, something like
         ``<habitat.message_server.Server: 5 sinks loaded, \
         52 messages so far>`` is returned.
@@ -241,6 +241,13 @@ class Sink:
 
         self.server = server
         self.types = set()
+
+        # message_count is initialised here but must be incremented
+        # by the subclass if it is to be useful. Only messages that
+        # match self.types (and are therefore processed) should
+        # increment the counter, and only after processing has completed.
+        self.message_count = 0
+
         self.setup()
 
     def add_type(self, type):
@@ -336,6 +343,7 @@ class SimpleSink(Sink):
             self.message(message)
 
             with self.cv:
+                self.message_count += 1
                 self.executing_count -= 1
                 self.cv.notify_all()
 
@@ -346,6 +354,33 @@ class SimpleSink(Sink):
 
     def shutdown(self):
         self.flush()
+
+    def __repr__(self):
+        """
+        Concisely describes the current state of the **Sink**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        If another thread holds the internal server lock, then a string
+        similar to ``<module.class: locked>`` is returned. Otherwise,
+        something like ``<module.class: 5 messages so far, 2 executing now>``
+        is returned.
+        """
+
+        general_format = "<%s: %%s>" % dynamicloader.fullname(self.__class__)
+        locked_format = general_format % "locked"
+        info_format = general_format % "%s messages so far, %s executing now"
+
+        acquired = self.cv.acquire(blocking=False)
+
+        if not acquired:
+            return locked_format
+
+        try:
+            return info_format % (self.message_count, self.executing_count)
+        finally:
+            self.cv.release()
 
 class ThreadedSink(Sink, threading.Thread):
     """
@@ -383,6 +418,7 @@ class ThreadedSink(Sink, threading.Thread):
             if isinstance(message, Message):
                 if message.type in self.types:
                     self.message(message)
+                    self.message_count += 1
             elif isinstance(message, ThreadedSinkShutdown):
                 running = False
 
@@ -395,6 +431,22 @@ class ThreadedSink(Sink, threading.Thread):
         self.queue.put(ThreadedSinkShutdown())
         self.flush()
         self.join()
+
+    def __repr__(self):
+        """
+        Concisely describes the current state of the **Sink**
+
+        This is primarily for help debugging from PDB or the python
+        console.
+
+        Something like ``<module.class: 5 messages so far, roughly 2 queued>``
+        is returned.
+        """
+
+        return "<%s: %s messages so far, roughly %s queued>" % \
+               (dynamicloader.fullname(self.__class__),
+                self.message_count,
+                self.queue.qsize())
 
 class ThreadedSinkShutdown:
     """

@@ -25,7 +25,10 @@ import functools
 from nose.tools import raises
 
 from habitat.message_server import Message, Listener, Server
+from habitat.utils.dynamicloader import fullname
+
 from slowsink import *
+from locktroll import LockTroll
 
 from habitat.message_server import SimpleSink, ThreadedSink
 
@@ -46,6 +49,24 @@ class FakeSink(SimpleSink):
         self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
         self.test_messages = []
         self.message = self.test_messages.append
+
+class DelayableSink(SimpleSink):
+    def setup(self):
+        self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
+        self.go = threading.Event()
+        self.go.set()
+        self.waiting = threading.Event()
+    def message(self, message):
+        self.waiting.set()
+        self.go.wait()
+
+class DelayableThreadedSink(ThreadedSink):
+    def setup(self):
+        self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
+        self.go = threading.Event()
+        self.go.set()
+    def message(self, message):
+        self.go.wait()
 
 class ChangeySink():
     def setup(self):
@@ -108,6 +129,101 @@ class TestSink:
     @raises(TypeError)
     def test_init_rejects_garbage_server(self):
         EmptySink("asdf")
+
+    def test_messagecount(self):
+        yield self.check_messagecount, FakeSink
+        yield self.check_messagecount, FakeThreadedSink
+
+    def check_messagecount(self, sinkclass):
+        sink = sinkclass(Server(None, None))
+        assert sink.message_count == 0
+        sink.push_message(Message(self.source, Message.TELEM, None))
+        sink.push_message(Message(self.source, Message.TELEM, None))
+        sink.push_message(Message(self.source, Message.TELEM, None))
+        sink.push_message(Message(self.source, Message.TELEM, None))
+        sink.flush()
+        assert sink.message_count == 0
+        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, None))
+        sink.flush()
+        assert sink.message_count == 1
+        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, None))
+        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, None))
+        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, None))
+        sink.flush()
+        assert sink.message_count == 4
+        sink.shutdown()
+
+    def test_repr_simple(self):
+        sink = DelayableSink(Server(None, None))
+
+        expect_format = "<" + fullname(sink.__class__) + ": %s>"
+        info_format = expect_format % "%s messages so far, %s executing now"
+        locked_format = expect_format % "locked"
+
+        assert repr(sink) == info_format % (0, 0)
+        troll = LockTroll(sink.cv)
+        troll.start()
+        assert repr(sink) == locked_format
+        troll.release()
+
+        message = Message(self.source, Message.RECEIVED_TELEM, None)
+
+        sink.push_message(message)
+        sink.push_message(message)
+        assert repr(sink) == info_format % (2, 0)
+
+        thread_a = ThreadedPush(sink, message)
+        thread_b = ThreadedPush(sink, message)
+        sink.go.clear()
+        sink.waiting.clear()
+        thread_a.start()
+        sink.waiting.wait()
+        sink.waiting.clear()
+        thread_b.start()
+        sink.waiting.wait()
+        assert repr(sink) == info_format % (2, 2)
+        sink.go.set()
+        thread_a.join()
+        thread_b.join()
+        assert repr(sink) == info_format % (4, 0)
+        sink.shutdown()
+
+    def test_repr_threaded(self):
+        # TODO: Evaluate the thread safety of this when I'm not tired.
+        sink = DelayableThreadedSink(Server(None, None))
+
+        info_format = "<" + fullname(sink.__class__)  + \
+                      ": %s messages so far, roughly %s queued>"
+
+        assert repr(sink) == info_format % (0, 0)
+
+        message = Message(self.source, Message.RECEIVED_TELEM, None)
+
+        sink.push_message(message)
+        sink.push_message(message)
+        sink.flush()
+        assert repr(sink) == info_format % (2, 0)
+
+        thread_a = ThreadedPush(sink, message)
+        thread_b = ThreadedPush(sink, message)
+
+        sink.go.clear()
+
+        thread_a.start()
+        thread_a.join()
+        thread_b.start()
+        thread_b.join()
+
+        # Since there's "one" executing and one in the queue, only one is
+        # queued. TODO add a lock, make it accurate.
+        assert repr(sink) == info_format % (2, 1)
+
+        sink.go.set()
+        sink.flush()
+
+        assert repr(sink) == info_format % (4, 0)
+
+        sink.shutdown()
 
     def test_types_is_a_set(self):
         sink = EmptySink(Server(None, None))
