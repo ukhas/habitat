@@ -32,6 +32,9 @@ from habitat.message_server import Server
 
 from locktroll import LockTroll
 
+class FakeProgram:
+    db = {"message_server_config": { "sinks": [] }  }
+
 class FakeSink(SimpleSink):
     def setup(self):
         pass
@@ -62,7 +65,7 @@ class NonSink:
 
 class TestServer:
     def setup(self):
-        self.server = Server(None, None)
+        self.server = Server(FakeProgram())
         self.source = Listener("M0ZDR", "1.2.3.4")
 
     def test_message_counter(self):

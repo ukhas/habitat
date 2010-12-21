@@ -43,8 +43,7 @@ new_get_options.hits = 0
 # Replace the Server class with something that does nothing
 dumbservers = []
 class DumbServer:
-    def __init__(self, config, program):
-        self.config = config
+    def __init__(self, program):
         self.program = program
         self.shutdown_hits = 0
         dumbservers.append(self)
@@ -128,7 +127,8 @@ class TestProgram:
 
         # Replace argv
         self.old_argv = sys.argv
-        self.new_argv = ["habitat", "-c", "couchserver", "-s", "socketfile"]
+        self.new_argv = ["habitat", "-c", "couchserver", "-d", "database", 
+            "-s", "socketfile"]
         sys.argv = self.new_argv
 
     def teardown(self):

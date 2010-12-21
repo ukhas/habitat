@@ -40,9 +40,12 @@ class Module(ParserModule):
 class Module2(ParserModule):
     pass
 
+class FakeProgram:
+    db = {"message_server_config": { "sinks": [] }  }
+
 class TestParserSink:
     def setUp(self):
-        self.sink = ParserSink(Server(None, None))
+        self.sink = ParserSink(Server(FakeProgram()))
 
     def test_parser_has_RECEIVED_TELEM_type(self):
         """sink has RECEIVED_TELEM type"""

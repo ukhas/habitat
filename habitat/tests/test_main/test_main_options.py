@@ -54,29 +54,38 @@ class TestOptions:
 
     def test_optparse_is_setup_correctly(self):
         expect_options = [ ("-f", "--config-file"),
-                           ("-c", "--couch"),
+                           ("-c", "--couch-uri"),
+                           ("-d", "--couch-db"),
                            ("-s", "--socket") ]
         for (short, long) in expect_options:
             assert main.parser.get_option(short).get_opt_string() == long
 
-    def create_config_file(self, name, value):
+    def create_config_file(self, name, couch_db, couch_uri, socket_file):
         config = ConfigParser.RawConfigParser()
         config.add_section("habitat")
-        config.set("habitat", "couch", value)
-        config.set("habitat", "socket_file", "socket")
+        config.set("habitat", "couch_db", couch_db)
+        config.set("habitat", "couch_uri", couch_uri)
+        config.set("habitat", "socket_file", socket_file)
 
         with open(name, "wb") as f:
             config.write(f)
 
     def test_get_options(self):
-        self.create_config_file(default_file, "default")
-        self.create_config_file(alternate_file, "altconfig")
+        self.create_config_file(default_file, "habitat",
+            "http://habitat:password@localhost:5984", "/tmp/habitat.sock")
+        self.create_config_file(alternate_file, "rehab",
+            "http://user:pass@example.com:1234", "/var/run/habitat/sck")
 
-        self.check_get_options(["-f", alternate_file], "altconfig")
-        self.check_get_options(["-c", "cmdline"], "cmdline")
-        self.check_get_options([], "default")
+        self.check_get_options(["-f", alternate_file],
+            "http://user:pass@example.com:1234", "rehab",
+            "/var/run/habitat/sck")
+        self.check_get_options(["-c", "cmdline", "-d", "dcmdline", "-s",
+            "scmdline"], "cmdline", "dcmdline", "scmdline")
+        self.check_get_options([], "http://habitat:password@localhost:5984",
+            "habitat", "/tmp/habitat.sock")
         self.check_get_options(["-c", "cmdline",
-                                "-f", alternate_file], "cmdline")
+            "-f", alternate_file], "cmdline", "rehab",
+            "/var/run/habitat/sck")
 
     def test_invalid_config_file_fails(self):
         with open(invalid_file, "wb") as f:
@@ -87,13 +96,15 @@ class TestOptions:
     def test_missing_config_file_fails(self):
         self.check_get_options_fails(["-c", "irrelevant", "-f", missing_file])
 
-    def check_get_options(self, argv, expect):
+    def check_get_options(self, argv, expect_c, expect_d, expect_s):
         old_argv = sys.argv
         sys.argv = ["habitat"] + argv
         result = main.get_options()
         sys.argv = old_argv
 
-        assert result["couch"] == expect
+        assert result["couch_uri"] == expect_c
+        assert result["couch_db"] == expect_d
+        assert result["socket_file"] == expect_s
 
     def check_get_options_fails(self, argv):
         old_argv = sys.argv
@@ -119,14 +130,15 @@ class TestOptions:
 
     def test_missing_default_file_does_not_fail(self):
         self.remove_default()
-        self.check_get_options(["-c", "cmdline", "-s", "scmdline"], "cmdline")
+        self.check_get_options(["-c", "cmdline", "-d", "dcmdline",
+            "-s", "scmdline"], "cmdline", "dcmdline", "scmdline")
 
     def test_missing_explicitly_stated_default_file_does_fail(self):
         self.remove_default()
         self.check_get_options_fails(["-c", "irrelevant", "-f", default_file])
 
     def test_lack_of_enough_information_fails(self):
-        flags = {"-c": "couch", "-s": "socket"}
+        flags = {"-c": "couch", "-s": "socket", "-d": "db"}
         self.remove_default()
 
         for i in flags.keys():
