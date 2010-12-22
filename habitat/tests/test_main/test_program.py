@@ -22,15 +22,18 @@ habitat.main, so the tests are fairly boring.
 """
 
 import sys
+import os
 import signal
 import threading
 import Queue
+import logging
 
 from nose.tools import raises
 
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
-from habitat.main import Program, SignalListener, get_options
+from habitat.main import Program, SignalListener, get_options, setup_logging, \
+                         default_configuration_file
 import habitat.main as program_module
 
 # Replace get_options
@@ -39,6 +42,15 @@ def new_get_options():
     new_get_options.hits += 1
     return old_get_options()
 new_get_options.hits = 0
+
+# Make sure it doesn't read a configuration file
+missing_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "habitat_missing.cfg")
+
+# Replace setup_logging with a function that does nothing
+def new_setup_logging(*args):
+    new_setup_logging.calls.append(args)
+new_setup_logging.calls = []
 
 # Replace the Server class with something that does nothing
 dumbservers = []
@@ -111,11 +123,16 @@ new_run.queue = Queue.Queue()
 class TestProgram:
     def setup(self):
         # Do the replacing:
+        assert program_module.default_configuration_file == \
+               default_configuration_file
         assert program_module.get_options == get_options
+        assert program_module.setup_logging == setup_logging
         assert program_module.Server == Server
         assert program_module.SCGIApplication == SCGIApplication
         assert program_module.SignalListener == SignalListener
+        program_module.default_configuration_file = missing_file
         program_module.get_options = new_get_options
+        program_module.setup_logging = new_setup_logging
         program_module.Server = DumbServer
         program_module.SCGIApplication = DumbSCGIApplication
         program_module.SignalListener = DumbSignalListener
@@ -128,7 +145,8 @@ class TestProgram:
 
         # Replace argv
         self.old_argv = sys.argv
-        self.new_argv = ["habitat", "-c", "couchserver", "-s", "socketfile"]
+        self.new_argv = ["habitat", "-c", "couchserver", "-s", "socketfile",
+                         "-v", "WARN", "-l", "debugfile", "-e", "DEBUG"]
         sys.argv = self.new_argv
 
     def teardown(self):
@@ -136,12 +154,16 @@ class TestProgram:
         assert sys.argv == self.new_argv
         sys.argv = self.old_argv
 
-        # Restore options, Server, SCGIApplication
+        # Restore everything we replaced in setup()
+        assert program_module.default_configuration_file == missing_file
         assert program_module.get_options == new_get_options
+        assert program_module.setup_logging == new_setup_logging
         assert program_module.Server == DumbServer
         assert program_module.SCGIApplication == DumbSCGIApplication
         assert program_module.SignalListener == DumbSignalListener
+        program_module.default_configuration_file = default_configuration_file
         program_module.get_options = get_options
+        program_module.setup_logging = setup_logging
         program_module.Server = Server
         program_module.SCGIApplication = SCGIApplication
         program_module.SignalListener = SignalListener
@@ -158,6 +180,11 @@ class TestProgram:
 
         # uses_options
         assert new_get_options.hits == 1
+
+        # calls setup_logging correctly
+        assert len(new_setup_logging.calls) == 1
+        assert new_setup_logging.calls[0] == \
+            (logging.WARN, "debugfile", logging.DEBUG)
 
         # TODO:connects_to_couch
 

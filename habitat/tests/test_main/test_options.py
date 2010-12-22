@@ -55,7 +55,10 @@ class TestOptions:
     def test_optparse_is_setup_correctly(self):
         expect_options = [ ("-f", "--config-file"),
                            ("-c", "--couch"),
-                           ("-s", "--socket") ]
+                           ("-s", "--socket"),
+                           ("-v", "--verbosity"),
+                           ("-l", "--log-file"),
+                           ("-e", "--log-level") ]
         for (short, long) in expect_options:
             assert main.parser.get_option(short).get_opt_string() == long
 
@@ -125,17 +128,34 @@ class TestOptions:
         self.remove_default()
         self.check_get_options_fails(["-c", "irrelevant", "-f", default_file])
 
-    def test_lack_of_enough_information_fails(self):
+    def test_lack_of_compulsory_information_fails(self):
         flags = {"-c": "couch", "-s": "socket"}
         self.remove_default()
 
         for i in flags.keys():
-            new_flags = flags.copy()
-            del new_flags[i]
+            self.check_missing_option_fails(flags, i)
 
-            argv = []
-            for (f, v) in new_flags.items():
-                argv.append(f)
-                argv.append(v)
+    def test_log_file_without_level_fails(self):
+        flags = {"-c": "couch", "-s": "socket", "-l": "tmp", "-e": "DEBUG"}
+        self.remove_default()
 
-            self.check_get_options_fails(argv)
+        for i in ["-l", "-e"]:
+            self.check_missing_option_fails(flags, i)
+
+    def check_missing_option_fails(self, flags, remove):
+        new_flags = flags.copy()
+        del new_flags[remove]
+
+        argv = []
+        for (f, v) in new_flags.items():
+            argv.append(f)
+            argv.append(v)
+
+        self.check_get_options_fails(argv)
+
+    # TODO:
+    # - Add log files and levels to check_get_options
+    def test_log_levels_in_config_parse(self):
+        pass
+    def test_log_level_options_parse(self):
+        pass

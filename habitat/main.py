@@ -30,6 +30,7 @@ import signal
 import threading
 import Queue
 import errno
+import logging
 import optparse
 import ConfigParser
 
@@ -60,10 +61,21 @@ parser.add_option("-c", "--couch", metavar="COUCH_SERVER",
 parser.add_option("-s", "--socket", metavar="SCGI_SOCKET",
                   dest="socket_file",
                   help="scgi socket file to serve on")
+parser.add_option("-v", "--verbosity", metavar="LOG_STDERR_LEVEL",
+                  dest="log_stderr_level",
+                  help="minimum loglevel to print on stderr, options: " +\
+                       "NONE, DEBUG, INFO, WARN, ERROR, CRITICAL")
+parser.add_option("-l", "--log-file", metavar="LOG_FILE",
+                  dest="log_file",
+                  help="file name to send log messages to")
+parser.add_option("-e", "--log-level", metavar="LOG_FILE_LEVEL",
+                  dest="log_file_level",
+                  help="minimum loglevel to log to file " + \
+                       "(see verbosity for options)")
 
 def get_options():
     """
-    ``get_options`` reads command line options and a configuration file
+    **get_options** reads command line options and a configuration file
 
     This function parses command line options, and reads a
     configuration file (which must be in the :py:mod:`ConfigParser`
@@ -112,11 +124,73 @@ def get_options():
             if options[dest] == None and config_items.has_key(dest):
                 options[dest] = config_items[dest]
 
-    for dest in options.keys():
-        if options[dest] == None:
+    required_options = ["couch", "socket_file"]
+
+    if options["log_file"] != None or options["log_file_level"] != None:
+        required_options += ["log_file", "log_file_level"]
+
+    for dest in required_options:
+        if options[dest] == None or options[dest] == "":
             parser.error("\"{0}\" was not specified".format(dest))
 
+    # I would use the "choice" type for parser and have it validate
+    # these options, but we also need to check options provided in a
+    # config file, and add a "NONE" option
+    LOG_LEVELS = ["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG"]
+    NONE_LEVELS = ["NONE", "SILENT", "QUIET"]
+
+    for levelarg in ["log_stderr_level", "log_file_level"]:
+        lvl = options[levelarg]
+        if lvl == None:
+            continue
+        lvl = lvl.upper()
+
+        if lvl in NONE_LEVELS:
+            options[levelarg] = None
+        elif lvl not in LOG_LEVELS:
+            parser.error("invalid value for \"{0}\"".format(levelarg))
+        else:
+            options[levelarg] = getattr(logging, lvl)
+
     return options
+
+def setup_logging(log_stderr_level, log_file_name, log_file_level):
+    """
+    **setup_logging** initalises the :py:mod:`Python logging module <logging>`.
+
+    It will initalise the 'habitat' logger and creates one, two, or no
+    Handlers, depending on the values provided for *log_file_level* and
+    *log_stderr_level*.
+    """
+
+    formatstring = "[%(asctime)s] %(name)s (%(levelname)s): %(message)s"
+
+    root_logger = logging.getLogger()
+
+    # Enable all messages at the logger level, then filter them in each
+    # handler.
+    root_logger.setLevel(logging.DEBUG)
+
+    have_handlers = False
+
+    if log_stderr_level != None:
+        stderr_handler = logging.StreamHandler()
+        stderr_handler.setFormatter(logging.Formatter(formatstring))
+        stderr_handler.setLevel(log_stderr_level)
+        root_logger.addHandler(stderr_handler)
+        have_handlers = True
+
+    if log_file_level != None:
+        file_handler = logging.FileHandler(log_file_name)
+        file_handler.setFormatter(logging.Formatter(formatstring))
+        file_handler.setLevel(log_file_level)
+        root_logger.addHandler(file_handler)
+        have_handlers = True
+
+    if not have_handlers:
+        # logging gets annoyed if there isn't atleast one handler.
+        # If we're meant to be totally silent...
+        root_logger.addHandler(logging.NullHandler())
 
 class Program:
     """
@@ -145,7 +219,11 @@ class Program:
 
         """
 
+        # Setup phase: before any threads are started.
         self.options = get_options()
+        setup_logging(self.options["log_stderr_level"],
+                      self.options["log_file"],
+                      self.options["log_file_level"])
         self.server = Server(None, self)
         self.scgiapp = SCGIApplication(self.server, self,
                                        self.options["socket_file"])
