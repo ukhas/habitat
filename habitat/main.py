@@ -38,7 +38,7 @@ import habitat
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
 
-__all__ = ["get_options", "Program", "SignalListener"]
+__all__ = ["get_options", "setup_logging", "Program", "SignalListener"]
 
 usage = "%prog [options]"
 version = "{0} {1}".format(habitat.__name__, habitat.__version__)
@@ -163,7 +163,8 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
     *log_stderr_level*.
     """
 
-    formatstring = "[%(asctime)s] %(name)s (%(levelname)s): %(message)s"
+    formatstring = "[%(asctime)s] %(levelname)s %(name)s %(threadName)s: " + \
+                   "%(message)s"
 
     root_logger = logging.getLogger()
 
