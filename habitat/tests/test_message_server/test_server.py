@@ -28,9 +28,11 @@ from nose.tools import raises, with_setup
 
 from habitat.message_server import Sink, SimpleSink, Message, Listener
 from habitat.utils.tests.reloadable_module import ReloadableModuleWriter
-from habitat.message_server import Server
-
+from habitat.utils.tests import threading_checks
+from habitat.utils import crashmat
 from locktroll import LockTroll
+
+from habitat.message_server import Server
 
 class FakeSink(SimpleSink):
     def setup(self):
@@ -62,8 +64,15 @@ class NonSink:
 
 class TestServer:
     def setup(self):
+        threading_checks.patch()
+
         self.server = Server(None, None)
         self.source = Listener("M0ZDR", "1.2.3.4")
+
+    def teardown(self):
+        self.server.shutdown()
+
+        threading_checks.restore()
 
     def test_message_counter(self):
         message_rt = Message(self.source, Message.RECEIVED_TELEM, None)
@@ -104,9 +113,6 @@ class TestServer:
         troll.start()
         assert repr(self.server) == locked_format
         troll.release()
-
-    def teardown(self):
-        self.server.shutdown()
 
     def test_can_load_fakesink(self):
         self.server.load(FakeSink)
@@ -340,8 +346,8 @@ class TestServer:
 
         old_object = self.server.sinks[0]
 
-        t = threading.Thread(target=f,
-                             name="Test Thread: test_reload_skips_no_messages")
+        t = crashmat.Thread(target=f,
+                            name="Test Thread: test_reload_skips_no_messages")
         t.start()
 
         old_object.shutting_down.wait()

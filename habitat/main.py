@@ -37,6 +37,7 @@ import ConfigParser
 import habitat
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
+from habitat.utils import crashmat
 
 __all__ = ["get_options", "setup_logging", "Program", "SignalListener"]
 
@@ -221,6 +222,8 @@ class Program:
         """
 
         # Setup phase: before any threads are started.
+        # We allow any execptions to raise and kill this thread, which
+        # is the only thread - and therefore kill the program.
         self.options = get_options()
         setup_logging(self.options["log_stderr_level"],
                       self.options["log_file"],
@@ -229,10 +232,12 @@ class Program:
         self.scgiapp = SCGIApplication(self.server, self,
                                        self.options["socket_file"])
         self.signallistener = SignalListener(self)
-        self.thread = threading.Thread(target=self.run,
-                                       name="Shutdown Handling Thread")
-
+        self.thread = crashmat.Thread(target=self.run,
+                                      name="Shutdown Handling Thread")
         self.signallistener.setup()
+
+        # After this point, threads are created and catching & killing
+        # the program is harder.
         self.scgiapp.start()
         self.thread.start()
 

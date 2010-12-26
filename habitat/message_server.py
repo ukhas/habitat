@@ -26,7 +26,7 @@ import threading
 import Queue
 import ipaddr
 
-from habitat.utils import dynamicloader
+from habitat.utils import dynamicloader, crashmat
 
 __all__ = ["Server", "Sink", "SimpleSink",
            "ThreadedSink", "Message", "Listener"]
@@ -384,7 +384,7 @@ class SimpleSink(Sink):
         finally:
             self.cv.release()
 
-class ThreadedSink(Sink, threading.Thread):
+class ThreadedSink(Sink, crashmat.Thread):
     """
     A class for sinks that need to execute in another thread to inherit
 
@@ -396,7 +396,7 @@ class ThreadedSink(Sink, threading.Thread):
     """
 
     def __init__(self, server):
-        threading.Thread.__init__(self)
+        crashmat.Thread.__init__(self)
         self.name = "ThreadedSink runner: " + self.__class__.__name__
 
         Sink.__init__(self, server)

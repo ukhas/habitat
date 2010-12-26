@@ -66,7 +66,7 @@ class FakeLogging:
             self.formatstring = formatstring
             self.dateformatstring = dateformatstring
 
-expect_formatstring = "[%(asctime)s] %(levelname)s %(name)s " +\
+expect_formatstring = "[%(asctime)s] %(levelname)s %(name)s " + \
                       "%(threadName)s: %(message)s"
 
 class TestSetupLogging:

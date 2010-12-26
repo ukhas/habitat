@@ -30,6 +30,8 @@ import logging
 
 from nose.tools import raises
 
+from habitat.utils.tests import threading_checks
+
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
 from habitat.main import Program, SignalListener, get_options, setup_logging, \
@@ -122,6 +124,8 @@ new_run.queue = Queue.Queue()
 
 class TestProgram:
     def setup(self):
+        threading_checks.patch()
+
         # Do the replacing:
         assert program_module.default_configuration_file == \
                default_configuration_file
@@ -167,6 +171,8 @@ class TestProgram:
         program_module.Server = Server
         program_module.SCGIApplication = SCGIApplication
         program_module.SignalListener = SignalListener
+
+        threading_checks.restore()
 
     def test_init(self):
         p = Program()

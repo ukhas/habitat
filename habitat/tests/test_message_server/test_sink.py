@@ -26,6 +26,8 @@ from nose.tools import raises
 
 from habitat.message_server import Message, Listener, Server
 from habitat.utils.dynamicloader import fullname
+from habitat.utils import crashmat
+from habitat.utils.tests import threading_checks
 
 from slowsink import *
 from locktroll import LockTroll
@@ -112,9 +114,9 @@ class FakeThreadedSink(ThreadedSink):
         else:
             self.test_thread = threading.current_thread()
 
-class ThreadedPush(threading.Thread):
+class ThreadedPush(crashmat.Thread):
     def __init__(self, sink, message):
-        threading.Thread.__init__(self)
+        crashmat.Thread.__init__(self)
         self.name = "Test Thread: ThreadedPush"
         self.sink = sink
         self.message = message
@@ -124,7 +126,12 @@ class ThreadedPush(threading.Thread):
 
 class TestSink:
     def setup(self):
+        threading_checks.patch()
+
         self.source = Listener("M0ZDR", "1.2.3.4")
+
+    def teardown(self):
+        threading_checks.restore()
 
     @raises(TypeError)
     def test_init_rejects_garbage_server(self):
@@ -400,10 +407,9 @@ class TestSink:
         # Testing a race condition is quite difficult.
         # SlowSink.message() will time.sleep(0.02)
         sink = sink_class(Server(None, None))
+        message = Message(self.source, Message.TELEM, None)
+        t = ThreadedPush(sink, message)
 
-        push = functools.partial(sink.push_message,
-                                 Message(self.source, Message.TELEM, None))
-        t = threading.Thread(target=push, name="Test Thread: check_flush_race")
         t.start()
 
         sink.in_message.wait()

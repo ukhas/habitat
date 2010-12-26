@@ -32,6 +32,7 @@ import SocketServer
 import json
 
 from habitat.message_server import Message, Listener
+from habitat.utils import crashmat
 
 __all__ = ["InsertApplication", "SCGIApplication", "SCGIHandler"]
 
@@ -147,8 +148,8 @@ class SCGIApplication(InsertApplication,
     def start(self):
         """start the SCGI server"""
 
-        self.accept_thread = threading.Thread(target=self.serve_forever_thread,
-                                              name="SCGI accept thread")
+        self.accept_thread = crashmat.Thread(target=self.serve_forever_thread,
+                                             name="SCGI accept thread")
 
         try:
             os.unlink(self.server_address)
@@ -183,8 +184,9 @@ class SCGIApplication(InsertApplication,
     def serve_forever_thread(self):
         self.serve_forever(poll_interval=self.shutdown_timeout)
 
-    # As in SocketServer.ThreadingMixIn but we want to keep track of our
-    # threads
+    # As in SocketServer.ThreadingMixIn but
+    #  - we want to keep track of our threads
+    #  - we want to use crashmat.Thread instead
     def process_request_thread(self, request, client_address):
         try:
             self.finish_request(request, client_address)
@@ -197,9 +199,9 @@ class SCGIApplication(InsertApplication,
 
     def process_request(self, request, client_address):
         request.settimeout(self.shutdown_timeout)
-        t = threading.Thread(target=self.process_request_thread,
-                             args=(request, client_address),
-                             name="SCGI Handler Thread")
+        t = crashmat.Thread(target=self.process_request_thread,
+                            args=(request, client_address),
+                            name="SCGI Handler Thread")
         self.threads.add(t)
         t.start()
 
@@ -319,7 +321,6 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
             action_function(self.environ["REMOTE_ADDR"], args)
         except (TypeError, ValueError):
             self.request.sendall("Status: 400 Bad Request\r\n\r\n")
-            raise
 
         response = "Status: 200 OK\r\n"
         response += "Content-Type: text/plain\r\n"
