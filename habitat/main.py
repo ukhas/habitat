@@ -51,6 +51,13 @@ default_configuration_file = "/etc/habitat/habitat.cfg"
 config_section = "habitat"
 """The section in the config file to search for options"""
 
+# I would use optparse.set_defaults, but instead we need to have command
+# line options, config file options, and defaults, overriding each
+# other in that order.
+default_options = { "couch": None, "socket_file": None,
+                    "log_stderr_level": "WARN", "log_file": None,
+                    "log_file_level": None }
+
 parser = optparse.OptionParser(usage=usage, version=version,
                                description=header)
 parser.add_option("-f", "--config-file", metavar="CONFIG_FILE",
@@ -90,23 +97,42 @@ def get_options():
     Command line options have priority over options from a config file.
     """
 
+    cmdline_options = get_options_cmdline()
+    config_options = get_options_config(cmdline_options["config_file"])
+    del cmdline_options["config_file"]
+
+    options = default_options.copy()
+
+    for dest in default_options:
+        if cmdline_options[dest] != None:
+            options[dest] = cmdline_options[dest]
+        elif config_options.has_key(dest) and config_options[dest] != None:
+            options[dest] = config_options[dest]
+
+    get_options_check_required(options)
+
+    for dest in ["log_stderr_level", "log_file_level"]:
+        options[dest] = get_options_parse_log_level(options[dest])
+
+    return options
+
+def get_options_cmdline():
     (option_values, args) = parser.parse_args()
 
     if len(args) != 0:
         parser.error("did not expect any positional arguments")
 
     # A dict is arguably easier to use.
-    options = option_values.__dict__.copy()
+    cmdline_options = option_values.__dict__.copy()
 
-    # I would use optparse.set_defaults but we need to know whether
-    # the option was explicitly stated
-    if options["config_file"] == None:
+    return cmdline_options
+
+def get_options_config(config_file):
+    if config_file == None:
         config_file = default_configuration_file
         config_file_explicit = False
     else:
-        config_file = options["config_file"]
         config_file_explicit = True
-    del options["config_file"]
 
     config = ConfigParser.RawConfigParser()
     try:
@@ -115,16 +141,16 @@ def get_options():
     except IOError, e:
         # If the error was in opening the default config file - not explicitly
         # set - then ignore it.
-        if config_file_explicit:
+        if not config_file_explicit:
+            return {}
+        else:
             parser.error("error opening {0}: {1}".format(config_file, e))
     except ConfigParser.ParsingError, e:
         parser.error("error parsing {0}: {1}".format(config_file, e))
     else:
-        config_items = dict(config.items(config_section))
-        for dest in options.keys():
-            if options[dest] == None and config_items.has_key(dest):
-                options[dest] = config_items[dest]
+        return dict(config.items(config_section))
 
+def get_options_check_required(options):
     required_options = ["couch", "socket_file"]
 
     if options["log_file"] != None or options["log_file_level"] != None:
@@ -134,26 +160,24 @@ def get_options():
         if options[dest] == None or options[dest] == "":
             parser.error("\"{0}\" was not specified".format(dest))
 
-    # I would use the "choice" type for parser and have it validate
-    # these options, but we also need to check options provided in a
-    # config file, and add a "NONE" option
-    LOG_LEVELS = ["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG"]
-    NONE_LEVELS = ["NONE", "SILENT", "QUIET"]
+# I would use the "choice" type for parser and have it validate
+# these options, but we also need to check options provided in a
+# config file, and add a "NONE" option
+LOG_LEVELS = ["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG"]
+NONE_LEVELS = ["NONE", "SILENT", "QUIET"]
 
-    for levelarg in ["log_stderr_level", "log_file_level"]:
-        lvl = options[levelarg]
-        if lvl == None:
-            continue
-        lvl = lvl.upper()
+def get_options_parse_log_level(level):
+    if level == None:
+        return None
 
-        if lvl in NONE_LEVELS:
-            options[levelarg] = None
-        elif lvl not in LOG_LEVELS:
-            parser.error("invalid value for \"{0}\"".format(levelarg))
-        else:
-            options[levelarg] = getattr(logging, lvl)
+    level = level.upper()
 
-    return options
+    if level in NONE_LEVELS:
+        return None
+    elif level in LOG_LEVELS:
+        return getattr(logging, level)
+    else:
+        parser.error("invalid value for \"{0}\"".format(levelarg))
 
 def setup_logging(log_stderr_level, log_file_name, log_file_level):
     """

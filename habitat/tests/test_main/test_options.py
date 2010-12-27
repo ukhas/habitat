@@ -159,3 +159,9 @@ class TestOptions:
         pass
     def test_log_level_options_parse(self):
         pass
+    def test_flags_take_priority_over_config_file(self):
+        pass
+    def test_default_stderr_level(self):
+        pass
+    def test_default_stderr_level_is_overridden_correctly(self):
+        pass
