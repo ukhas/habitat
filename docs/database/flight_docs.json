@@ -46,7 +46,7 @@
         Payloads contains complete information on each payload flying in this flight.
         This includes radio settings and telemetry format.
     */
-    "payloads": [
+    "payloads": {
         "habitat": {
             /*
                 Radio contains information for actually tuning a radio to receive the
@@ -101,7 +101,7 @@
                         "format": "dd.dddd"
                     }, {
                         "name": "altitude",
-                        "type": "int",
+                        "type": "int"
                     }, {
                         "name": "speed",
                         "type": "float"
@@ -152,5 +152,5 @@
                 "2E0JSO"
             ]
         }
-    ]
+    }
 }

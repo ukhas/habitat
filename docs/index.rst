@@ -10,6 +10,7 @@ Contents:
    intro
    installing
    configuration
+   database
    reference/index
 
 Indices and tables
