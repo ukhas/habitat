@@ -19,12 +19,33 @@
 Tests the crashmat module, ../crashmat.py
 """
 
+import sys
+import os
+import signal
+
 from nose.tools import raises
 from habitat.utils import crashmat
 
 def fakethread_run(self):
     self.ran = True
 
+class FakeOSModule:
+    def __init__(self):
+        self.sent_signals = []
+
+    def kill(self, pid, signum):
+        assert pid == 1337
+        self.sent_signals.append(signum)
+
+    def getpid(self):
+        return 1337
+
+class FakeSignalModule:
+    def alarm(self, time):
+        self.alarm_time = time
+
+# Share code with habitat/tests/test_main/test_signals.py which has exactly
+# the same class
 class TestCrashmat:
     def test_init_calls_super_and_works(self):
         def test_func():
@@ -68,10 +89,22 @@ class TestCrashmat:
         assert t.ran
 
     def test_run_catches_exception(self):
+        assert self.check_run_catches(ValueError) == True
+
+    def test_run_doesnt_catch_sysexit(self):
+        assert self.check_run_catches(SystemExit) == False
+
+    def check_run_catches(self, exception):
         t = crashmat.Thread()
 
+        def new_panic():
+            pass
+
+        old_panic = crashmat.panic
+        crashmat.panic = new_panic
+
         def err():
-            raise ValueError
+            raise exception
 
         def a():
             a.handled = True
@@ -81,4 +114,77 @@ class TestCrashmat:
         t.old_run = err
         t.run()
 
-        assert a.handled
+        crashmat.panic = old_panic
+
+        return a.handled
+
+    def test_handle_exception(self):
+        """test handle_exception calls logger.exception and panic"""
+        class Logger:
+            def exception(self, message):
+                self.message = message
+                self.exc = sys.exc_info()
+
+        def new_panic():
+            new_panic.called = True
+        new_panic.called = False
+
+        old_panic = crashmat.panic
+        old_logger = crashmat.logger
+        crashmat.panic = new_panic
+        crashmat.logger = Logger()
+
+        def err():
+            raise ValueError
+        t = crashmat.Thread(target=err, name="Test Thread: Crashmat")
+        t.start()
+        t.join()
+
+        assert crashmat.logger.message == \
+            "uncaught exception, killing process brutally"
+        assert crashmat.logger.exc[0] == ValueError
+        assert new_panic.called
+
+        crashmat.logger = old_logger
+        crashmat.panic = old_panic
+
+    def test_set_shutdown_function(self):
+        def f():
+            pass
+
+        assert crashmat.shutdown_function == None
+        crashmat.set_shutdown_function(f)
+        assert crashmat.shutdown_function == f
+
+        # Clean up...
+        crashmat.set_shutdown_function(None)
+
+    def test_panic_without_shutdown_function(self):
+        assert crashmat.os == os
+        new_os = FakeOSModule()
+        crashmat.os = new_os
+
+        crashmat.panic()
+        assert new_os.sent_signals == [signal.SIGKILL]
+
+        assert crashmat.os == new_os
+        crashmat.os = os
+
+    def test_panic_with_shutdown_function(self):
+        assert crashmat.signal == signal
+        new_signal = FakeSignalModule()
+        crashmat.signal = new_signal
+
+        def f():
+            f.called = True
+        f.called = False
+
+        crashmat.set_shutdown_function(f)
+        crashmat.panic()
+
+        assert new_signal.alarm_time == 60
+        assert f.called
+
+        crashmat.set_shutdown_function(None)
+        assert crashmat.signal == new_signal
+        crashmat.signal = signal

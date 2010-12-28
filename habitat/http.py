@@ -72,8 +72,7 @@ class InsertApplication:
         which the message action will insert items.
 
         *program*: a :py:class:`habitat.main.Program` object, of which the
-        :py:meth:`habitat.main.Program.shutdown` and
-        :py:meth:`habitat.main.Program.panic` methods are used.
+        :py:meth:`habitat.main.Program.shutdown` is used.
         """
 
         # TODO: Raise error if these are not the correct type of object?

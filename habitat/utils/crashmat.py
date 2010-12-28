@@ -23,9 +23,39 @@ the log, attempts to call a graceful shutdown function, but ultimatly
 ensures that the process terminates (via :py:meth:`signal.alarm`).
 """
 
+import os
+import signal
 import threading
+import logging
 
-__all__ = ["Thread"]
+__all__ = ["Thread", "set_shutdown_function", "panic"]
+
+shutdown_function = None
+
+def set_shutdown_function(f):
+    """Set a shutdown_function; see :py:func:`panic`"""
+    global shutdown_function
+    shutdown_function = f
+
+def panic():
+    """
+    **panic()** attempts to terminate the python process completely.
+
+    If a ``shutdown_function`` has been set via
+    :py:func:`set_shutdown_function` then this function will call
+    :py:func:`signal.alarm`, and then it will call the shutdown
+    function. This has the effect that if the shutdown function fails
+    to kill the programe cracefully, it will die anyway in 60 seconds.
+
+    Otherwise, this function will simply raise SIGKILL, causing
+    immediate death.
+    """
+
+    if shutdown_function == None:
+        os.kill(os.getpid(), signal.SIGKILL)
+    else:
+        signal.alarm(60)
+        shutdown_function()
 
 # Classes are allowed to subclass threading.Thread and override run().
 # For one example, see ThreadedSink.
@@ -33,7 +63,17 @@ __all__ = ["Thread"]
 # the internal workings of Thread changed.
 # Admittedly this is a bit hacky, but perhaps more resilient
 
+logger = logging.getLogger("crashmat")
+
 class Thread(threading.Thread):
+    """
+    A Thread class that kills the process in response to unhandled exceptions.
+
+    This class behaves identically to :py:cls:`threading.Thread`,
+    with the exception that if there is an unhandled exception,
+    :py:meth:`panic` will be called.
+    """
+
     def __init__(self, *args, **kwargs):
         threading.Thread.__init__(self, *args, **kwargs)
 
@@ -45,9 +85,18 @@ class Thread(threading.Thread):
     def new_run(self):
         try:
             self.old_run()
+        except SystemExit:
+            pass
         except:
             self.handle_exception()
 
     def handle_exception(self):
-        # traceback.format_exc()
-        pass
+        """
+        **handle_exception()** is called in response to an unhandled exception
+
+        It will call :py:meth:`logging.Logger.exception` and then
+        :py:func:`panic`
+        """
+
+        logger.exception("uncaught exception, killing process brutally")
+        panic()

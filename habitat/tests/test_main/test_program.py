@@ -84,10 +84,9 @@ class DumbSCGIApplication:
     def shutdown(self):
         self.shutdown_hits += 1
 
-# Replace signal with something that returns instantly. Signal is tested
+# Replace SignalListener with something that returns instantly. It is tested
 # in its own unit test, and provided Program.main() calls it and
-# Program.shutdown()/Program.reload()/Program.panic() work, it's good -
-# the signal watching function isn't going to return in the real thing
+# Program.shutdown()/Program.reload() work, it's good.
 
 # listen() will block, so it should be the last thing program calls.
 # Therefore we raise this in listen; and check that it has been raised
@@ -224,13 +223,6 @@ class TestProgram:
         assert p.queue.qsize() == 1
         assert p.queue.get() == Program.RELOAD
 
-    def test_panic(self):
-        p = Program()
-        p.panic()
-        assert p.queue.qsize() == 1
-        assert p.queue.get() == Program.SHUTDOWN
-        assert signal.alarm(0) > 50
-
     def test_shutdown_fullrun(self):
         p = Program()
         # We did not replace p.run, so a new thread will be started:
@@ -242,3 +234,8 @@ class TestProgram:
         assert dumbsignallisteners[0].exit_hits == 1
         assert dumbscgiapps[0].shutdown_hits == 1
         assert dumbservers[0].shutdown_hits == 1
+
+    # TODO:
+    # - test main_setup creates no threads
+    # - test errors in main_setup (before threads are created) are raised
+    # - test errors after main_setup cause crashmat.panic()

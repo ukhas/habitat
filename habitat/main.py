@@ -220,8 +220,8 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
 
 class Program:
     """
-    Program provides the :py:meth:`main`, :py:meth:`shutdown`, \
-    :py:meth:`reload` and :py:meth:`panic` methods
+    Program provides the :py:meth:`main`, :py:meth:`shutdown` and \
+    :py:meth:`reload` methods
     """
 
     (RELOAD, SHUTDOWN) = range(2)
@@ -275,22 +275,13 @@ class Program:
         """asks the Program thread to process a **SHUTDOWN** event"""
         self.queue.put(Program.SHUTDOWN)
 
-    def panic(self):
-        """
-        calls :py:func:`signal.alarm` as a failsafe and then \
-        :py:meth:`shutdown`
-        """
-
-        signal.alarm(60)
-        self.shutdown()
-
     def run(self):
         """
         The Program thread processes **SHUTDOWN** and **RELOAD** events
 
-        In order to make :py:meth:`shutdown`, :py:meth:`reload` and
-        :py:meth:`panic` return instantly, the actual work requested
-        by calling those methods is done by this thread.
+        In order to make :py:meth:`shutdown` and :py:meth:`reload`
+        return instantly, the actual work requested by calling those
+        methods is done by this thread.
 
          - **RELOAD**: To be implemented
          - **SHUTDOWN**: shuts down the :py:class:`SignalListener`,
