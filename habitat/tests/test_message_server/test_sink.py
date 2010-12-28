@@ -55,7 +55,7 @@ class FakeSink(SimpleSink):
         self.test_messages = []
         self.message = self.test_messages.append
 
-class DelayableSink(SimpleSink):
+class DelayableMixIn:
     def setup(self):
         self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
         self.go = threading.Event()
@@ -64,14 +64,13 @@ class DelayableSink(SimpleSink):
     def message(self, message):
         self.waiting.set()
         self.go.wait()
+        self.waiting.clear()
 
-class DelayableThreadedSink(ThreadedSink):
-    def setup(self):
-        self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
-        self.go = threading.Event()
-        self.go.set()
-    def message(self, message):
-        self.go.wait()
+class DelayableSink(SimpleSink, DelayableMixIn):
+    pass
+
+class DelayableThreadedSink(ThreadedSink, DelayableMixIn):
+    pass
 
 class ChangeySink():
     def setup(self):
@@ -220,15 +219,11 @@ class TestSink:
         sink.flush()
         assert repr(sink) == info_format % (2, 0, "")
 
-        thread_a = ThreadedPush(sink, message)
-        thread_b = ThreadedPush(sink, message)
-
         sink.go.clear()
 
-        thread_a.start()
-        thread_a.join()
-        thread_b.start()
-        thread_b.join()
+        sink.push_message(message)
+        sink.push_message(message)
+        sink.waiting.wait()
 
         assert repr(sink) == info_format % (2, 1, ", currently executing")
 
@@ -407,7 +402,7 @@ class TestSink:
         yield self.check_flush_race, SlowThreadedSink
 
     def check_flush_race(self, sink_class):
-        # Testing a race condition is quite difficult.
+        # Testing a race condition is quite difficult. (TODO ?)
         # SlowSink.message() will time.sleep(0.02)
         sink = sink_class(Server(FakeProgram()))
         message = Message(self.source, Message.TELEM, None)

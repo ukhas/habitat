@@ -49,4 +49,3 @@ class SlowShutdownSink(SimpleSink):
         SimpleSink.shutdown(self)
         self.shutting_down.set()
         time.sleep(0.02)
-        self.shutting_down.clear()
