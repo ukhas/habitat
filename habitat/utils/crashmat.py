@@ -69,7 +69,7 @@ class Thread(threading.Thread):
     """
     A Thread class that kills the process in response to unhandled exceptions.
 
-    This class behaves identically to :py:cls:`threading.Thread`,
+    This class behaves identically to :py:class:`threading.Thread`,
     with the exception that if there is an unhandled exception,
     :py:meth:`panic` will be called.
     """
