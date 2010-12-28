@@ -57,8 +57,7 @@ class Server:
         try:
             self.config = self.program.db["message_server_config"]
         except couchdbkit.exceptions.ResourceNotFound:
-            self.program.panic("message_server_config document not found "+
-                    "in CouchDB, panicking!")
+            raise Exception("message_server_config couchdb document not found")
 
         for sink in self.config['sinks']:
             self.load(sink)

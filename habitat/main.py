@@ -233,7 +233,7 @@ def couch_connect(couch_uri, couch_db):
         # Quickly check that we can access this database
         db.info()
     except restkit.errors.ResourceError:
-        raise Exception, "Could not connect to the CouchDB database"
+        raise Exception("Could not connect to the CouchDB database")
 
     return db
 
