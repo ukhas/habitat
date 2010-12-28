@@ -325,6 +325,7 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
             action_function(self.environ["REMOTE_ADDR"], args)
         except (TypeError, ValueError):
             self.request.sendall("Status: 400 Bad Request\r\n\r\n")
+            return
 
         response = "Status: 200 OK\r\n"
         response += "Content-Type: text/plain\r\n"
