@@ -22,15 +22,20 @@ habitat.main, so the tests are fairly boring.
 """
 
 import sys
+import os
 import signal
 import threading
 import Queue
+import logging
 
 from nose.tools import raises
 
+from habitat.utils.tests import threading_checks
+
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
-from habitat.main import Program, SignalListener, get_options
+from habitat.main import Program, SignalListener, get_options, setup_logging, \
+                         default_configuration_file
 import habitat.main as program_module
 
 # Replace get_options
@@ -39,6 +44,15 @@ def new_get_options():
     new_get_options.hits += 1
     return old_get_options()
 new_get_options.hits = 0
+
+# Make sure it doesn't read a configuration file
+missing_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "habitat_missing.cfg")
+
+# Replace setup_logging with a function that does nothing
+def new_setup_logging(*args):
+    new_setup_logging.calls.append(args)
+new_setup_logging.calls = []
 
 # A fake CouchDB database
 class FakeCouchDatabase:
@@ -86,10 +100,9 @@ class DumbSCGIApplication:
     def shutdown(self):
         self.shutdown_hits += 1
 
-# Replace signal with something that returns instantly. Signal is tested
+# Replace SignalListener with something that returns instantly. It is tested
 # in its own unit test, and provided Program.main() calls it and
-# Program.shutdown()/Program.reload()/Program.panic() work, it's good -
-# the signal watching function isn't going to return in the real thing
+# Program.shutdown()/Program.reload() work, it's good.
 
 # listen() will block, so it should be the last thing program calls.
 # Therefore we raise this in listen; and check that it has been raised
@@ -126,12 +139,19 @@ new_run.queue = Queue.Queue()
 
 class TestProgram:
     def setup(self):
+        threading_checks.patch()
+
         # Do the replacing:
+        assert program_module.default_configuration_file == \
+               default_configuration_file
         assert program_module.get_options == get_options
+        assert program_module.setup_logging == setup_logging
         assert program_module.Server == Server
         assert program_module.SCGIApplication == SCGIApplication
         assert program_module.SignalListener == SignalListener
+        program_module.default_configuration_file = missing_file
         program_module.get_options = new_get_options
+        program_module.setup_logging = new_setup_logging
         program_module.Server = DumbServer
         program_module.SCGIApplication = DumbSCGIApplication
         program_module.SignalListener = DumbSignalListener
@@ -144,8 +164,9 @@ class TestProgram:
 
         # Replace argv
         self.old_argv = sys.argv
-        self.new_argv = ["habitat", "-c", "couchserver", "-d", "database", 
-            "-s", "socketfile"]
+        self.new_argv = ["habitat", "-c", "couchserver", "-d", "database",
+                         "-s", "socketfile",
+                         "-v", "WARN", "-l", "debugfile", "-e", "DEBUG"]
         sys.argv = self.new_argv
 
     def teardown(self):
@@ -153,15 +174,21 @@ class TestProgram:
         assert sys.argv == self.new_argv
         sys.argv = self.old_argv
 
-        # Restore options, Server, SCGIApplication
+        # Restore everything we replaced in setup()
+        assert program_module.default_configuration_file == missing_file
         assert program_module.get_options == new_get_options
+        assert program_module.setup_logging == new_setup_logging
         assert program_module.Server == DumbServer
         assert program_module.SCGIApplication == DumbSCGIApplication
         assert program_module.SignalListener == DumbSignalListener
+        program_module.default_configuration_file = default_configuration_file
         program_module.get_options = get_options
+        program_module.setup_logging = setup_logging
         program_module.Server = Server
         program_module.SCGIApplication = SCGIApplication
         program_module.SignalListener = SignalListener
+
+        threading_checks.restore()
 
     def test_init(self):
         p = Program()
@@ -175,6 +202,11 @@ class TestProgram:
 
         # uses_options
         assert new_get_options.hits == 1
+
+        # calls setup_logging correctly
+        assert len(new_setup_logging.calls) == 1
+        assert new_setup_logging.calls[0] == \
+            (logging.WARN, "debugfile", logging.DEBUG)
 
         # connects to couch
         assert p.db.server_uri == "couchserver"
@@ -209,13 +241,6 @@ class TestProgram:
         assert p.queue.qsize() == 1
         assert p.queue.get() == Program.RELOAD
 
-    def test_panic(self):
-        p = Program()
-        p.panic()
-        assert p.queue.qsize() == 1
-        assert p.queue.get() == Program.SHUTDOWN
-        assert signal.alarm(0) > 50
-
     def test_shutdown_fullrun(self):
         p = Program()
         # We did not replace p.run, so a new thread will be started:
@@ -227,3 +252,9 @@ class TestProgram:
         assert dumbsignallisteners[0].exit_hits == 1
         assert dumbscgiapps[0].shutdown_hits == 1
         assert dumbservers[0].shutdown_hits == 1
+
+    # TODO: tests for main() split & proper error handling
+    # (see todo in main.py)
+    # - test main_setup creates no threads
+    # - test errors in main_setup (before threads are created) are raised
+    # - test errors after main_setup cause crashmat.panic()

@@ -220,6 +220,7 @@ class TestLoad:
         asdf_2c_object = asdf_2c()
         assert asdf_2c_object.test == 2
 
+class TestFullname:
     def test_fullname(self):
         lm = dynamicloadme
         lmn = dynamicloadme.__name__

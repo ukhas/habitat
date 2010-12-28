@@ -16,17 +16,18 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 import threading
+from habitat.utils import crashmat
 
-class LockTroll(threading.Thread):
+class LockTroll(crashmat.Thread):
     def __init__(self, lock):
-        threading.Thread.__init__(self)
+        crashmat.Thread.__init__(self)
         self.name = "Test Thread: LockTroll"
         self.lock = lock
         self.stop = threading.Event()
         self.started = threading.Event()
 
     def start(self):
-        threading.Thread.start(self)
+        crashmat.Thread.start(self)
         self.started.wait()
 
     def run(self):

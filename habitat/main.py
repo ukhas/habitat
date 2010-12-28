@@ -30,6 +30,7 @@ import signal
 import threading
 import Queue
 import errno
+import logging
 import optparse
 import ConfigParser
 import couchdbkit
@@ -38,8 +39,9 @@ import restkit.errors
 import habitat
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
+from habitat.utils import crashmat
 
-__all__ = ["get_options", "Program", "SignalListener"]
+__all__ = ["get_options", "setup_logging", "Program", "SignalListener"]
 
 usage = "%prog [options]"
 version = "{0} {1}".format(habitat.__name__, habitat.__version__)
@@ -50,6 +52,13 @@ default_configuration_file = "/etc/habitat/habitat.cfg"
 
 config_section = "habitat"
 """The section in the config file to search for options"""
+
+# I would use optparse.set_defaults, but instead we need to have command
+# line options, config file options, and defaults, overriding each
+# other in that order.
+default_options = { "couch_uri": None, "couch_db": None, "socket_file": None,
+                    "log_stderr_level": "WARN", "log_file": None,
+                    "log_file_level": None }
 
 parser = optparse.OptionParser(usage=usage, version=version,
                                description=header)
@@ -66,10 +75,21 @@ parser.add_option("-d", "--couch-db", metavar="COUCH_DATABASE",
 parser.add_option("-s", "--socket", metavar="SCGI_SOCKET",
                   dest="socket_file",
                   help="scgi socket file to serve on")
+parser.add_option("-v", "--verbosity", metavar="LOG_STDERR_LEVEL",
+                  dest="log_stderr_level",
+                  help="minimum loglevel to print on stderr, options: " +\
+                       "NONE, DEBUG, INFO, WARN, ERROR, CRITICAL")
+parser.add_option("-l", "--log-file", metavar="LOG_FILE",
+                  dest="log_file",
+                  help="file name to send log messages to")
+parser.add_option("-e", "--log-level", metavar="LOG_FILE_LEVEL",
+                  dest="log_file_level",
+                  help="minimum loglevel to log to file " + \
+                       "(see verbosity for options)")
 
 def get_options():
     """
-    ``get_options`` reads command line options and a configuration file
+    **get_options** reads command line options and a configuration file
 
     This function parses command line options, and reads a
     configuration file (which must be in the :py:mod:`ConfigParser`
@@ -83,23 +103,42 @@ def get_options():
     Command line options have priority over options from a config file.
     """
 
+    cmdline_options = get_options_cmdline()
+    config_options = get_options_config(cmdline_options["config_file"])
+    del cmdline_options["config_file"]
+
+    options = default_options.copy()
+
+    for dest in default_options:
+        if cmdline_options[dest] != None:
+            options[dest] = cmdline_options[dest]
+        elif config_options.has_key(dest) and config_options[dest] != None:
+            options[dest] = config_options[dest]
+
+    get_options_check_required(options)
+
+    for dest in ["log_stderr_level", "log_file_level"]:
+        options[dest] = get_options_parse_log_level(options[dest])
+
+    return options
+
+def get_options_cmdline():
     (option_values, args) = parser.parse_args()
 
     if len(args) != 0:
         parser.error("did not expect any positional arguments")
 
     # A dict is arguably easier to use.
-    options = option_values.__dict__.copy()
+    cmdline_options = option_values.__dict__.copy()
 
-    # I would use optparse.set_defaults but we need to know whether
-    # the option was explicitly stated
-    if options["config_file"] == None:
+    return cmdline_options
+
+def get_options_config(config_file):
+    if config_file == None:
         config_file = default_configuration_file
         config_file_explicit = False
     else:
-        config_file = options["config_file"]
         config_file_explicit = True
-    del options["config_file"]
 
     config = ConfigParser.RawConfigParser()
     try:
@@ -108,26 +147,88 @@ def get_options():
     except IOError, e:
         # If the error was in opening the default config file - not explicitly
         # set - then ignore it.
-        if config_file_explicit:
+        if not config_file_explicit:
+            return {}
+        else:
             parser.error("error opening {0}: {1}".format(config_file, e))
     except ConfigParser.ParsingError, e:
         parser.error("error parsing {0}: {1}".format(config_file, e))
     else:
-        config_items = dict(config.items(config_section))
-        for dest in options.keys():
-            if options[dest] == None and config_items.has_key(dest):
-                options[dest] = config_items[dest]
+        return dict(config.items(config_section))
 
-    for dest in options.keys():
+def get_options_check_required(options):
+    required_options = ["couch_uri", "couch_db", "socket_file"]
+
+    if options["log_file"] != None or options["log_file_level"] != None:
+        required_options += ["log_file", "log_file_level"]
+
+    for dest in required_options:
         if options[dest] == None or options[dest] == "":
             parser.error("\"{0}\" was not specified".format(dest))
 
-    return options
+# I would use the "choice" type for parser and have it validate
+# these options, but we also need to check options provided in a
+# config file, and add a "NONE" option
+LOG_LEVELS = ["CRITICAL", "ERROR", "WARN", "INFO", "DEBUG"]
+NONE_LEVELS = ["NONE", "SILENT", "QUIET"]
+
+def get_options_parse_log_level(level):
+    if level == None:
+        return None
+
+    level = level.upper()
+
+    if level in NONE_LEVELS:
+        return None
+    elif level in LOG_LEVELS:
+        return getattr(logging, level)
+    else:
+        parser.error("invalid value for \"{0}\"".format(levelarg))
+
+# TODO: add logging calls to habitat
+def setup_logging(log_stderr_level, log_file_name, log_file_level):
+    """
+    **setup_logging** initalises the :py:mod:`Python logging module <logging>`.
+
+    It will initalise the 'habitat' logger and creates one, two, or no
+    Handlers, depending on the values provided for *log_file_level* and
+    *log_stderr_level*.
+    """
+
+    formatstring = "[%(asctime)s] %(levelname)s %(name)s %(threadName)s: " + \
+                   "%(message)s"
+
+    root_logger = logging.getLogger()
+
+    # Enable all messages at the logger level, then filter them in each
+    # handler.
+    root_logger.setLevel(logging.DEBUG)
+
+    have_handlers = False
+
+    if log_stderr_level != None:
+        stderr_handler = logging.StreamHandler()
+        stderr_handler.setFormatter(logging.Formatter(formatstring))
+        stderr_handler.setLevel(log_stderr_level)
+        root_logger.addHandler(stderr_handler)
+        have_handlers = True
+
+    if log_file_level != None:
+        file_handler = logging.FileHandler(log_file_name)
+        file_handler.setFormatter(logging.Formatter(formatstring))
+        file_handler.setLevel(log_file_level)
+        root_logger.addHandler(file_handler)
+        have_handlers = True
+
+    if not have_handlers:
+        # logging gets annoyed if there isn't atleast one handler.
+        # If we're meant to be totally silent...
+        root_logger.addHandler(logging.NullHandler())
 
 class Program:
     """
-    Program provides the :py:meth:`main`, :py:meth:`shutdown`, \
-    :py:meth:`reload` and :py:meth:`panic` methods
+    Program provides the :py:meth:`main`, :py:meth:`shutdown` and \
+    :py:meth:`reload` methods
     """
 
     (RELOAD, SHUTDOWN) = range(2)
@@ -152,7 +253,14 @@ class Program:
 
         """
 
+        # Setup phase: before any threads are started.
+        # We allow any execptions to raise and kill this thread, which
+        # is the only thread - and therefore kill the program.
+        # TODO split functions, handle errors properly
         self.options = get_options()
+        setup_logging(self.options["log_stderr_level"],
+                      self.options["log_file"],
+                      self.options["log_file_level"])
         couch = couchdbkit.Server(self.options['couch_uri'])
         self.db = couch[self.options['couch_db']]
 
@@ -160,16 +268,18 @@ class Program:
             # Quick test that we can access this database
             self.db.info()
         except restkit.errors.ResourceError:
-            self.panic("Could not access the CouchDB database, panicking!")
+            raise Exception, "Could not connect to the CouchDB database"
 
         self.server = Server(self)
         self.scgiapp = SCGIApplication(self.server, self,
                                        self.options["socket_file"])
         self.signallistener = SignalListener(self)
-        self.thread = threading.Thread(target=self.run,
-                                       name="Shutdown Handling Thread")
-
+        self.thread = crashmat.Thread(target=self.run,
+                                      name="Shutdown Handling Thread")
         self.signallistener.setup()
+
+        # After this point, threads are created and catching & killing
+        # the program is harder: crashmat.panic must be used.
         self.scgiapp.start()
         self.thread.start()
 
@@ -183,24 +293,13 @@ class Program:
         """asks the Program thread to process a **SHUTDOWN** event"""
         self.queue.put(Program.SHUTDOWN)
 
-    def panic(self, why=None):
-        """
-        calls :py:func:`signal.alarm` as a failsafe and then \
-        :py:meth:`shutdown`
-        """
-        
-        if why != None:
-            print why
-        signal.alarm(60)
-        self.shutdown()
-
     def run(self):
         """
         The Program thread processes **SHUTDOWN** and **RELOAD** events
 
-        In order to make :py:meth:`shutdown`, :py:meth:`reload` and
-        :py:meth:`panic` return instantly, the actual work requested
-        by calling those methods is done by this thread.
+        In order to make :py:meth:`shutdown` and :py:meth:`reload`
+        return instantly, the actual work requested by calling those
+        methods is done by this thread.
 
          - **RELOAD**: To be implemented
          - **SHUTDOWN**: shuts down the :py:class:`SignalListener`,
@@ -221,7 +320,7 @@ class Program:
                 self.server.shutdown()
                 sys.exit()
             elif item == Program.RELOAD:
-                # TODO
+                # TODO: Reload support
                 pass
 
 class SignalListener:

@@ -28,6 +28,8 @@ import threading
 from nose.tools import raises
 
 from habitat.main import SignalListener
+from habitat.utils import crashmat
+
 import habitat.main as signals_module
 
 class PausedManyTimes(Exception):
@@ -72,7 +74,6 @@ class DumbProgram:
     def __init__(self):
         self.reload_hits = 0
         self.shutdown_hits = 0
-        self.panic_hits = 0
 
     def reload(self):
         self.reload_hits += 1
@@ -80,11 +81,8 @@ class DumbProgram:
     def shutdown(self):
         self.shutdown_hits += 1
 
-    def panic(self):
-        self.panic_hits += 1
-
     def hits(self):
-        return (self.reload_hits, self.shutdown_hits, self.panic_hits)
+        return (self.reload_hits, self.shutdown_hits)
 
 class TestSignalListener:
     def setup(self):
@@ -133,8 +131,8 @@ class TestSignalListener:
         assert self.signal_listener.shutdown_event.is_set()
 
     def test_exit_waits_for_event(self):
-        t = threading.Thread(target=self.signal_listener.exit,
-                             name="Test thread: test_exit_waits_for_event")
+        t = crashmat.Thread(target=self.signal_listener.exit,
+                            name="Test thread: test_exit_waits_for_event")
         t.start()
         while not t.is_alive():
             time.sleep(0.001)
@@ -148,14 +146,14 @@ class TestSignalListener:
     def test_handle_term_calls_shutdown(self):
         """handle(TERM|INT) calls shutdown"""
         self.signal_listener.handle(signal.SIGTERM, None)
-        assert self.dumbprogram.hits() == (0, 1, 0)
+        assert self.dumbprogram.hits() == (0, 1)
         self.signal_listener.handle(signal.SIGINT, None)
-        assert self.dumbprogram.hits() == (0, 2, 0)
+        assert self.dumbprogram.hits() == (0, 2)
 
     def test_handle_hup_calls_reload(self):
         """handle(HUP) calls reload"""
         self.signal_listener.handle(signal.SIGHUP, None)
-        assert self.dumbprogram.hits() == (1, 0, 0)
+        assert self.dumbprogram.hits() == (1, 0)
 
     @raises(SystemExit)
     def test_handle_usr1_calls_sys_exit(self):

@@ -32,6 +32,7 @@ from nose.tools import raises
 
 from serverstub import ServerStub
 from do_scgi_request import do_scgi_request
+from habitat.utils.tests import threading_checks
 
 from habitat.message_server import Message
 
@@ -44,6 +45,8 @@ scgi_req = functools.partial(do_scgi_request, socket.AF_UNIX, socket_file)
 class TestSCGIStartupShutdown:
     """SCGI Startup & Shutdown"""
     def setup(self):
+        threading_checks.patch()
+
         self.threads_before = threading.enumerate()
         self.scgiapp = SCGIApplication(ServerStub(), None, socket_file, 0.001)
 
@@ -54,6 +57,8 @@ class TestSCGIStartupShutdown:
         # We may as well clean up after ourselves. This should not fail,
         # so there isn't an ENOENT check.
         os.unlink(socket_file)
+
+        threading_checks.restore()
 
     def test_start_does_not_fork(self):
         old_fork = os.fork
@@ -146,17 +151,6 @@ class TestSCGIBehaviour:
         self.scgiapp = SCGIApplication(server, None, socket_file, 0.001)
         self.scgiapp.start()
 
-        old_handle_error = self.scgiapp.handle_error
-        self.ignore_exceptions = []
-        tester = self
-
-        def new_handle_error(request, client_address):
-            type = sys.exc_info()[0]
-            if type not in tester.ignore_exceptions:
-                old_handle_error(request, client_address)
-
-        self.scgiapp.handle_error = new_handle_error
-
     def teardown(self):
         self.scgiapp.shutdown()
 
@@ -193,8 +187,6 @@ class TestSCGIBehaviour:
         self.check_catches_invalid_requests({"type": None})
 
     def check_catches_invalid_requests(self, mod):
-        self.ignore_exceptions.append(ValueError)
-        self.ignore_exceptions.append(TypeError)
         modded_test_message = test_message_d.copy()
         modded_test_message.update(mod)
         modded_test_message = json.dumps(modded_test_message)
@@ -203,7 +195,6 @@ class TestSCGIBehaviour:
         assert len(self.messages) == 0
 
     def test_invalid_request_does_not_crash_server(self):
-        self.ignore_exceptions.append(ValueError)
         (headers, body) = scgi_req("/message", "blah{]2!]2")
         assert headers["Status"].startswith("400")
         assert len(self.messages) == 0
