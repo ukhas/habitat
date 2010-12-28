@@ -91,17 +91,12 @@ class TestCrashmat:
     def test_run_catches_exception(self):
         assert self.check_run_catches(ValueError) == True
 
-    def test_run_doesnt_catch_sysexit(self):
-        assert self.check_run_catches(SystemExit) == False
+    @raises(SystemExit)
+    def test_run_reraises_sysexit(self):
+        self.check_run_catches(SystemExit)
 
     def check_run_catches(self, exception):
         t = crashmat.Thread()
-
-        def new_panic():
-            pass
-
-        old_panic = crashmat.panic
-        crashmat.panic = new_panic
 
         def err():
             raise exception
@@ -113,8 +108,6 @@ class TestCrashmat:
 
         t.old_run = err
         t.run()
-
-        crashmat.panic = old_panic
 
         return a.handled
 

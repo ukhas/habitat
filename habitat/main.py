@@ -225,6 +225,18 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
         # If we're meant to be totally silent...
         root_logger.addHandler(logging.NullHandler())
 
+def couch_connect(couch_uri, couch_db):
+    couch = couchdbkit.Server(couch_uri)
+    db = couch[couch_db]
+
+    try:
+        # Quickly check that we can access this database
+        db.info()
+    except restkit.errors.ResourceError:
+        raise Exception, "Could not connect to the CouchDB database"
+
+    return db
+
 class Program:
     """
     Program provides the :py:meth:`main`, :py:meth:`shutdown` and \
@@ -243,6 +255,7 @@ class Program:
         This method does the following:
 
          - calls :py:func:`get_options`
+         - calls :py:func:`setup_logging` with appropriate arguments
          - creates the CouchDB connection object and tests for connectivity
          - creates a :py:class:`habitat.message_server.Server`
          - creates a :py:class:`habitat.http.SCGIApplication`
@@ -254,35 +267,51 @@ class Program:
         """
 
         # Setup phase: before any threads are started.
-        # We allow any execptions to raise and kill this thread, which
+        # We allow any execptions to raise and kill this thread - which
         # is the only thread - and therefore kill the program.
-        # TODO split functions, handle errors properly
+        try:
+            self.main_setup()
+        except SystemExit:
+            raise
+        except:
+            if len(logging.getLogger().handlers) == 0:
+                raise
+            else:
+                logger = logging.getLogger("habitat.main")
+                logger.exception("Exception in Program.main_setup() exiting")
+                return
+
+        # After this point, threads are created and catching & killing
+        # the program is harder: crashmat.panic must be used.
+        # SystemExit should not be raised by the MainThread.
+        try:
+            self.main_execution()
+        except:
+            crashmat.panic()
+
+        self.thread.join()
+
+    def main_setup(self):
         self.options = get_options()
         setup_logging(self.options["log_stderr_level"],
                       self.options["log_file"],
                       self.options["log_file_level"])
-        couch = couchdbkit.Server(self.options['couch_uri'])
-        self.db = couch[self.options['couch_db']]
-
-        try:
-            # Quick test that we can access this database
-            self.db.info()
-        except restkit.errors.ResourceError:
-            raise Exception, "Could not connect to the CouchDB database"
-
+        self.db = couch_connect(self.options['couch_uri'],
+                                self.options['couch_db'])
         self.server = Server(self)
         self.scgiapp = SCGIApplication(self.server, self,
                                        self.options["socket_file"])
         self.signallistener = SignalListener(self)
+        self.signallistener.setup()
         self.thread = crashmat.Thread(target=self.run,
                                       name="Shutdown Handling Thread")
-        self.signallistener.setup()
+        crashmat.set_shutdown_function(self.shutdown)
 
-        # After this point, threads are created and catching & killing
-        # the program is harder: crashmat.panic must be used.
+    def main_execution(self):
         self.scgiapp.start()
         self.thread.start()
 
+        # This will never return until habitat shuts down
         self.signallistener.listen()
 
     def reload(self):
@@ -304,10 +333,12 @@ class Program:
          - **RELOAD**: To be implemented
          - **SHUTDOWN**: shuts down the :py:class:`SignalListener`,
            :py:class:`habitat.http.SCGIApplication` and the
-           :py:class:`habitat.message_server.Server`, then calls
-           :py:func:`sys.exit`. Having shut down the above three,
-           this should be the only thread executing, so the process
-           will exit.
+           :py:class:`habitat.message_server.Server`, then returns,
+           killing this thread (``Program.thread``).
+           Having shut down the above three, there should be only two
+           threads executing: MainThread, which will be blocked in
+           ``Program.thread.join()``, and this thread. Therefore,
+           immediately after this function returns, the process exits.
 
         """
 
@@ -318,7 +349,7 @@ class Program:
                 self.signallistener.exit()
                 self.scgiapp.shutdown()
                 self.server.shutdown()
-                sys.exit()
+                return
             elif item == Program.RELOAD:
                 # TODO: Reload support
                 pass
@@ -384,7 +415,6 @@ class SignalListener:
                 signal.pause()
         except SystemExit:
             self.shutdown_event.set()
-            raise
 
     def exit(self):
         """

@@ -123,11 +123,11 @@ class TestSignalListener:
         assert len(self.fakeos.sent_signals) == 1
         assert self.fakeos.sent_signals[0] == signal.SIGUSR1
 
-    def test_listen_passes_sysexit_and_sets_event(self):
+    def test_listen_sets_event_and_absorbs_systemexit(self):
         raises(PausedManyTimes)(self.signal_listener.listen)()
         assert not self.signal_listener.shutdown_event.is_set()
         self.fakesignal.emulate_sysexit = True
-        raises(SystemExit)(self.signal_listener.listen)()
+        self.signal_listener.listen()
         assert self.signal_listener.shutdown_event.is_set()
 
     def test_exit_waits_for_event(self):

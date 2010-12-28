@@ -86,7 +86,7 @@ class Thread(threading.Thread):
         try:
             self.old_run()
         except SystemExit:
-            pass
+            raise
         except:
             self.handle_exception()
 

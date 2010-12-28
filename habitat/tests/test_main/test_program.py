@@ -32,6 +32,8 @@ from nose.tools import raises
 
 from habitat.utils.tests import threading_checks
 
+from habitat.utils import crashmat
+from habitat.utils.crashmat import set_shutdown_function, panic
 from habitat.message_server import Server
 from habitat.http import SCGIApplication
 from habitat.main import Program, SignalListener, get_options, setup_logging, \
@@ -106,8 +108,10 @@ class DumbSCGIApplication:
 
 # listen() will block, so it should be the last thing program calls.
 # Therefore we raise this in listen; and check that it has been raised
-# (and the test's asserts check things that have happened before it was
-# raised)
+# (therefore the test's asserts check things that have happened before it
+# was raised)
+# Note that for this to work we have to call main_execution() directly
+# since main() wraps it in a try: except:
 class Listening(Exception):
     pass
 
@@ -130,12 +134,73 @@ class DumbSignalListener:
     def exit(self):
         self.exit_hits += 1
 
+# A replacement for crashmat.set_shutdown_function
+shutdown_functions = []
+def new_set_shutdown_function(func):
+    shutdown_functions.append(func)
+
+def new_panic():
+    new_panic.calls += 1
+new_panic.calls = 0
+
 # Replacement for run so we can keep track of the threads we spawn.
 # Anything that tests main will want to replace run first; run is not replaced
 # in setup() since it's the initialised object that must be modified
 def new_run():
     new_run.queue.put(threading.current_thread())
 new_run.queue = Queue.Queue()
+
+# In order to test p.main() we replace main_setup, main_execution,
+# and provide a fake p.thread
+def action_nothing():
+    pass
+def action_raise():
+    raise Exception
+def action_sysexit():
+    raise SystemExit
+
+def new_main_setup():
+    new_main_setup.calls += 1
+    new_main_setup.action()
+new_main_setup.calls = 0
+new_main_setup.action = action_nothing
+
+def new_main_execution():
+    new_main_execution.calls += 1
+    new_main_execution.action()
+new_main_execution.calls = 0
+new_main_execution.action = action_nothing
+
+class DumbThread:
+    def __init__(self):
+        self.join_calls = 0
+    def join(self):
+        self.join_calls += 1
+
+# p.main() does call some logging methods, so replace logging
+class FakeLogging:
+    for level in ["DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]:
+        locals()[level] = getattr(logging, level)
+    del level
+
+    def __init__(self):
+        self.rt = self.Logger()
+        self.hbt = self.Logger()
+
+    def getLogger(self, name=None):
+        if name == None:
+            return self.rt
+        elif name == "habitat.main":
+            return self.hbt
+        else:
+            raise AssertionError
+
+    class Logger:
+        def __init__(self):
+            self.exceptions = []
+            self.handlers = []
+        def exception(self, msg):
+            self.exceptions.append( (msg, sys.exc_info()[0]) )
 
 class TestProgram:
     def setup(self):
@@ -149,18 +214,31 @@ class TestProgram:
         assert program_module.Server == Server
         assert program_module.SCGIApplication == SCGIApplication
         assert program_module.SignalListener == SignalListener
+        assert crashmat.set_shutdown_function == set_shutdown_function
+        assert crashmat.panic == panic
+        assert program_module.logging == logging
         program_module.default_configuration_file = missing_file
         program_module.get_options = new_get_options
         program_module.setup_logging = new_setup_logging
         program_module.Server = DumbServer
         program_module.SCGIApplication = DumbSCGIApplication
         program_module.SignalListener = DumbSignalListener
+        crashmat.set_shutdown_function = new_set_shutdown_function
+        crashmat.panic = new_panic
+        self.new_logging = FakeLogging()
+        program_module.logging  = self.new_logging
 
-        # Clear the list, reset the counter
+        # Clear the list, reset the counter, reset the functions
         new_get_options.hits = 0
         dumbservers[:] = []
         dumbscgiapps[:] = []
         dumbsignallisteners[:] = []
+        shutdown_functions[:] = []
+        new_main_setup.action = action_nothing
+        new_main_execution.action = action_nothing
+        new_main_setup.calls = 0
+        new_main_execution.calls = 0
+        new_panic.calls = 0
 
         # Replace argv
         self.old_argv = sys.argv
@@ -181,12 +259,18 @@ class TestProgram:
         assert program_module.Server == DumbServer
         assert program_module.SCGIApplication == DumbSCGIApplication
         assert program_module.SignalListener == DumbSignalListener
+        assert crashmat.set_shutdown_function == new_set_shutdown_function
+        assert crashmat.panic == new_panic
+        assert program_module.logging == self.new_logging
         program_module.default_configuration_file = default_configuration_file
         program_module.get_options = get_options
         program_module.setup_logging = setup_logging
         program_module.Server = Server
         program_module.SCGIApplication = SCGIApplication
         program_module.SignalListener = SignalListener
+        crashmat.set_shutdown_function = set_shutdown_function
+        crashmat.panic = panic
+        program_module.logging = logging
 
         threading_checks.restore()
 
@@ -194,11 +278,66 @@ class TestProgram:
         p = Program()
         assert isinstance(p.queue, Queue.Queue)
 
-    def test_main(self):
-        # Run main
+    def create_main_tester(self):
+        p = Program()
+        p.main_setup = new_main_setup
+        p.main_execution = new_main_execution
+        p.thread = DumbThread()
+        return p
+
+    def test_main_calls_setup_and_execution(self):
+        p = self.create_main_tester()
+        p.main()
+        assert new_main_setup.calls == 1
+        assert new_main_execution.calls == 1
+        assert p.thread.join_calls == 1
+
+        # Check that main_setup is called first.
+        new_main_setup.action = action_sysexit
+        raises(SystemExit)(p.main)()
+        assert new_main_setup.calls == 2
+        assert new_main_execution.calls == 1
+        assert p.thread.join_calls == 1
+
+    @raises(SystemExit)
+    def test_main_reraises_setup_sysexit_despite_logging(self):
+        new_main_setup.action = action_sysexit
+        self.new_logging.rt.handlers.append(None)
+        self.create_main_tester().main()
+
+    @raises(Exception)
+    def test_main_without_logging_reraises_setup_errors(self):
+        new_main_setup.action = action_raise
+        self.create_main_tester().main()
+
+    def test_main_with_logging_calls_exception_on_setup_errors(self):
+        expect_message = "Exception in Program.main_setup() exiting"
+        new_main_setup.action = action_raise
+        self.new_logging.rt.handlers.append(None)
+        self.create_main_tester().main()
+        assert len(self.new_logging.hbt.exceptions) == 1
+        assert self.new_logging.hbt.exceptions[0] == \
+            (expect_message, Exception)
+
+    def test_main_panics_on_execution_errors(self):
+        new_main_execution.action = action_raise
+        self.check_panic_caused()
+
+    def test_main_panics_on_execution_sysexit(self):
+        new_main_execution.action = action_sysexit
+        self.check_panic_caused()
+
+    def check_panic_caused(self):
+        self.create_main_tester().main()
+        assert new_panic.calls == 1
+
+    def test_main_setup_execution(self):
+        """main_setup and main_execution"""
         p = Program()
         p.run = new_run
-        raises(Listening)(p.main)()
+
+        # setup phase
+        p.main_setup()
 
         # uses_options
         assert new_get_options.hits == 1
@@ -212,19 +351,37 @@ class TestProgram:
         assert p.db.server_uri == "couchserver"
         assert p.db.database_name == "database"
 
+        # creates a server
         assert len(dumbservers) == 1
         assert dumbservers[0].program == p
 
+        # creates a scgiapp
         assert len(dumbscgiapps) == 1
         assert dumbscgiapps[0].program == p
         assert dumbscgiapps[0].server == dumbservers[0]
         assert dumbscgiapps[0].socket_file == "socketfile"
-        assert dumbscgiapps[0].start_hits == 1
+        assert dumbscgiapps[0].start_hits == 0
 
+        # creates a signal listener         
         assert len(dumbsignallisteners) == 1
         assert dumbsignallisteners[0].setup_hits == 1
+        assert dumbsignallisteners[0].listen_hits == 0
+
+        # creates a thread, but doesn't run it yet
+        assert p.thread.is_alive() == False
+
+        # calls set_shutdown_function
+        assert len(shutdown_functions) == 1
+        assert shutdown_functions[0] == p.shutdown
+
+        # execution phase
+        raises(Listening)(p.main_execution)()
+
+        # starts scgiapp and calls listen
+        assert dumbscgiapps[0].start_hits == 1
         assert dumbsignallisteners[0].listen_hits == 1
 
+        # starts p.thread
         assert new_run.queue.get() == p.thread
         assert new_run.queue.qsize() == 0
         p.thread.join()
@@ -243,18 +400,12 @@ class TestProgram:
 
     def test_shutdown_fullrun(self):
         p = Program()
-        # We did not replace p.run, so a new thread will be started:
-        raises(Listening)(p.main)()
-
+        # We did not replace p.run, so a new thread will be started.
+        p.main_setup()
+        raises(Listening)(p.main_execution)()
         p.shutdown()
         p.thread.join()
 
         assert dumbsignallisteners[0].exit_hits == 1
         assert dumbscgiapps[0].shutdown_hits == 1
         assert dumbservers[0].shutdown_hits == 1
-
-    # TODO: tests for main() split & proper error handling
-    # (see todo in main.py)
-    # - test main_setup creates no threads
-    # - test errors in main_setup (before threads are created) are raised
-    # - test errors after main_setup cause crashmat.panic()

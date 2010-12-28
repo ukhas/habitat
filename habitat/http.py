@@ -205,6 +205,11 @@ class SCGIApplication(InsertApplication,
         t.start()
 
     # TODO: def handle_error(self)
+    # We probably want to rewrite process_request_thread instead such that
+    # errors are raised (and therefore crashmat.panic()) is called.
+    # No errors should be uncaught, therefore panic is justified.
+    # Support for catching dodgy SCGI requests causing IOErrors, etc.
+    # should be added. Perhaps logger.warn() and ignore.
 
 class SCGIHandler(SocketServer.BaseRequestHandler):
     """
