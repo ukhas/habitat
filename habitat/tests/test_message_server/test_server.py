@@ -38,6 +38,11 @@ class FakeSink(SimpleSink):
     def message(self):
         pass
 
+class FakeProgram:
+    db = {"message_server_config": { "sinks": [] }  }
+    def __init__(self, sinks=[]):
+        self.db["message_server_config"]["sinks"] = sinks
+
 class SinkWithoutSetup(SimpleSink):
     """A sink without a setup method should not be loaded."""
     def message(self):
@@ -62,7 +67,7 @@ class NonSink:
 
 class TestServer:
     def setup(self):
-        self.server = Server(None, None)
+        self.server = Server(FakeProgram())
         self.source = Listener("M0ZDR", "1.2.3.4")
 
     def test_message_counter(self):
@@ -73,6 +78,10 @@ class TestServer:
         for i in xrange(10):
             self.server.push_message(message_rt)
         assert self.server.message_count == 11
+
+    def test_uses_config(self):
+        self.server = Server(FakeProgram([FakeSink]))
+        assert len(self.server.sinks) == 1
 
     def test_repr(self):
         assert self.server.__class__.__name__ == "Server"

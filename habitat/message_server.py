@@ -25,6 +25,7 @@ import inspect
 import threading
 import Queue
 import ipaddr
+import couchdbkit.exceptions
 
 from habitat.utils import dynamicloader
 
@@ -40,20 +41,27 @@ class Server:
     each and every sink when message() is called.
     """
 
-    def __init__(self, config, program):
+    def __init__(self, program):
         """
-        *config*: the main configuration document for the **Server**
-
         *program*: a :py:class:`habitat.main.Program` object
         """
-
-        self.config = config
+        
         self.program = program
+        self.db = self.program.db
 
         self.sinks = []
         self.message_count = 0
 
         self.lock = threading.RLock()
+
+        try:
+            self.config = self.program.db["message_server_config"]
+        except couchdbkit.exceptions.ResourceNotFound:
+            self.program.panic("message_server_config document not found "+
+                    "in CouchDB, panicking!")
+
+        for sink in self.config['sinks']:
+            self.load(sink)
 
     def load(self, new_sink):
         """

@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Daniel Richman
+# Copyright 2010 (C) Daniel Richman, Adam Greig
 #
 # This file is part of habitat.
 #
@@ -32,6 +32,8 @@ import Queue
 import errno
 import optparse
 import ConfigParser
+import couchdbkit
+import restkit.errors
 
 import habitat
 from habitat.message_server import Server
@@ -54,9 +56,13 @@ parser = optparse.OptionParser(usage=usage, version=version,
 parser.add_option("-f", "--config-file", metavar="CONFIG_FILE",
                   dest="config_file",
                   help="file from which other options may be read")
-parser.add_option("-c", "--couch", metavar="COUCH_SERVER",
-                  dest="couch",
-                  help="couch server to connect to")
+parser.add_option("-c", "--couch-uri", metavar="COUCH_URI",
+                  dest="couch_uri",
+                  help="couch server to connect to"+
+                    " (http://username:password@host:port/")
+parser.add_option("-d", "--couch-db", metavar="COUCH_DATABASE",
+                  dest="couch_db",
+                  help="couch database to use")
 parser.add_option("-s", "--socket", metavar="SCGI_SOCKET",
                   dest="socket_file",
                   help="scgi socket file to serve on")
@@ -113,7 +119,7 @@ def get_options():
                 options[dest] = config_items[dest]
 
     for dest in options.keys():
-        if options[dest] == None:
+        if options[dest] == None or options[dest] == "":
             parser.error("\"{0}\" was not specified".format(dest))
 
     return options
@@ -136,17 +142,27 @@ class Program:
         This method does the following:
 
          - calls :py:func:`get_options`
+         - creates the CouchDB connection object and tests for connectivity
          - creates a :py:class:`habitat.message_server.Server`
          - creates a :py:class:`habitat.http.SCGIApplication`
          - creates a :py:class:`SignalListener`
          - starts the SCGI app thread
          - starts the Program thread (see :py:meth:`Program.run`)
-         - starts the SignalListner thread
+         - starts the SignalListener thread
 
         """
 
         self.options = get_options()
-        self.server = Server(None, self)
+        couch = couchdbkit.Server(self.options['couch_uri'])
+        self.db = couch[self.options['couch_db']]
+
+        try:
+            # Quick test that we can access this database
+            self.db.info()
+        except restkit.errors.ResourceError:
+            self.panic("Could not access the CouchDB database, panicking!")
+
+        self.server = Server(self)
         self.scgiapp = SCGIApplication(self.server, self,
                                        self.options["socket_file"])
         self.signallistener = SignalListener(self)
@@ -167,12 +183,14 @@ class Program:
         """asks the Program thread to process a **SHUTDOWN** event"""
         self.queue.put(Program.SHUTDOWN)
 
-    def panic(self):
+    def panic(self, why=None):
         """
         calls :py:func:`signal.alarm` as a failsafe and then \
         :py:meth:`shutdown`
         """
-
+        
+        if why != None:
+            print why
         signal.alarm(60)
         self.shutdown()
 
