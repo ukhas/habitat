@@ -8,6 +8,7 @@
     to load and relevant pre-parse filters for each.
 */
 "parser_config": {
+    "type": "config",
     "modules": [
         {
             "name": "UKHAS",
@@ -27,6 +28,7 @@
     sources and sinks to load.
 */
 "message_server_config": {
+    "type": "config",
     "sinks": [
         "habitat.parser.ParserSink",
         "habitat.archive.ArchiveSink"
