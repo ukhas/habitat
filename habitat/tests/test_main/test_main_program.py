@@ -40,6 +40,23 @@ def new_get_options():
     return old_get_options()
 new_get_options.hits = 0
 
+# A fake CouchDB database
+class FakeCouchDatabase:
+    def __init__(self, server_uri, database_name):
+        self.server_uri = server_uri
+        self.database_name = database_name
+    def info(self):
+        pass
+
+# A fake CouchDB server interface
+class FakeCouchServer:
+    def __init__(self, uri):
+        self.accessed_uri = uri
+    def __getitem__(self, item):
+        return FakeCouchDatabase(self.accessed_uri, item)
+    
+program_module.couchdbkit.Server = FakeCouchServer
+
 # Replace the Server class with something that does nothing
 dumbservers = []
 class DumbServer:
@@ -159,11 +176,12 @@ class TestProgram:
         # uses_options
         assert new_get_options.hits == 1
 
-        # TODO:connects_to_couch
+        # connects to couch
+        assert p.db.server_uri == "couchserver"
+        assert p.db.database_name == "database"
 
         assert len(dumbservers) == 1
         assert dumbservers[0].program == p
-        # TODO:gives_server_correct_config_document
 
         assert len(dumbscgiapps) == 1
         assert dumbscgiapps[0].program == p

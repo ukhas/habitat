@@ -32,14 +32,16 @@ from habitat.message_server import Server
 
 from locktroll import LockTroll
 
-class FakeProgram:
-    db = {"message_server_config": { "sinks": [] }  }
-
 class FakeSink(SimpleSink):
     def setup(self):
         pass
     def message(self):
         pass
+
+class FakeProgram:
+    db = {"message_server_config": { "sinks": [] }  }
+    def __init__(self, sinks=[]):
+        self.db["message_server_config"]["sinks"] = sinks
 
 class SinkWithoutSetup(SimpleSink):
     """A sink without a setup method should not be loaded."""
@@ -76,6 +78,10 @@ class TestServer:
         for i in xrange(10):
             self.server.push_message(message_rt)
         assert self.server.message_count == 11
+
+    def test_uses_config(self):
+        self.server = Server(FakeProgram([FakeSink]))
+        assert len(self.server.sinks) == 1
 
     def test_repr(self):
         assert self.server.__class__.__name__ == "Server"
