@@ -68,7 +68,7 @@ parser.add_option("-f", "--config-file", metavar="CONFIG_FILE",
 parser.add_option("-c", "--couch-uri", metavar="COUCH_URI",
                   dest="couch_uri",
                   help="couch server to connect to"+
-                    " (http://username:password@host:port/")
+                    " (http://username:password@host:port/)")
 parser.add_option("-d", "--couch-db", metavar="COUCH_DATABASE",
                   dest="couch_db",
                   help="couch database to use")
