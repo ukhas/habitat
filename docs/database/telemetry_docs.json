@@ -1,9 +1,10 @@
 /*
-    Payload telemetry documents have the SHA256 of the sentence string as their ID.
-    This helps avoid the race condition of two people submitting the same string at
-    the same time - CouchDB's optimistic concurrency model will block two people
-    from creating a document with the same ID, so one will succeed and the other
-    backs off, loads the new document and just appends a receiver.
+    Payload telemetry documents have the SHA256 of the sentence string as their
+    ID.  This helps avoid the race condition of two people submitting the same
+    string at the same time - CouchDB's optimistic concurrency model will block
+    two people from creating a document with the same ID, so one will succeed
+    and the other backs off, loads the new document and just appends a
+    receiver.
 */
 "ab2a7300684278180d5d26d614a85139d186a5a09038bbbfcfbfce07f953507b": {
     "type": "payload_telemetry",
@@ -21,8 +22,9 @@
     "estimated_received_time": 1292772125,
     
     /*
-        Data is the dict returned by the parser module, containing all the useful
-        data from this string, hopefully including a latitude and longitude.
+        Data is the dict returned by the parser module, containing all the
+        useful data from this string, hopefully including a latitude and
+        longitude.
     */
     "data": {
         "payload": "habitat",
@@ -40,9 +42,9 @@
     },
     
     /*
-        Receivers is a list of people who received this message, including when they
-        think they received it, when habitat got their message and the last position
-        telemetry they sent about themselves.
+        Receivers is a list of people who received this message, including when
+        they think they received it, when habitat got their message and the
+        last position telemetry they sent about themselves.
     */
     "receivers": {
         "M0RND": {

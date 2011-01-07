@@ -1,11 +1,11 @@
 /*
-    Various elements of the system have configuration options set in Couch documents,
-    which use specific document IDs.
+    Various elements of the system have configuration options set in Couch
+    documents, which use specific document IDs.
 */
 
 /*
-    parser_config contains configuration for the parser, including which parser modules
-    to load and relevant pre-parse filters for each.
+    parser_config contains configuration for the parser, including which parser
+    modules to load and relevant pre-parse filters for each.
 */
 "parser_config": {
     "type": "config",
@@ -24,8 +24,8 @@
 },
 
 /*
-    message_server_config contains configuration for the message server, including which
-    sources and sinks to load.
+    message_server_config contains configuration for the message server,
+    including which sources and sinks to load.
 */
 "message_server_config": {
     "type": "config",
