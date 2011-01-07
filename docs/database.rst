@@ -36,17 +36,17 @@ Flight Documents
 ================
 
 Flight documents are the largest documents involved and also the ones most
-likely to be fiddled with manually so a reasonable level of detail is given in
-explaining each field.
+likely to be fiddled with manually so a reasonable level of detail is given
+in explaining each field.
 
 The high level overview is that each flight document completely describes one
 "flight", or "project" or "launch": it has a unique launch time and position
 and may contain multiple payloads, each of which may be received by multiple
-users. For each payload, the information needed to detect it on a radio, decode
-the resulting transmission and then parse it into useful data is given, as well
-as any habitat filters that should be applied when parsing data to correct
-mistakes. Finally, listeners who are actively chasing after a payload are also
-listed with each payload.
+users. For each payload, the information needed to detect it on a radio,
+decode the resulting transmission and then parse it into useful data is
+given, as well as any habitat filters that should be applied when parsing
+data to correct mistakes. Finally, listeners who are actively chasing after a
+payload are also listed with each payload.
 
 Each section is described in more detail below.
 
@@ -60,10 +60,10 @@ The document ID is a standard Couch ID, and each flight document contains the
         "_id": "c89860d6f68b1f31ac9480ff9f95bb62",
         "type": "flight",
 
-A start and end date is given as a UNIX timestamp and reflects the time period
-that telemetry received for payloads listed on the document will be associated
-with this flight. Typically the end date will be 24 hours after the start
-date::
+A start and end date is given as a UNIX timestamp and reflects the time
+period that telemetry received for payloads listed on the document will be
+associated with this flight. Typically the end date will be 24 hours after
+the start date::
 
     "start": 1292771680,
     "end": 1292772670,
@@ -72,9 +72,9 @@ Flight names are used for user interfaces and contain free text::
 
     "name": "Habitat Test Launch",
 
-The ``launch`` dictionary contains the actual time the flight launched as well
-as the timezone it launched in and the location it launched from, in decimal
-degrees::
+The ``launch`` dictionary contains the actual time the flight launched as
+well as the timezone it launched in and the location it launched from, in
+decimal degrees::
 
     "launch": {
         "time": 1292771780,
@@ -133,9 +133,10 @@ Neither ``radio`` nor ``telemetry`` are actually used by habitat, but instead
 are passed on to listeners so they may tune their radios and adjust their
 decoding software appropriately.
 
-The ``sentence`` dictionary is used by the habitat parser to retrieve data from
-the message strings that listeners upload and as such its design depends on the
-parser in use. An example for the UKHAS protocol parser is given below::
+The ``sentence`` dictionary is used by the habitat parser to retrieve data
+from the message strings that listeners upload and as such its design depends
+on the parser in use. An example for the UKHAS protocol parser is given
+below::
 
     "sentence": {
         "protocol": "UKHAS",
@@ -170,16 +171,16 @@ parser in use. An example for the UKHAS protocol parser is given below::
     },
 
 As well as the ``sentence`` dictionary, the parser also uses the ``filters``
-dictionary to determine which filters should be applied to telemetry from this
-payload. Two levels of filter are available for payloads: "intermediate", which
-is applied after the parser has determined which payload the data has been
-received from but before that telemetry is parsed for information, and "post",
-which is applied to the parsed output data. Both may be specified as a
-callable, given as a Python path string, or as code stored in the document
-itself, as demonstrated below. In the case of callable filters, a ``config``
-dictionary may be given which will be passed to the function along with the
-message itself, while hotfix filters specify the text content of a function
-which is given ``message`` as its only parameter::
+dictionary to determine which filters should be applied to telemetry from
+this payload. Two levels of filter are available for payloads:
+"intermediate", which is applied after the parser has determined which
+payload the data has been received from but before that telemetry is parsed
+for information, and "post", which is applied to the parsed output data. Both
+may be specified as a callable, given as a Python path string, or as code
+stored in the document itself, as demonstrated below. In the case of callable
+filters, a ``config`` dictionary may be given which will be passed to the
+function along with the message itself, while hotfix filters specify the text
+content of a function which is given ``message`` as its only parameter::
 
     "filters": {
         "intermediate": [
@@ -210,8 +211,75 @@ payload and as such may be rendered on the map::
 Telemetry Documents
 ===================
 
+There are two forms of telemetry document: payload and listener telemetry.
+The former contains information transmitted by payloads such as position and
+sensor readings, while the latter contains updates from people listening to
+payloads, such as position.
+
 Payload Telemetry
 -----------------
+
+Unlike other documents, payload telemetry uses the SHA256 sum of the sentence
+string as their document ID. This helps prevent a race condition if two
+people attempt to submit the same string at the same time -- Couch will
+prevent them from both adding an identically IDd document, so one can back
+off and update the first listener's document instead::
+
+    "ab2a7300684278180d5d26d614a85139d186a5a09038bbbfcfbfce07f953507b": {
+        "_id": "ab2a7300684278180d5d26d614a85139d186a5a09038bbbfcfbfce07f953507b",
+
+The ``type`` field is set to ``payload_telemetry``::
+
+    "type": "payload_telemetry",
+
+The message string as received by the listener is in the ``message`` field::
+
+    "message": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681",
+
+As the listener clocks may be inaccurate, we attempt to calculate the
+time each piece of telemetry was received. This estimated value is stored
+in ``estimated_received_time``::
+    
+    "estimated_received_time": 1292772125,
+
+The information parsed out of the message string is stored in the ``data``
+dictionary, directly as returned by the parser::
+
+    "data": {
+        "payload": "habitat",
+        "message_count": 123,
+        "time": {
+            "hour": 12,
+            "minute": 45,
+            "second": 6
+        },
+        "latitude": -35.1032,
+        "longitude": 138.8568,
+        "altitude": 0,
+        "speed": 0.0,
+        "custom_string": "hab"
+    }
+
+Finally, there is a list of receivers -- listeners who submitted this
+piece of telemetry. For each receiver, we store their callsign or identifier
+as the key, and inside that dictionary the time they believe they received
+the packet (based on their local clock), the time we received their
+submission (based on the server clock) and the CouchID of their latest
+piece of listener telemetry, used to locate them when they received that
+message (see the next section)::
+
+    "receivers": {
+        "M0RND": {
+            "received_time": 1292772125,
+            "uploaded_time": 1292772130,
+            "latest_telemetry": "10bedc8832fe563c901596c900001906"
+        },
+        "M0ZDR": {
+            "received_time": 1292772126,
+            "uploaded_time": 1292772122,
+            "latest_telemetry": "10bedc8832fe563c901596c9000031dd"
+        }
+    }
 
 Listener Telemetry
 ------------------
