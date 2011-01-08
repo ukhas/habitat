@@ -5,9 +5,9 @@
     "type": "flight",
     
     /*
-        Start and end dates reflect the time period that telemetry for this payload
-        will be logged against this flight, typically a 24 hour period from the
-        start date.
+        Start and end dates reflect the time period that telemetry for this
+        payload will be logged against this flight, typically a 24 hour period
+        from the start date.
     */
     "start": 1292771680,
     "end": 1292772670,
@@ -19,7 +19,8 @@
     
     /*
         Launch time, timezone and location reflect when and where the launch
-        actually happened. Timezone should be a tz db identifier e.g., "Europe/London".
+        actually happened. Timezone should be a tz db identifier e.g.,
+        "Europe/London".
     */
     "launch": {
         "time": 1292771780,
@@ -43,14 +44,14 @@
     },
     
     /*
-        Payloads contains complete information on each payload flying in this flight.
-        This includes radio settings and telemetry format.
+        Payloads contains complete information on each payload flying in this
+        flight.  This includes radio settings and telemetry format.
     */
-    "payloads": [
+    "payloads": {
         "habitat": {
             /*
-                Radio contains information for actually tuning a radio to receive the
-                payload.
+                Radio contains information for actually tuning a radio to
+                receive the payload.
             */
             "radio": {
                 "frequency": 434.075,
@@ -70,10 +71,9 @@
             },
             
             /*
-                Sentence contains information for parsing the received data into
-                useful data.
-                Protocol reflects what parser module should be used, and the rest
-                of this example is specific to UKHAS:
+                Sentence contains information for parsing the received data
+                into useful data.  Protocol reflects what parser module should
+                be used, and the rest of this example is specific to UKHAS:
                     * Checksum indicates the checksum function in use
                     * Payload indicates the payload name, the first field
                         of any UKHAS-protocol sentence
@@ -101,7 +101,7 @@
                         "format": "dd.dddd"
                     }, {
                         "name": "altitude",
-                        "type": "int",
+                        "type": "int"
                     }, {
                         "name": "speed",
                         "type": "float"
@@ -144,13 +144,13 @@
             },
             
             /*
-                Chasers are people out tracking the payloads and moving as they do so, and
-                therefore are also transmitting GPS telemetry.
+                Chasers are people out tracking the payloads and moving as they
+                do so, and therefore are also transmitting GPS telemetry.
             */
             "chasers": [
                 "M0RND",
                 "2E0JSO"
             ]
         }
-    ]
+    }
 }
