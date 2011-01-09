@@ -30,9 +30,9 @@ class ParserSink(SimpleSink):
     The Parser Sink
 
     The parser sink is the interface between the message server and the
-    parser. It is responsible for receiving raw telemetry from the message
-    server, turning it into beautiful telemetry data, and then sending that
-    back.
+    parser modules. It is responsible for receiving raw telemetry from the
+    message server, giving it to modules which turn it into beautiful
+    telemetry data, and then sending that back to the message server.
     """
 
     BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = locations = range(3)
@@ -51,87 +51,6 @@ class ParserSink(SimpleSink):
 
         self.modules = []
 
-    def add_filter(self, location, filter):
-        """
-        Add a new filter to the Parser.
-
-        *location*: when the filter should be run. one of
-        **ParserSink.BEFORE_FILTER**, **ParserSink.DURING_FILTER** or
-        **ParserSink.AFTER_FILTER**
-
-        *filter*: a function (or a __call__able class) to run, with
-        the single parameter message and which returns a message
-        """
-
-        if not hasattr(filter, '__call__'):
-            raise TypeError("filter must be callable")
-
-        # Inspect argument list based on type. Class __call__ methods will
-        # have a self argument, so account for that.
-        if inspect.isclass(filter):
-            args = len(inspect.getargspec(filter.__call__).args) - 1
-        elif inspect.isfunction(filter):
-            args = len(inspect.getargspec(filter).args)
-        else:
-            raise TypeError("filter must be a class or a function")
-
-        if args != 1:
-            raise ValueError("filter must only take one argument")
-
-        if location in self.filters.keys():
-            self.filters[location].append(filter)
-        else:
-            raise ValueError("Invalid location")
-
-    def remove_filter(self, location, filter):
-        """
-        Remove a filter from the Parser.
-        """
-
-        if location in self.filters.keys():
-            if filter in self.filters[location]:
-                self.filters[location].remove(filter)
-            else:
-                raise ValueError("Filter was not loaded")
-        else:
-            raise ValueError("Invalid location")
-
-    def add_module(self, module):
-        if not issubclass(module, ParserModule):
-            raise TypeError("Module must be a sub class of ParserModule")
-        self.modules.append(module)
-
-    def remove_module(self, module):
-        if module in self.modules:
-            self.modules.remove(module)
-        else:
-            raise ValueError("Module was not loaded")
-
-    def reload_module(self, module):
-        for loaded_module in self.modules:
-            if loaded_module.__name__ == module.__name__:
-                self.modules.remove(loaded_module)
-                self.modules.append(module)
-                return
-        raise ValueError("Module was not loaded")
-
-    def message(self, message):
-        """
-        Parse an incoming message from the message server.
-
-        *message*: a :py:class:`habitat.message_server.Message` object.
-        ``message.type`` should be **RECEIVED_TELEM**
-        """
-
-        if message.type != Message.RECEIVED_TELEM:
-            return
-
-        for filter in self.before_filters:
-            message = filter(message)
-        for filter in self.during_filters:
-            message = filter(message)
-        for filter in self.after_filters:
-            message = filter(message)
 
 class ParserModule(object):
     """
