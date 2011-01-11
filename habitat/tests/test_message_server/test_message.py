@@ -55,14 +55,14 @@ class TestMessage:
     def test_initialiser_rejects_invalid_type(self):
         Message(self.source, 951, "asdf")
 
-    @raises(TypeError)
+    @raises(ValueError)
     def test_initialiser_rejects_garbage_type(self):
         Message(self.source, "asdf", "asdf")
 
     def test_initialiser_allows_no_data(self):
         Message(self.source, Message.RECEIVED_TELEM, None)
 
-    @raises(TypeError)
+    @raises(ValueError)
     def test_validate_type_rejects_garbage_type(self):
         Message.validate_type("asdf")
 

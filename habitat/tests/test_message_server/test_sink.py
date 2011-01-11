@@ -40,13 +40,13 @@ class FakeProgram:
 class EmptySink(SimpleSink):
     def setup(self):
         pass
-    def message(self):
+    def message(self, message):
         pass
 
 class EmptyThreadedSink(ThreadedSink):
     def setup(self):
         pass
-    def message(self):
+    def message(self, message):
         pass
 
 class FakeSink(SimpleSink):
@@ -54,6 +54,8 @@ class FakeSink(SimpleSink):
         self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
         self.test_messages = []
         self.message = self.test_messages.append
+    def message(self, message):
+        pass
 
 class DelayableMixIn:
     def setup(self):
@@ -322,11 +324,11 @@ class TestSink:
             yield self.check_rejects_garbage_set, i
             yield self.check_rejects_invalid_types, i
 
-    @raises(TypeError)
+    @raises(ValueError)
     def check_rejects_garbage_type(self, func):
         func("asdf")
 
-    @raises(TypeError)
+    @raises(ValueError)
     def check_rejects_garbage_types(self, func):
         func(set(["asdf", Message.RECEIVED_TELEM]))
 
@@ -384,9 +386,12 @@ class TestSink:
     def test_threaded_sink_executes_in_one_thread(self):
         sink = FakeThreadedSink(Server(FakeProgram()))
 
-        a = ThreadedPush(sink, Message(self.source, Message.LISTENER_INFO, 1))
-        b = ThreadedPush(sink, Message(self.source, Message.LISTENER_INFO, 2))
-        c = ThreadedPush(sink, Message(self.source, Message.RECEIVED_TELEM, 3))
+        a = ThreadedPush(sink, Message(self.source,
+            Message.LISTENER_INFO, 1))
+        b = ThreadedPush(sink, Message(self.source,
+            Message.LISTENER_INFO, 2))
+        c = ThreadedPush(sink, Message(self.source,
+            Message.RECEIVED_TELEM, 3))
 
         for t in [a, b, c]:
             t.start()

@@ -23,7 +23,7 @@ from habitat.message_server import SimpleSink, Message
 class FakeSink2(SimpleSink):
     def setup(self):
         pass
-    def message(self):
+    def message(self, message):
         pass
 
 class TestSink(SimpleSink):

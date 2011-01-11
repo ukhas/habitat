@@ -237,7 +237,7 @@ def couch_connect(couch_uri, couch_db):
 
     return db
 
-class Program:
+class Program(object):
     """
     Program provides the :py:meth:`main`, :py:meth:`shutdown` and \
     :py:meth:`reload` methods
@@ -354,7 +354,7 @@ class Program:
                 # TODO: Reload support
                 pass
 
-class SignalListener:
+class SignalListener(object):
     """
     This class listens for signals
 

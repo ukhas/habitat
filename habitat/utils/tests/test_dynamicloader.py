@@ -247,15 +247,15 @@ class TestInspectors:
         fn = dynamicloader.isclass
         ex = dynamicloader.expectisclass
         self.check_function_success(fn, ex, dynamicloadme.AClass)
-        self.check_function_failure(fn, ex, dynamicloadme.AFunction, TypeError)
+        self.check_function_failure(fn, ex, dynamicloadme.AFunction,
+            TypeError)
         self.check_function_failure(fn, ex, "asdf", TypeError)
 
     def test_issubclass(self):
         fn = dynamicloader.issubclass
         ex = dynamicloader.expectissubclass
         self.check_value_function(fn, ex, dynamicloadme.CClass,
-                                  dynamicloadme.Parent2, dynamicloadme.BClass,
-                                  ValueError)
+            dynamicloadme.Parent2, dynamicloadme.BClass, TypeError)
 
     def test_isfunction(self):
         """isfunction, isgeneratorfunction, isstandardfunction, iscallable"""
@@ -290,8 +290,8 @@ class TestInspectors:
         self.check_function_success(fni, exi, gfn)
         self.check_function_success(fni, exi, ccl)
         self.check_function_success(fni, exi, dcl)
-        self.check_function_failure(fni, exi, acl, ValueError)
-        self.check_function_failure(fni, exi, "asdf", ValueError)
+        self.check_function_failure(fni, exi, acl, TypeError)
+        self.check_function_failure(fni, exi, "asdf", TypeError)
 
     def test_hasnumargs(self):
         for func, val in [ (dynamicloadme.AFunction, 0),
@@ -302,7 +302,7 @@ class TestInspectors:
 
             self.check_value_function(dynamicloader.hasnumargs,
                                       dynamicloader.expecthasnumargs,
-                                      func, val, val + 1, ValueError)
+                                      func, val, val + 1, TypeError)
 
     def test_hasstuff(self):
         """hasmethod, hasattr"""
@@ -315,16 +315,16 @@ class TestInspectors:
         ccl = dynamicloadme.CClass
         mod = dynamicloadme
 
-        self.check_value_function(fna, exa, acl, "anattr", "asdf", ValueError)
-        self.check_value_function(fna, exa, ccl, "anattr", "asdf", ValueError)
-        self.check_value_function(fna, exa, mod, "avariable", "z", ValueError)
-        self.check_value_function(fna, exa, mod, "AFunction", "x", ValueError)
+        self.check_value_function(fna, exa, acl, "anattr", "asdf", TypeError)
+        self.check_value_function(fna, exa, ccl, "anattr", "asdf", TypeError)
+        self.check_value_function(fna, exa, mod, "avariable", "z", TypeError)
+        self.check_value_function(fna, exa, mod, "AFunction", "x", TypeError)
 
         self.check_value_function(fnm, exm, mod, "AFunction", "avariable",
-                                  ValueError)
+            TypeError)
         self.check_value_function(fnm, exm, ccl, "__call__", "anattr",
-                                  ValueError)
-        self.check_value_function(fnm, exm, bcl, "a_method", "a", ValueError)
+            TypeError)
+        self.check_value_function(fnm, exm, bcl, "a_method", "a", TypeError)
 
     def check_function_success(self, func, expectfunc, argument):
         assert func(argument) == True

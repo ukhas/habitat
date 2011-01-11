@@ -93,7 +93,7 @@ def load(loadable, force_reload=False):
 
     old_modules = sys.modules.keys()
 
-    if isinstance(loadable, (str, unicode)):
+    if isinstance(loadable, basestring):
         if len(loadable) <= 0:
             raise ValueError("loadable(str) must have non zero length")
 
@@ -157,7 +157,7 @@ def fullname(loadable):
     # simply return it, it has to load() it and then figure out what its
     # real full name is. See tests
 
-    if isinstance(loadable, (str, unicode)):
+    if isinstance(loadable, basestring):
         loadable = load(loadable)
 
     if inspect.isclass(loadable) or inspect.isfunction(loadable):
@@ -231,19 +231,28 @@ def expectgenerator(error):
     def decorator(function):
         def new_function(*args, **kwargs):
             if not function(*args, **kwargs):
-                raise error()
+                raise error
         functools.update_wrapper(new_function, function)
         return new_function
     return decorator
 
-expectisclass = expectgenerator(TypeError)(isclass)
-expectisfunction = expectgenerator(TypeError)(isfunction)
-expectisgeneratorfunction = expectgenerator(TypeError)(isgeneratorfunction)
-expectisstandardfunction = expectgenerator(TypeError)(isstandardfunction)
+expectisclass = expectgenerator(
+        TypeError("Not a class"))(isclass)
+expectisfunction = expectgenerator(
+        TypeError("Not a function"))(isfunction)
+expectisgeneratorfunction = expectgenerator(
+        TypeError("Not a generator function"))(isgeneratorfunction)
+expectisstandardfunction = expectgenerator(
+        TypeError("Not a standard function"))(isstandardfunction)
 
-expectiscallable = expectgenerator(ValueError)(iscallable)
-expectissubclass = expectgenerator(ValueError)(issubclass)
-expecthasnumargs = expectgenerator(ValueError)(hasnumargs)
-expecthasmethod = expectgenerator(ValueError)(hasmethod)
-expecthasattr = expectgenerator(ValueError)(hasattr)
+expectiscallable = expectgenerator(
+        TypeError("Not callable"))(iscallable)
+expectissubclass = expectgenerator(
+        TypeError("Not a correct subclass"))(issubclass)
+expecthasnumargs = expectgenerator(
+        TypeError("Incorrect number of args"))(hasnumargs)
+expecthasmethod = expectgenerator(
+        TypeError("Does not have a required method"))(hasmethod)
+expecthasattr = expectgenerator(
+        TypeError("Does not have a required attribute"))(hasattr)
 

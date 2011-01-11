@@ -32,7 +32,7 @@ from habitat.utils import dynamicloader, crashmat
 __all__ = ["Server", "Sink", "SimpleSink",
            "ThreadedSink", "Message", "Listener"]
 
-class Server:
+class Server(object):
     """
     The **Server** is the main message server class.
 
@@ -73,9 +73,9 @@ class Server:
 
         new_sink = dynamicloader.load(new_sink)
         dynamicloader.expectisclass(new_sink)
-        dynamicloader.expectissubclass(new_sink, Sink)
-        dynamicloader.expecthasmethod(new_sink, "setup")
-        dynamicloader.expecthasmethod(new_sink, "message")
+        dynamicloader.expecthasmethod(new_sink, "push_message")
+        dynamicloader.expecthasmethod(new_sink, "shutdown")
+        dynamicloader.expecthasmethod(new_sink, "flush")
 
         with self.lock:
             fullnames = (dynamicloader.fullname(s.__class__)
@@ -161,9 +161,6 @@ class Server:
         *message*: a :py:class:`habitat.message_server.Message` object
         """
 
-        if not isinstance(message, Message):
-            raise TypeError("message must be a Message object")
-
         with self.lock:
             self.message_count += 1
 
@@ -198,7 +195,7 @@ class Server:
         finally:
             self.lock.release()
 
-class Sink:
+class Sink(object):
     """
     **Sink** is the parent class for all sinks.
 
@@ -243,8 +240,14 @@ class Sink:
         :py:class:`Sink` is now receiving messages from
         """
 
-        if not isinstance(server, Server):
-            raise TypeError("server must be a Server object")
+        # Some basic checking that we're getting a server
+        dynamicloader.expecthasmethod(server, "push_message")
+
+        # And that we are a sensible class
+        dynamicloader.expecthasmethod(self, "setup")
+        dynamicloader.expecthasmethod(self, "message")
+        dynamicloader.expecthasnumargs(self.setup, 0)
+        dynamicloader.expecthasnumargs(self.message, 1)
 
         self.server = server
         self.types = set()
@@ -340,9 +343,7 @@ class SimpleSink(Sink):
         self.executing_count = 0
 
     def push_message(self, message):
-        if not isinstance(message, Message):
-            raise TypeError("message must be a Message object")
-
+        dynamicloader.expecthasattr(message, "type")
         if message.type in self.types:
             with self.cv:
                 self.executing_count += 1
@@ -415,9 +416,6 @@ class ThreadedSink(Sink, crashmat.Thread):
         self.start()
 
     def push_message(self, message):
-        if not isinstance(message, Message):
-            raise TypeError("message must be a Message object")
-
         # Between get()ting items from the queue, self.types may change.
         # We should let run() filter for messages we want
         self.queue.put(message)
@@ -427,7 +425,11 @@ class ThreadedSink(Sink, crashmat.Thread):
         while running:
             message = self.queue.get()
 
-            if isinstance(message, Message):
+            if (hasattr(message, "threaded_sink_shutdown") and
+                    message.threaded_sink_shutdown == True):
+                running = False
+            else:
+                dynamicloader.expecthasattr(message, "type")
                 if message.type in self.types:
                     with self.stats_lock:
                         self.executing = 1
@@ -437,9 +439,6 @@ class ThreadedSink(Sink, crashmat.Thread):
                     with self.stats_lock:
                         self.message_count += 1
                         self.executing = 0
-
-            elif isinstance(message, ThreadedSinkShutdown):
-                running = False
 
             self.queue.task_done()
 
@@ -484,14 +483,14 @@ class ThreadedSink(Sink, crashmat.Thread):
         finally:
             self.stats_lock.release()
 
-class ThreadedSinkShutdown:
+class ThreadedSinkShutdown(object):
     """
     A object used to ask the runner of a :py:class:`ThreadedSink` \
     to shut down
     """
-    pass
+    threaded_sink_shutdown = True
 
-class Message:
+class Message(object):
     """
     A Message object describes a single message that the server might handle
 
@@ -526,10 +525,10 @@ class Message:
         """
         # TODO data validation based on type
 
-        if not isinstance(source, Listener):
-            raise TypeError("source must be a Listener object")
-
         self.validate_type(type)
+
+        dynamicloader.expecthasattr(source, "callsign")
+        dynamicloader.expecthasattr(source, "ip")
 
         self.source = source
         self.type = type
@@ -555,23 +554,19 @@ class Message:
     def validate_type(cls, type):
         """Checks that type is an integer and a valid message type"""
 
-        if not isinstance(type, int):
-            raise TypeError("type must be an int")
-
         if type not in cls.types:
-            raise ValueError("type is not a valid type")
+            raise ValueError("message.type is not a valid type")
 
     @classmethod
     def validate_types(cls, types):
         """Checks that types is a set of valid integer message types"""
 
-        if not isinstance(types, (set, frozenset)):
-            raise TypeError("types must be a set")
-
+        dynamicloader.expecthasattr(types, "__iter__")
+        
         for type in types:
             Message.validate_type(type)
 
-class Listener:
+class Listener(object):
     """
     A **Listener** object describes the source from which a message came.
 
@@ -591,14 +586,13 @@ class Listener:
         **IPAddress** object (the ``ipaddr`` module)
         """
 
-        if not isinstance(callsign, (str, unicode)):
-            raise TypeError("callsign must be a string")
-
+        if not isinstance(callsign, basestring):
+            raise TypeError("callsign must derive from basestring")
         if not callsign.isalnum():
             raise ValueError("callsign must be alphanumeric")
 
         self.ip = ipaddr.IPAddress(ip)
-        self.callsign = str(callsign).upper()
+        self.callsign = callsign.upper()
 
     def __eq__(self, other):
         try:
