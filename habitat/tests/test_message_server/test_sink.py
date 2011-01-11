@@ -135,7 +135,7 @@ class TestSink:
     def teardown(self):
         threading_checks.restore()
 
-    @raises(TypeError)
+    @raises(ValueError)
     def test_init_rejects_garbage_server(self):
         EmptySink("asdf")
 
@@ -322,11 +322,11 @@ class TestSink:
             yield self.check_rejects_garbage_set, i
             yield self.check_rejects_invalid_types, i
 
-    @raises(TypeError)
+    @raises(ValueError)
     def check_rejects_garbage_type(self, func):
         func("asdf")
 
-    @raises(TypeError)
+    @raises(ValueError)
     def check_rejects_garbage_types(self, func):
         func(set(["asdf", Message.RECEIVED_TELEM]))
 

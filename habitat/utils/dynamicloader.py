@@ -93,7 +93,7 @@ def load(loadable, force_reload=False):
 
     old_modules = sys.modules.keys()
 
-    if isinstance(loadable, (str, unicode)):
+    if isinstance(loadable, basestring):
         if len(loadable) <= 0:
             raise ValueError("loadable(str) must have non zero length")
 
@@ -157,7 +157,7 @@ def fullname(loadable):
     # simply return it, it has to load() it and then figure out what its
     # real full name is. See tests
 
-    if isinstance(loadable, (str, unicode)):
+    if isinstance(loadable, basestring):
         loadable = load(loadable)
 
     if inspect.isclass(loadable) or inspect.isfunction(loadable):
