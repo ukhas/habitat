@@ -133,7 +133,7 @@ class ParserSink(SimpleSink):
         for filter in self.after_filters:
             message = filter(message)
 
-class ParserModule:
+class ParserModule(object):
     """
     **ParserModules** are classes which turn radio strings into useful data.
 

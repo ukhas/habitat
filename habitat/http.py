@@ -51,7 +51,7 @@ http://github.com/ukhas/habitat
 http://habitat.habhub.org/
 """
 
-class InsertApplication:
+class InsertApplication(object):
     """
     **InsertApplication** contains high level "actions" of the HTTP gateway
 

@@ -32,7 +32,7 @@ from habitat.utils import dynamicloader, crashmat
 __all__ = ["Server", "Sink", "SimpleSink",
            "ThreadedSink", "Message", "Listener"]
 
-class Server:
+class Server(object):
     """
     The **Server** is the main message server class.
 
@@ -198,7 +198,7 @@ class Server:
         finally:
             self.lock.release()
 
-class Sink:
+class Sink(object):
     """
     **Sink** is the parent class for all sinks.
 
@@ -484,14 +484,14 @@ class ThreadedSink(Sink, crashmat.Thread):
         finally:
             self.stats_lock.release()
 
-class ThreadedSinkShutdown:
+class ThreadedSinkShutdown(object):
     """
     A object used to ask the runner of a :py:class:`ThreadedSink` \
     to shut down
     """
     pass
 
-class Message:
+class Message(object):
     """
     A Message object describes a single message that the server might handle
 
@@ -571,7 +571,7 @@ class Message:
         for type in types:
             Message.validate_type(type)
 
-class Listener:
+class Listener(object):
     """
     A **Listener** object describes the source from which a message came.
 
