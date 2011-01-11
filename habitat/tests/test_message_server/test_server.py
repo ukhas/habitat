@@ -36,7 +36,7 @@ from habitat.message_server import Server
 class FakeSink(SimpleSink):
     def setup(self):
         pass
-    def message(self):
+    def message(self, message):
         pass
 
 class FakeProgram:
@@ -46,7 +46,7 @@ class FakeProgram:
 
 class SinkWithoutSetup(SimpleSink):
     """A sink without a setup method should not be loaded."""
-    def message(self):
+    def message(self, message):
         pass
 
 class SinkWithoutMessage(SimpleSink):
@@ -128,12 +128,12 @@ class TestServer:
     def test_can_load_fakesink_by_name(self):
         self.server.load(__name__ + ".FakeSink")
 
-    @raises(ValueError)
+    @raises(TypeError)
     def test_refuses_to_load_nonsink(self):
         """refuses to load a sink that doesn't have Sink as a base class"""
         self.server.load(NonSink)
 
-    @raises(ValueError)
+    @raises(TypeError)
     def test_refuses_to_load_nonsink_by_name(self):
         """refuses to load a sink that doesn't have Sink as a base class"""
         self.server.load(__name__ + ".NonSink")
@@ -166,11 +166,11 @@ class TestServer:
     def test_refuses_to_load_nonexistant_module_by_name(self):
         self.server.load(__name__ + "asdf.FakeSink")
 
-    @raises(ValueError)
+    @raises(TypeError)
     def test_refuses_to_load_sink_without_setup_method(self):
         self.server.load(__name__ + ".SinkWithoutSetup")
 
-    @raises(ValueError)
+    @raises(TypeError)
     def test_refuses_to_load_sink_without_message_method(self):
         self.server.load(SinkWithoutMessage)
 

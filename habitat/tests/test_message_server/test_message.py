@@ -43,11 +43,11 @@ class TestMessage:
         assert message.type == Message.RECEIVED_TELEM
         assert message.data == mydata
 
-    @raises(ValueError)
+    @raises(TypeError)
     def test_initialiser_rejects_garbage_source(self):
         Message("asdf", Message.RECEIVED_TELEM, "asdf")
 
-    @raises(ValueError)
+    @raises(TypeError)
     def test_initialiser_rejects_null_source(self):
         Message(None, Message.RECEIVED_TELEM, "asdf")
 

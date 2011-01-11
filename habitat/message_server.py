@@ -73,8 +73,9 @@ class Server(object):
 
         new_sink = dynamicloader.load(new_sink)
         dynamicloader.expectisclass(new_sink)
-        dynamicloader.expecthasmethod(new_sink, "setup")
-        dynamicloader.expecthasmethod(new_sink, "message")
+        dynamicloader.expecthasmethod(new_sink, "push_message")
+        dynamicloader.expecthasmethod(new_sink, "shutdown")
+        dynamicloader.expecthasmethod(new_sink, "flush")
 
         with self.lock:
             fullnames = (dynamicloader.fullname(s.__class__)
@@ -241,6 +242,12 @@ class Sink(object):
 
         # Some basic checking that we're getting a server
         dynamicloader.expecthasmethod(server, "push_message")
+
+        # And that we are a sensible class
+        dynamicloader.expecthasmethod(self, "setup")
+        dynamicloader.expecthasmethod(self, "message")
+        dynamicloader.expecthasnumargs(self.setup, 0)
+        dynamicloader.expecthasnumargs(self.message, 1)
 
         self.server = server
         self.types = set()
@@ -548,12 +555,14 @@ class Message(object):
         """Checks that type is an integer and a valid message type"""
 
         if type not in cls.types:
-            raise ValueError("type is not a valid type")
+            raise ValueError("message.type is not a valid type")
 
     @classmethod
     def validate_types(cls, types):
         """Checks that types is a set of valid integer message types"""
 
+        dynamicloader.expecthasattr(types, "__iter__")
+        
         for type in types:
             Message.validate_type(type)
 
