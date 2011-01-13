@@ -55,7 +55,7 @@ class Server(object):
         self.lock = threading.RLock()
 
         try:
-            self.config = self.program.db["message_server_config"]
+            self.config = self.db["message_server_config"]
         except couchdbkit.exceptions.ResourceNotFound:
             raise Exception("message_server_config couchdb document not found")
 

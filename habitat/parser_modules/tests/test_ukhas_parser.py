@@ -192,7 +192,7 @@ output_good_6["latitude"] = 35.1032
 class TestUKHASParser:
     """UKHAS Parser"""
     def setUp(self):
-        self.p = UKHASParser()
+        self.p = UKHASParser(None)
     def test_pre_parse_rejects_bad_sentences(self):
         for sentence in bad_sentences:
             assert_raises(ValueError, self.p.pre_parse, sentence)
