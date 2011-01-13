@@ -26,12 +26,21 @@ import threading
 from nose.tools import raises, with_setup
 
 from habitat.message_server import Sink, SimpleSink, Message, Listener
-from habitat.utils.tests.reloadable_module import ReloadableModuleWriter
-from habitat.utils.tests import threading_checks
 from habitat.utils import crashmat
-from locktroll import LockTroll
+
+from test_habitat.lib import threading_checks
+from test_habitat.lib.reloadable_module_writer import ReloadableModuleWriter
+from test_habitat.lib.locktroll import LockTroll
 
 from habitat.message_server import Server
+
+# This would confuse an earlier version of of the software that would compare
+# dynamicloader.fullname with a string "loadable".
+from fakesink import TestSinkA, TestSinkB, FakeSink2, \
+                     SinkWithoutSetup, SinkWithoutMessage
+from pushback import PushbackSimpleSink, PushbackThreadedSink, \
+                     PushbackReceiverSimpleSink, PushbackReceiverThreadedSink
+from slowsink import SlowShutdownSink
 
 class FakeSink(SimpleSink):
     def setup(self):
@@ -44,27 +53,16 @@ class FakeProgram:
     def __init__(self, sinks=[]):
         self.db["message_server_config"]["sinks"] = sinks
 
-class SinkWithoutSetup(SimpleSink):
-    """A sink without a setup method should not be loaded."""
-    def message(self, message):
-        pass
-
-class SinkWithoutMessage(SimpleSink):
-    """A sink without a message method should not be loaded."""
-    def setup(self):
-        pass
-
-# This would confuse an earlier version of of the software that would compare
-# dynamicloader.fullname with a string "loadable".
-from fakesink import *
-from pushback import *
-from slowsink import SlowShutdownSink
-
 class NonSink:
     """
-    Doesn't have a base class of Sink, so shouldn't be loaded
+    Doesn't have push_message(), so doesn't "look like" a Sink.
+    Therefore shouldn't be loaded. Whether it has message or setup
+    methods is irrelevant since it is not a subclass of Sink.
     """
-    pass
+    def message():
+        pass
+    def setup():
+        pass
 
 class TestServer:
     def setup(self):
@@ -288,8 +286,7 @@ class TestServer:
         assert isinstance(self.server.sinks[0], TestSinkB)
 
     def test_reload(self):
-        rmod = ReloadableModuleWriter(__name__, __file__,
-                                      'rsink', 'ReloadableSink')
+        rmod = ReloadableModuleWriter('rsink', 'ReloadableSink')
         assert not rmod.is_loaded()
 
         # dynamicloader.reload's functionality is tested quite thoroughly in
@@ -310,9 +307,9 @@ class TestServer:
     def generate_rmod_code(self, *types):
         values = set([getattr(Message, i) for i in types])
         values_string = ", ".join(["Message.%s" % t for t in types])
-        code = "from fakesink import TestSink\n" + \
+        code = "from test_habitat.test_message_server import fakesink\n" + \
                "from habitat.message_server import Message\n" + \
-               "class ReloadableSink(TestSink):\n" + \
+               "class ReloadableSink(fakesink.TestSink):\n" + \
                "    testtypes = [%s]\n"
         return (code % values_string, values)
 

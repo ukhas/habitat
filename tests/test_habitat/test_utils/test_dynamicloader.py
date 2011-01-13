@@ -29,13 +29,11 @@ from nose.tools import raises
 
 from habitat.utils import dynamicloader
 
-from habitat.utils.tests import dynamicloadme
-from habitat.utils.tests.reloadable_module import ReloadableModuleWriter
+from test_habitat.lib.reloadable_module_writer import ReloadableModuleWriter
+from test_habitat.test_utils.garbage import dynamicloadme
+from test_habitat.test_utils.garbage.dynamicloadme import AClass
 
-# For fullname() tests
-from habitat.utils.tests.dynamicloadme import AClass
-
-unimp_name = "habitat.utils.tests.dynamicloadunimp"
+unimp_name = "test_habitat.test_utils.garbage.dynamicloadunimp"
 
 class TestLoad:
     """dynamicloader.load():"""
@@ -167,11 +165,12 @@ class TestLoad:
         self.check_reload_module("reloadableb", modulecode_1, modulecode_2)
 
     def check_reload_module(self, modname, modulecode_1, modulecode_2):
-        rmod = ReloadableModuleWriter(__name__, __file__, modname, 'asdf')
+        rmod = ReloadableModuleWriter(modname, 'asdf')
         assert not rmod.is_loaded()
 
-        roundabout_loadable = rmod.fullmodname + "_alias.asdf"
-        assert roundabout_loadable not in sys.modules
+        roundabout_mod = ReloadableModuleWriter(modname + "_alias", "asdf")
+        assert not roundabout_mod.is_loaded()
+        roundabout_mod.write_code("from %s import asdf" % modname)
 
         rmod.write_code(modulecode_1)
 
@@ -215,7 +214,7 @@ class TestLoad:
         rmod.write_code(modulecode_2)
 
         # And finally like this:
-        asdf_2c = dynamicloader.load(roundabout_loadable, force_reload=True)
+        asdf_2c = dynamicloader.load(roundabout_mod.loadable, force_reload=True)
         assert asdf_2c != asdf_1c
         asdf_2c_object = asdf_2c()
         assert asdf_2c_object.test == 2

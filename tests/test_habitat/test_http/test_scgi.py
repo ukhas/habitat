@@ -30,16 +30,17 @@ import traceback
 
 from nose.tools import raises
 
+from test_habitat import scratch_dir
+from test_habitat.lib import threading_checks
 from serverstub import ServerStub
 from do_scgi_request import do_scgi_request
-from habitat.utils.tests import threading_checks
 
 from habitat.message_server import Message
 
 from habitat.http import info_message
 from habitat.http import SCGIApplication
 
-socket_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sock")
+socket_file = os.path.join(scratch_dir, "sock")
 scgi_req = functools.partial(do_scgi_request, socket.AF_UNIX, socket_file)
 
 class TestSCGIStartupShutdown:

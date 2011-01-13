@@ -11,9 +11,11 @@ for CGI communications. These can be given either as command line arguments::
     
     habitat.py -c http://user:pass@server:port -d database -s /tmp/socket
 
-Or specified in a configuration file whose path is given on the command line::
+habitat will also load configuration options from a configuration file. By
+default it will attempt to load /etc/habitat/habitat.cfg but won't complain
+if it can't. The config file location can be overridden on the command line::
     
-    habitat.py -f /etc/habitat.conf
+    habitat.py -f /etc/habitat/habitat_alternative.cfg
 
 The format of the configuration file is as follows::
     
@@ -21,6 +23,8 @@ The format of the configuration file is as follows::
     couch_uri = http://username:password@server:port
     couch_db = database
     socket_file = /tmp/socket
+
+Command line flags override options specified in a configuration file.
 
 Once this information is obtained, habitat can load itself up and the remaining
 configuration is obtained from Couch documents.

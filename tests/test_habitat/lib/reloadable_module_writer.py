@@ -20,16 +20,16 @@ import os
 import time
 import inspect
 
+import test_habitat
+
 class ReloadableModuleWriter:
-    def __init__(self, parent_name, parent_file, modname, itemname):
-        components = parent_name.split(".")
-        components[-1:] = [modname, itemname]
+    def __init__(self, modname, itemname):
+        components = test_habitat.scratch_path + [modname, itemname]
 
         self.loadable = ".".join(components)
         self.fullmodname = ".".join(components[:-1])
 
-        self.filename = os.path.join(os.path.dirname(parent_file),
-                                     modname + ".py")
+        self.filename = os.path.join(test_habitat.scratch_dir, modname + ".py")
 
     # Even when the builtin reload is called python will read from the
     # pyc file if the embedded mtime matches that of the py file. That's

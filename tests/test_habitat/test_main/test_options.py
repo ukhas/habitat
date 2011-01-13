@@ -31,14 +31,12 @@ from nose.tools import raises
 
 from habitat import main
 
-default_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "habitat_default.cfg")
-alternate_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                              "habitat_alternate.cfg")
-invalid_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "habitat_invalid.cfg")
-missing_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "habitat_missing.cfg")
+from test_habitat import scratch_dir
+
+default_file = os.path.join(scratch_dir, "habitat_default.cfg")
+alternate_file = os.path.join(scratch_dir, "habitat_alternate.cfg")
+invalid_file = os.path.join(scratch_dir, "habitat_invalid.cfg")
+missing_file = os.path.join(scratch_dir, "habitat_missing.cfg")
 
 class CaughtError(Exception):
     pass

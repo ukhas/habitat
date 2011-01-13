@@ -20,7 +20,7 @@ crashmat provides a replacement for :py:class:`threading.Thread` that,
 instead of printing unhandled exceptions in threads and then quietly
 killing it, will panic when a thread fails: it writes an error message to
 the log, attempts to call a graceful shutdown function, but ultimatly
-ensures that the process terminates (via :py:meth:`signal.alarm`).
+ensures that the process terminates (via :py:func:`signal.alarm`).
 """
 
 import os

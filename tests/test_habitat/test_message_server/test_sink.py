@@ -27,10 +27,12 @@ from nose.tools import raises
 from habitat.message_server import Message, Listener, Server
 from habitat.utils.dynamicloader import fullname
 from habitat.utils import crashmat
-from habitat.utils.tests import threading_checks
 
-from slowsink import *
-from locktroll import LockTroll
+from test_habitat.lib import threading_checks
+from test_habitat.lib.locktroll import LockTroll
+
+from fakesink import SinkWithoutSetup, SinkWithoutMessage
+from slowsink import SlowSimpleSink, SlowThreadedSink
 
 from habitat.message_server import SimpleSink, ThreadedSink
 
@@ -140,6 +142,14 @@ class TestSink:
     @raises(TypeError)
     def test_init_rejects_garbage_server(self):
         EmptySink("asdf")
+
+    @raises(TypeError)
+    def test_sink_init_fails_without_setup_method(self):
+        s = SinkWithoutSetup(None)
+
+    @raises(TypeError)
+    def test_sink_init_fails_without_message_method(self):
+        s = SinkWithoutMessage(None)
 
     def test_messagecount(self):
         yield self.check_messagecount, FakeSink

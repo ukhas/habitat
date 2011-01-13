@@ -38,3 +38,15 @@ class TestSinkA(TestSink):
 
 class TestSinkB(TestSink):
     testtypes = [Message.LISTENER_INFO]
+
+class SinkWithoutSetup(SimpleSink):
+    """A sink without a setup method should not be loaded."""
+    # NB. This is now enforced by Sink.__init__
+    def message(self):
+        pass
+
+class SinkWithoutMessage(SimpleSink):
+    """A sink without a message method should not be loaded."""
+    # NB. This is now enforced by Sink.__init__
+    def setup(self):
+        pass

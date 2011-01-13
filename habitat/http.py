@@ -75,9 +75,6 @@ class InsertApplication(object):
         :py:meth:`habitat.main.Program.shutdown` is used.
         """
 
-        # TODO: Raise error if these are not the correct type of object?
-        # It would break all the tests that use InsertApplication(None, None)
-
         self.server = server
         self.program = program
 

@@ -30,7 +30,7 @@ import logging
 
 from nose.tools import raises
 
-from habitat.utils.tests import threading_checks
+from test_habitat.lib import threading_checks
 
 from habitat.utils import crashmat
 from habitat.utils.crashmat import set_shutdown_function, panic
