@@ -301,8 +301,15 @@ class UKHASParser(ParserModule):
         self._verify_checksum(string, checksum, config["checksum"])
         output = {"payload": fields[0]}
         for field_num in range(len(fields) - 1):
-            field = fields[field_num + 1]
-            field_config = config["fields"][field_num]
+            try:
+                field = fields[field_num + 1]
+                field_config = config["fields"][field_num]
+            except IndexError:
+                # This will happen when config["fields"] does not have
+                # enough fields for the sentence, so return everything
+                # we haven't been able to parse instead
+                output["_extra_data"] = fields[field_num + 1:]
+                break
             name, data = self._parse_field(field, field_config)
             output[name] = data
         return output

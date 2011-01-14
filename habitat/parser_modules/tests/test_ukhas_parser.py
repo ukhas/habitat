@@ -189,6 +189,18 @@ del output_good_2["time"]["second"]
 output_good_6 = deepcopy(output_good)
 output_good_6["latitude"] = 35.1032
 
+# A sentence with less fields than the config suggests, but otherwise valid
+sentence_short = "$$habitat,123,12:45:06,-35.1032,138.8568,4285*5260"
+output_short = deepcopy(output_good)
+del output_short["speed"]
+del output_short["custom_string"]
+
+# A sentence with more fields than the config suggests, but otherwise valid
+sentence_long = "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab,123" \
+                ",4.56,seven*3253"
+output_long = deepcopy(output_good)
+output_long["_extra_data"] = ["123", "4.56", "seven"]
+
 class TestUKHASParser:
     """UKHAS Parser"""
     def setUp(self):
@@ -250,4 +262,7 @@ class TestUKHASParser:
                 [sentence_good_6, output_good_6, base_config]
             ]:
             assert self.p.parse(sentence, config) == output
-
+    def test_parse_handles_shorter_sentences(self):
+        assert self.p.parse(sentence_short, base_config) == output_short
+    def test_parse_handles_longer_sentences(self):
+        assert self.p.parse(sentence_long, base_config) == output_long
