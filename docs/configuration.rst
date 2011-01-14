@@ -56,6 +56,7 @@ Parser Configuration
 The parser sink takes a list of parser modules that should be loaded at
 startup, again given as Python path strings but with some additional
 information:
+
     * Name, to identify the parser module when a payload specifies it should be
       used
     * Pre-filters, Python functions that should be executed before any data is
