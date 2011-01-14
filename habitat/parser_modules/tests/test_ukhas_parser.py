@@ -130,7 +130,7 @@ config_checksum_none = deepcopy(base_config)
 config_checksum_none["checksum"] = "none"
 
 # A configuration with coordinates in degrees and minutes
-config_minutes = deepcopy(base_config)
+config_minutes = deepcopy(config_checksum_none)
 config_minutes["fields"][2]["format"] = "ddmm.mm"
 config_minutes["fields"][3]["format"] = "ddmm.mm"
 
@@ -152,7 +152,7 @@ sentence_bad_int = "$$habitat,a,00:00:00,0.0,0.0,0,0.0,hab"
 sentence_bad_time = "$$habitat,1,aa:bb:cc,0.0,0.0,0,0.0,hab"
 sentence_bad_time_2 = "$$habitat,1,123,0.0,0.0,0,0.0,hab"
 sentence_bad_float = "$$habitat,1,00:00:00,abc,0.0,0,0.0,hab"
-sentence_bad_minutes = "$$habitat,1,00:00:00,087.123,0.0,0,0.0,hab"
+sentence_bad_minutes = "$$habitat,1,00:00:00,087.123,0000.00,0,0.0,hab"
 
 # Several examples of valid sentences, where the coordinates are variously
 # mangled (in minutes, or with funny padding, random 0s and spaces
@@ -169,14 +169,14 @@ sentence_good_6 = \
 
 # Correct parser output for the checksum test sentences
 output_checksum_test = {
-    "payload": "habitat", "_protocol": "UKHAS", "message_count": 1,
+    "payload": "habitat", "message_count": 1,
     "time": {"hour": 0, "minute": 0, "second": 0},
     "latitude": 0.0, "longitude": 0.0, "altitude": 0,
     "speed": 0.0, "custom_string": "hab"}
 
 # Correct parser output for (most) of the good sentences
 output_good = {
-    "payload": "habitat", "_protocol": "UKHAS", "message_count": 123,
+    "payload": "habitat", "message_count": 123,
     "time": {"hour": 12, "minute": 45, "second": 06},
     "latitude": -35.1032, "longitude": 138.8568,
     "altitude": 4285, "speed": 3.6, "custom_string": "hab"}

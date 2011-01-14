@@ -263,9 +263,9 @@ class UKHASParser(ParserModule):
                 first, second = field.split(".")
                 degrees = float(first[:-2])
                 minutes = float(first[-2:] + "." + second)
+                if minutes > 60.0:
+                    raise ValueError("Minutes component > 60.")
                 m_to_d = minutes / 60.0
-                if m_to_d > 60.0:
-                    raise ValueError("Minutes value is greater than 60.")
                 degrees += math.copysign(m_to_d, degrees)
                 field_data = degrees
         return [field_name, field_data]
@@ -298,7 +298,7 @@ class UKHASParser(ParserModule):
         fields = self._extract_fields(string)
         string, checksum = self._split_checksum(string[2:])
         self._verify_checksum(string, checksum, config["checksum"])
-        output = {"payload": fields[0], "_protocol": "UKHAS"}
+        output = {"payload": fields[0]}
         for field_num in range(len(fields) - 1):
             try:
                 field = fields[field_num + 1]
