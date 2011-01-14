@@ -283,8 +283,8 @@ class TestParserSink(object):
         assert self.server.db.view_string == "habitat/payload_config"
         assert self.server.db.view_params["limit"] == 1
         assert self.server.db.view_params["include_docs"] == True
-        assert self.server.db.view_params["startkey"][:11] == '["habitat",'
-        assert abs(int(self.server.db.view_params["startkey"][11:-1]) -
+        assert self.server.db.view_params["startkey"][0] == "habitat"
+        assert abs(int(self.server.db.view_params["startkey"][1]) -
             int(time.time())) < 2
 
     def test_calls_parser_with_config(self):
@@ -336,4 +336,4 @@ class TestParserSink(object):
         assert self.server.message.source.callsign == "test callsign"
         assert self.server.message.source.ip == "123.123.123.123"
         assert self.server.message.type == Message.TELEM
-        assert self.server.message.data == {"data": True}
+        assert self.server.message.data == {"data": True, "_protocol": "Fake"}

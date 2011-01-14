@@ -103,7 +103,7 @@ Supported types include:
 
 import time
 import math
-from string import hexdigits
+from string import ascii_lowercase, ascii_uppercase, digits, hexdigits
 
 from habitat.parser import ParserModule
 from habitat.utils import checksums
@@ -119,6 +119,8 @@ coordinate_formats = [
 
 class UKHASParser(ParserModule):
     """The UKHAS Parser Module"""
+    
+    allowed_callsign_characters = ascii_lowercase + ascii_uppercase + digits
 
     def _split_checksum(self, string):
         """
@@ -225,6 +227,12 @@ class UKHASParser(ParserModule):
         elif algorithm == "fletcher-16-256":
             if checksums.fletcher_16(string, 256) != checksum.upper():
                 raise ValueError("Invalid Fletcher-16-256 checksum.")
+
+    def _verify_callsign(self, callsign):
+        for letter in callsign:
+            if letter not in self.allowed_callsign_characters:
+                raise ValueError("Invalid callsign, contains characters "
+                        "besides A-Z and 0-9.")
     
     def _parse_field(self, field, field_config):
         """
@@ -281,6 +289,7 @@ class UKHASParser(ParserModule):
 
         self._verify_basic_format(string)
         fields = self._extract_fields(string)
+        self._verify_callsign(fields[0])
         return fields[0]
         
     def parse(self, string, config):
@@ -298,6 +307,7 @@ class UKHASParser(ParserModule):
         fields = self._extract_fields(string)
         string, checksum = self._split_checksum(string[2:])
         self._verify_checksum(string, checksum, config["checksum"])
+        self._verify_callsign(fields[0])
         output = {"payload": fields[0]}
         for field_num in range(len(fields) - 1):
             try:
