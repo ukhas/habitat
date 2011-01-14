@@ -165,7 +165,7 @@ class UKHASParser(ParserModule):
         if string[:2] != "$$":
             raise ValueError("String does not start `$$'.")
         string, checksum = self._split_checksum(string)
-        if checksum != None:
+        if checksum:
             for letter in checksum:
                 if letter not in hexdigits:
                     raise ValueError(

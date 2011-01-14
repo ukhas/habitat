@@ -66,6 +66,12 @@ For example, a configuration for the above typical sentence might be::
         }
     }
 
+Payload Name
+------------
+
+The payload name is given as the key to the configuration dictionary, in
+the above case the string "habitat" on the first line.
+
 Checksum Algorithms
 -------------------
 

@@ -62,6 +62,10 @@ information:
     * Pre-filters, Python functions that should be executed before any data is
       passed to this module
 
+The list of modules is given in priority order, with the first item on the
+list the first module to be attempted. You should sort them in the order
+you are most likely to receive data in.
+
 An example configuration would be::
 
     "parser_config": {

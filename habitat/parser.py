@@ -54,7 +54,7 @@ class ParserSink(SimpleSink):
             self.AFTER_FILTER: self.after_filters
         }
 
-        self.modules = {}
+        self.modules = []
         
         for module in self.server.db["parser_config"]["modules"]:
             m = dynamicloader.load(module["class"])
@@ -62,42 +62,88 @@ class ParserSink(SimpleSink):
             dynamicloader.expecthasmethod(m, "parse")
             dynamicloader.expecthasnumargs(m.pre_parse, 1)
             dynamicloader.expecthasnumargs(m.parse, 2)
-            new_module = m(self)
-            self.modules[module["name"]] = new_module
+            module["module"] = m(self)
+            self.modules.append(module)
 
     def message(self, message):
         """
         Handles a new message from the server, hopefully turning it into
         parsed telemetry data.
+
+        This function attempts to determine which of the loaded parser
+        modules should be used to parse the message, and which config
+        file it should be given to do so.
+
+        For the priority ordered list self.modules, resolution proceeds as::
+
+            for module in modules:
+                module.pre_parse to find a callsign
+                if a callsign is found:
+                    look up the configuration document for that callsign
+                    if a configuration document is found:
+                        check it specifies that this module should be used
+                        if it does:
+                            module.parse to get the data
+                            return
+            if all modules were attempted but no config docs were found:
+                for module in modules:
+                    if this module has a default configuration:
+                        module.pre_parse to find a callsign
+                        if a callsign is found:
+                            use this module's default configuration
+                            module.parse to get the data
+                            return
+            if we still can't get any data:
+                error
+
+        Note that in the loops below, the pre_parse, _find_config_doc and
+        parse methods will all raise a ValueError if failure occurs,
+        continuing the loop.
         """
 
-        # Pre-parse to try and find a callsign
-        callsign = None
         for module in self.modules:
             try:
-                callsign = self.modules[module].pre_parse(message.data)
+                callsign = module["module"].pre_parse(message.data)
+                config = self._find_config_doc(callsign)
+                if config["protocol"] == module["name"]:
+                    data = module["module"].parse(message.data, config)
+                    new_message = Message(message.source, Message.TELEM, data)
+                    self.server.push_message(new_message)
+                    return
             except ValueError:
                 continue
 
-        if callsign:
-            # Try to find a relevant configuration from Couch
-            startkey = '["' + callsign + '", ' + str(int(time.time())) + ']'
-            result = self.server.db.view("habitat/payload_config",
-                limit=1, include_docs=True, startkey=startkey).first()["doc"]
-            if callsign not in result["payloads"].keys():
-                raise ValueError("Payload configration document not found.")
-            config = result["payloads"][callsign]["sentence"]
-            if config["protocol"] not in self.modules:
-                raise ValueError("Payload configuration document specifies a"
-                    " module that is not loaded.")
-            else:
-                module = config["protocol"]
-                data = self.modules[module].parse(message.data, config)
-                parsed_message = Message(message.source, Message.TELEM, data)
-                self.server.push_message(parsed_message)
-        else:
-            raise ValueError("No callsign found.")
+        for module in self.modules:
+            try:
+                config = module["default_config"]
+                callsign = module["module"].pre_parse(message.data)
+                data = module["module"].parse(message.data, config)
+                new_message = Message(message.source, Message.TELEM, data)
+                self.server.push_message(new_message)
+                return
+            except (ValueError, KeyError):
+                continue
 
+        raise ValueError("No data could be parsed.") 
+
+    def _find_config_doc(self, callsign):
+        """
+        Check Couch for a configuration document we can use for this payload.
+        The Couch view first tries to find any Flight documents with this
+        callsign in their payloads dictionary, but will also return any
+        Sandbox documents with this payload if no valid Flight documents
+        could be found. Flight documents only count if their end time is
+        in the future.
+        If no config can be found, raises
+        :py:exc:`ValueError <exceptions.ValueError>`, otherwise returns
+        the sentence dictionary out of the payload config dictionary.
+        """
+        startkey = '["' + callsign + '",' + str(int(time.time())) + ']'
+        result = self.server.db.view("habitat/payload_config", limit = 1,
+                include_docs = True, startkey = startkey).first()
+        if not result or callsign not in result["doc"]["payloads"]:
+            raise ValueError("No configuration document found for callsign.")
+        return result["doc"]["payloads"][callsign]["sentence"]
 
     def shutdown(self):
         """Gracefully kills the parser."""

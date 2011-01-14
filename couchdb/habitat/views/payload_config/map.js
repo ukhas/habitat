@@ -5,10 +5,13 @@ function(doc) {
     // Typically queried with
     //     startkey=["payload",NOW]&limit=1&include_docs=true
     // to obtain the correct configuration for a given payload.
-    if(doc.type == "flight") {
+    if(doc.type == "flight" || doc.type == "sandbox") {
         var payload;
         for(payload in doc.payloads) {
-            emit([payload, doc.end], null);
+            if(doc.type == "flight")
+                emit([payload, doc.end], null);
+            else
+                emit([payload, "sandbox"], null);
         }
     }
 }

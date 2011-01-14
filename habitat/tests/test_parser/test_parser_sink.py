@@ -32,10 +32,28 @@ flight_doc = {
         "habitat": {
             "sentence": {
                 "protocol": "Fake",
-                "payload": "habitat"
+                "from_flight_doc": True
             }
         }
     }
+}
+
+wrong_flight_doc = {
+    "start": int(time.time()) - 86400,
+    "end": int(time.time()) + 86400,
+    "payloads": {
+        "wrong": {
+            "sentence": {
+                "protocol": "Fake",
+                "from_flight_doc": True
+            }
+        }
+    }
+}
+
+default_config = {
+    "protocol": "Fake",
+    "default": True
 }
 
 class FakeModule(object):
@@ -120,6 +138,22 @@ class FakeViewResults(object):
         return {"value": None, "id": "1234567890abcdef", "key": ["habitat",
             flight_doc["end"]], "doc": flight_doc}
 
+class EmptyViewResults(object):
+    """
+    A mocked up couchdbkit ViewResults that didn't find anything.
+    """
+    def first(self):
+        return None
+
+class WrongViewResults(object):
+    """
+    A mocked up couchdbkit ViewResults that didn't find anything with our
+    payload, but had others so returned one of those.
+    """
+    def first(self):
+        return {"value": None, "id": "1234567890abcdef", "key": ["wrong",
+            wrong_flight_doc["end"]], "doc": wrong_flight_doc}
+
 class FakeDB(object):
     """
     A mocked up CouchDB database which can be queried as normal for
@@ -137,6 +171,7 @@ class FakeDB(object):
         }
         self.view_string = None
         self.view_params = None
+        self.view_results = FakeViewResults()
 
     def __getitem__(self, item):
         if item == "parser_config":
@@ -147,7 +182,7 @@ class FakeDB(object):
     def view(self, view, **params):
         self.view_string = view
         self.view_params = params
-        return FakeViewResults()
+        return self.view_results
         
 
 class FakeServer(object):
@@ -170,6 +205,13 @@ class FakeMessage(object):
         self.type = Message.RECEIVED_TELEM
         self.data = "test message"
 
+class WrongMessage(object):
+    """A fake message that won't result in a valid callsign"""
+    def __init__(self):
+        self.source = FakeListener()
+        self.type = Message.RECEIVED_TELEM
+        self.data = "wrong"
+
 class TestParserSink(object):
     def setup(self):
         self.server = FakeServer()
@@ -180,7 +222,7 @@ class TestParserSink(object):
 
     def test_loads_modules_in_config(self):
         assert len(self.sink.modules) == 1
-        assert isinstance(self.sink.modules["Fake"], FakeModule)
+        assert isinstance(self.sink.modules[0]["module"], FakeModule)
 
     def try_to_load_module(self, module):
         self.server.db["parser_config"]["modules"][0]["class"] = module
@@ -219,14 +261,46 @@ class TestParserSink(object):
         assert self.server.db.view_string == "habitat/payload_config"
         assert self.server.db.view_params["limit"] == 1
         assert self.server.db.view_params["include_docs"] == True
-        assert self.server.db.view_params["startkey"][:12] == '["habitat", '
-        assert abs(int(self.server.db.view_params["startkey"][12:-1]) -
+        assert self.server.db.view_params["startkey"][:11] == '["habitat",'
+        assert abs(int(self.server.db.view_params["startkey"][11:-1]) -
             int(time.time())) < 2
 
     def test_calls_parser_with_config(self):
         self.sink.message(FakeMessage())
-        assert (self.sink.modules["Fake"].config ==
+        assert (self.sink.modules[0]["module"].config ==
                 flight_doc["payloads"]["habitat"]["sentence"])
+    
+    def test_uses_default_config_with_empty_results(self):
+        self.server.db.view_results = EmptyViewResults()
+        self.server.db.parser_config["modules"][0]["default_config"] = \
+                default_config
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].config == default_config
+
+    def test_uses_default_config_with_wrong_results(self):
+        self.server.db.view_results = WrongViewResults()
+        self.server.db.parser_config["modules"][0]["default_config"] = \
+                default_config
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].config == default_config
+
+    @raises(ValueError)
+    def test_errors_when_no_config_or_default_config_found(self):
+        self.server.db.view_results = EmptyViewResults()
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+
+    @raises(ValueError)
+    def test_errors_when_no_config_or_default_config_found(self):
+        self.server.db.view_results = WrongViewResults()
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+
+    @raises(ValueError)
+    def test_errors_when_no_callsign_found(self):
+        self.sink.message(WrongMessage())
 
     def test_pushes_message(self):
         self.sink.message(FakeMessage())
