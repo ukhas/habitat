@@ -16,8 +16,20 @@
 */
 
 /*
- * gcc -D_GNU_SOURCE -Wall -pedantic -O2 runas.temp.c -o runas
- * chmod ug+s runas
+ * cd ~habitat-www
+ * mkdir hook
+ * chown root:www-data hook
+ * chmod 750 hook
+ *
+ * gcc -D_GNU_SOURCE -Wall -pedantic -O2 runas.temp.c -o hook/runas
+ * chown habitat-www:habitat-www hook/runas
+ * chmod 755 hook/runas
+ * chmod ug+s hook/runas
+ *
+ * With the above setup, only users in the group www-data will be able to
+ * execute the binary, which only root will be able to modify, and it
+ * will allow user www-data to become user habitat-www in order to run
+ * only one command (controlled, see code below).
  */
 
 #include <stdio.h>
