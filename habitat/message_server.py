@@ -53,11 +53,21 @@ class Server(object):
         self.message_count = 0
 
         self.lock = threading.RLock()
+        self.queue = Queue.Queue()
+        self.thread = crashmat.Thread(name="Message Server Thread",
+                                      target=self.run)
 
         try:
             self.config = self.program.db["message_server_config"]
         except couchdbkit.exceptions.ResourceNotFound:
             raise Exception("message_server_config couchdb document not found")
+
+    def start(self):
+        """
+        Starts up the server.
+        """
+
+        self.thread.start()
 
         for sink in self.config['sinks']:
             self.load(sink)
@@ -139,6 +149,43 @@ class Server(object):
             new_sink = dynamicloader.load(sink.__class__, force_reload=True)
             self.load(new_sink)
 
+    def run(self):
+        running = True
+        while running:
+            message = self.queue.get()
+
+            if (hasattr(message, "shutdown_notification") and
+                    message.shutdown_notification == True):
+                running = False
+            else:
+                with self.lock:
+                    for sink in self.sinks:
+                        sink.push_message(message)
+
+                    self.message_count += 1
+
+            self.queue.task_done()
+
+    def push_message(self, message):
+        """
+        Pushes a message to all sinks loaded in the server
+
+        This method will return instantly, having added the message object
+        to an internal queue for processing by a thread.
+
+        *message*: a :py:class:`habitat.message_server.Message` object
+        """
+
+        dynamicloader.expecthasattr(message, "type")
+        self.queue.put(message)
+
+    def flush(self):
+        """
+        Blocks until the internal queue of messages has been processed
+        """
+
+        self.queue.join()
+
     def shutdown(self):
         """
         Shuts down the Server
@@ -148,24 +195,15 @@ class Server(object):
         loaded sink
         """
 
+        self.queue.put(ShutdownNotification())
+        self.flush()
+        self.thread.join()
+
         with self.lock:
             for sink in self.sinks:
                 sink.shutdown()
 
             self.sinks = []
-
-    def push_message(self, message):
-        """
-        Pushes a message to all sinks loaded in the server
-
-        *message*: a :py:class:`habitat.message_server.Message` object
-        """
-
-        with self.lock:
-            self.message_count += 1
-
-            for sink in self.sinks:
-                sink.push_message(message)
 
     def __repr__(self):
         """
@@ -178,12 +216,13 @@ class Server(object):
         similar to ``<habitat.message_server.Server: locked>`` is
         returned. Otherwise, something like
         ``<habitat.message_server.Server: 5 sinks loaded, \
-        52 messages so far>`` is returned.
+        52 messages so far, approx 1 queued>`` is returned.
         """
 
         general_format = "<habitat.message_server.Server: %s>"
         locked_format = general_format % "locked"
-        info_format = general_format % "%s sinks loaded, %s messages so far"
+        info_format = general_format % ("%s sinks loaded, " +
+                                        "%s messages so far, approx %s queued")
 
         acquired = self.lock.acquire(blocking=False)
 
@@ -191,7 +230,8 @@ class Server(object):
             return locked_format
 
         try:
-            return info_format % (len(self.sinks), self.message_count)
+            return info_format % (len(self.sinks), self.message_count,
+                                  self.queue.qsize())
         finally:
             self.lock.release()
 
@@ -344,6 +384,7 @@ class SimpleSink(Sink):
 
     def push_message(self, message):
         dynamicloader.expecthasattr(message, "type")
+
         if message.type in self.types:
             with self.cv:
                 self.executing_count += 1
@@ -425,11 +466,12 @@ class ThreadedSink(Sink, crashmat.Thread):
         while running:
             message = self.queue.get()
 
-            if (hasattr(message, "threaded_sink_shutdown") and
-                    message.threaded_sink_shutdown == True):
+            if (hasattr(message, "shutdown_notification") and
+                    message.shutdown_notification == True):
                 running = False
             else:
                 dynamicloader.expecthasattr(message, "type")
+
                 if message.type in self.types:
                     with self.stats_lock:
                         self.executing = 1
@@ -446,7 +488,7 @@ class ThreadedSink(Sink, crashmat.Thread):
         self.queue.join()
 
     def shutdown(self):
-        self.queue.put(ThreadedSinkShutdown())
+        self.queue.put(ShutdownNotification())
         self.flush()
         self.join()
 
@@ -483,12 +525,12 @@ class ThreadedSink(Sink, crashmat.Thread):
         finally:
             self.stats_lock.release()
 
-class ThreadedSinkShutdown(object):
+class ShutdownNotification(object):
     """
-    A object used to ask the runner of a :py:class:`ThreadedSink` \
-    to shut down
+    A object used to ask the runner of a :py:class:`Server` or a \
+    :py:class:`ThreadedSink` to shut down
     """
-    threaded_sink_shutdown = True
+    shutdown_notification = True
 
 class Message(object):
     """

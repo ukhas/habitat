@@ -24,7 +24,7 @@ import functools
 
 from nose.tools import raises
 
-from habitat.message_server import Message, Listener, Server
+from habitat.message_server import Message, Listener
 from habitat.utils.dynamicloader import fullname
 from habitat.utils import crashmat
 
@@ -35,6 +35,15 @@ from fakesink import SinkWithoutSetup, SinkWithoutMessage
 from slowsink import SlowSimpleSink, SlowThreadedSink
 
 from habitat.message_server import SimpleSink, ThreadedSink
+
+class FakeServer:
+    def __init__(self):
+        self.set_program(FakeProgram())
+    def set_program(self, program):
+        self.program = program
+        self.db = program.db
+    def push_message(self):
+        pass
 
 class FakeProgram:
     db = {"message_server_config": { "sinks": [] }  }
@@ -156,7 +165,7 @@ class TestSink:
         yield self.check_messagecount, FakeThreadedSink
 
     def check_messagecount(self, sinkclass):
-        sink = sinkclass(Server(FakeProgram()))
+        sink = sinkclass(FakeServer())
         assert sink.message_count == 0
         sink.push_message(Message(self.source, Message.TELEM, None))
         sink.push_message(Message(self.source, Message.TELEM, None))
@@ -175,7 +184,7 @@ class TestSink:
         sink.shutdown()
 
     def test_repr_simple(self):
-        sink = DelayableSink(Server(FakeProgram()))
+        sink = DelayableSink(FakeServer())
 
         expect_format = "<" + fullname(sink.__class__) + " (SimpleSink): %s>"
         info_format = expect_format % "%s messages so far, %s executing now"
@@ -211,7 +220,7 @@ class TestSink:
         sink.shutdown()
 
     def test_repr_threaded(self):
-        sink = DelayableThreadedSink(Server(FakeProgram()))
+        sink = DelayableThreadedSink(FakeServer())
 
         base_format = "<" + fullname(sink.__class__)  + " (ThreadedSink): %s>"
         info_format = base_format % "%s messages so far, roughly %s queued%s"
@@ -252,16 +261,16 @@ class TestSink:
         sink.shutdown()
 
     def test_types_is_a_set(self):
-        sink = EmptySink(Server(FakeProgram()))
+        sink = EmptySink(FakeServer())
         assert isinstance(sink.types, set)
 
     def test_sink_stores_server(self):
-        server = Server(FakeProgram())
+        server = FakeServer()
         sink = EmptySink(server)
         assert sink.server == server
 
     def test_types(self):
-        sink = EmptySink(Server(FakeProgram()))
+        sink = EmptySink(FakeServer())
 
         # We need these executed in this precise order but it'd be nice if
         # they were printed by spec as separate tests:
@@ -316,14 +325,14 @@ class TestSink:
         assert sink.types == set([])
 
     def test_can_remove_type_twice(self):
-        sink = EmptySink(Server(FakeProgram()))
+        sink = EmptySink(FakeServer())
         sink.add_type(Message.RECEIVED_TELEM)
         sink.remove_type(Message.RECEIVED_TELEM)
         sink.remove_type(Message.RECEIVED_TELEM)
         # Should not produce a KeyError
 
     def test_rejects_garbage(self):
-        sink = EmptySink(Server(FakeProgram()))
+        sink = EmptySink(FakeServer())
         for i in [sink.add_type, sink.remove_type]:
             yield self.check_rejects_garbage_type, i
             yield self.check_rejects_invalid_type, i
@@ -355,13 +364,13 @@ class TestSink:
         func(set([Message.RECEIVED_TELEM, 952]))
 
     def test_setup_called(self):
-        sink = FakeSink(Server(FakeProgram()))
+        sink = FakeSink(FakeServer())
         assert sink.types == set([Message.RECEIVED_TELEM,
                                   Message.LISTENER_INFO])
         assert sink.message == sink.test_messages.append
 
     def test_push_message(self):
-        sink = FakeSink(Server(FakeProgram()))
+        sink = FakeSink(FakeServer())
 
         # Same story as test_types
         yield self.check_push_unwanted_message, sink
@@ -382,7 +391,7 @@ class TestSink:
         yield self.check_sink_changing_types_push, ChangeyThreadedSink
 
     def check_sink_changing_types_push(self, sink_class):
-        sink = sink_class(Server(FakeProgram()))
+        sink = sink_class(FakeServer())
 
         sink.push_message(Message(self.source, Message.LISTENER_INFO, 1))
         sink.push_message(Message(self.source, Message.LISTENER_INFO, 2))
@@ -394,7 +403,7 @@ class TestSink:
         assert sink.status == 2
 
     def test_threaded_sink_executes_in_one_thread(self):
-        sink = FakeThreadedSink(Server(FakeProgram()))
+        sink = FakeThreadedSink(FakeServer())
 
         a = ThreadedPush(sink, Message(self.source,
             Message.LISTENER_INFO, 1))
@@ -419,7 +428,7 @@ class TestSink:
     def check_flush_race(self, sink_class):
         # Testing a race condition is quite difficult. (TODO ?)
         # SlowSink.message() will time.sleep(0.02)
-        sink = sink_class(Server(FakeProgram()))
+        sink = sink_class(FakeServer())
         message = Message(self.source, Message.TELEM, None)
         t = ThreadedPush(sink, message)
 
@@ -436,10 +445,10 @@ class TestSink:
         sink.shutdown()
 
     def test_simple_shutdown(self):
-        self.check_shutdown(EmptySink(Server(FakeProgram())), False)
+        self.check_shutdown(EmptySink(FakeServer()), False)
 
     def test_threaded_shutdown(self):
-        self.check_shutdown(EmptyThreadedSink(Server(FakeProgram())), True)
+        self.check_shutdown(EmptyThreadedSink(FakeServer()), True)
 
     def check_shutdown(self, sink, check_thread):
         # For a SimpleSink, shutdown should just call flush
@@ -463,6 +472,6 @@ class TestSink:
         assert sink.flush.call_count == 1
 
     def test_threadname(self):
-        sink = EmptyThreadedSink(Server(FakeProgram()))
+        sink = EmptyThreadedSink(FakeServer())
         assert sink.name.startswith("ThreadedSink runner: EmptyThreadedSink")
         sink.shutdown()

@@ -18,7 +18,7 @@
 # This would confuse an earlier version of of the software that would compare
 # dynamicloader.fullname with a string "loadable".
 
-from habitat.message_server import SimpleSink, Message
+from habitat.message_server import SimpleSink, ThreadedSink, Message
 
 class FakeSink2(SimpleSink):
     def setup(self):
@@ -38,6 +38,12 @@ class TestSinkA(TestSink):
 
 class TestSinkB(TestSink):
     testtypes = [Message.LISTENER_INFO]
+
+class TestSinkC(ThreadedSink):
+    def setup(self):
+        pass
+    def message(self, message):
+        pass
 
 class SinkWithoutSetup(SimpleSink):
     """A sink without a setup method should not be loaded."""
