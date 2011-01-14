@@ -19,7 +19,7 @@
 The parser interprets incoming telemetry strings into useful telemetry data.
 """
 
-import inspect
+import time
 
 from habitat.message_server import SimpleSink, Message
 from habitat.utils import dynamicloader
@@ -74,9 +74,24 @@ class ParserSink(SimpleSink):
         callsign = None
         for module in self.modules:
             try:
-                callsign = self.modules[module].pre_parse(message)
+                callsign = self.modules[module].pre_parse(message.data)
             except ValueError:
                 continue
+
+        if callsign:
+            startkey = '["' + callsign + '", ' + str(int(time.time())) + ']'
+            result = self.server.db.view("habitat/payload_config", limit=1,
+                include_docs=True, startkey=startkey).first()["doc"]
+            config = result["payloads"][callsign]["sentence"]
+            if config["protocol"] not in self.modules:
+                raise ValueError("Payload configuration document specifies a"
+                    " module that is not loaded.")
+            else:
+                module = config["protocol"]
+                data = self.modules[module].parse(message.data, config)
+                parsed_message = Message(message.source, Message.TELEM, data)
+                self.server.push_message(parsed_message)
+
 
     def shutdown(self):
         """Gracefully kills the parser."""
