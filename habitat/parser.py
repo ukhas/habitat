@@ -108,6 +108,7 @@ class ParserSink(SimpleSink):
                 config = self._find_config_doc(callsign)
                 if config["protocol"] == module["name"]:
                     data = module["module"].parse(message.data, config)
+                    data["_protocol"] = module["name"]
                     new_message = Message(message.source, Message.TELEM, data)
                     self.server.push_message(new_message)
                     return
@@ -120,6 +121,8 @@ class ParserSink(SimpleSink):
                 config = module["default_config"]
                 callsign = module["module"].pre_parse(message.data)
                 data = module["module"].parse(message.data, config)
+                data["_protocol"] = module["name"]
+                data["_used_default_config"] = True
                 new_message = Message(message.source, Message.TELEM, data)
                 self.server.push_message(new_message)
                 return
@@ -141,20 +144,12 @@ class ParserSink(SimpleSink):
         :py:exc:`ValueError <exceptions.ValueError>`, otherwise returns
         the sentence dictionary out of the payload config dictionary.
         """
-        startkey = '["' + callsign + '",' + str(int(time.time())) + ']'
+        startkey = [callsign, int(time.time())]
         result = self.server.db.view("habitat/payload_config", limit = 1,
                 include_docs = True, startkey = startkey).first()
         if not result or callsign not in result["doc"]["payloads"]:
             raise ValueError("No configuration document found for callsign.")
         return result["doc"]["payloads"][callsign]["sentence"]
-
-    def shutdown(self):
-        """Gracefully kills the parser."""
-        pass
-
-    def flush(self):
-        """Finish processing all incoming messages.""" 
-        pass
 
 
 class ParserModule(object):
