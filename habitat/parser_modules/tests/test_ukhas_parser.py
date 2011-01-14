@@ -169,14 +169,14 @@ sentence_good_6 = \
 
 # Correct parser output for the checksum test sentences
 output_checksum_test = {
-    "payload": "habitat", "message_count": 1,
+    "payload": "habitat", "_protocol": "UKHAS", "message_count": 1,
     "time": {"hour": 0, "minute": 0, "second": 0},
     "latitude": 0.0, "longitude": 0.0, "altitude": 0,
     "speed": 0.0, "custom_string": "hab"}
 
 # Correct parser output for (most) of the good sentences
 output_good = {
-    "payload": "habitat", "message_count": 123,
+    "payload": "habitat", "_protocol": "UKHAS", "message_count": 123,
     "time": {"hour": 12, "minute": 45, "second": 06},
     "latitude": -35.1032, "longitude": 138.8568,
     "altitude": 4285, "speed": 3.6, "custom_string": "hab"}

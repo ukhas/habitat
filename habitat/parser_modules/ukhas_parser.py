@@ -299,7 +299,7 @@ class UKHASParser(ParserModule):
         fields = self._extract_fields(string)
         string, checksum = self._split_checksum(string[2:])
         self._verify_checksum(string, checksum, config["checksum"])
-        output = {"payload": fields[0]}
+        output = {"payload": fields[0], "_protocol": "UKHAS"}
         for field_num in range(len(fields) - 1):
             try:
                 field = fields[field_num + 1]
