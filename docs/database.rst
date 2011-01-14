@@ -100,8 +100,8 @@ Payload Specific Data
 ---------------------
 
 The rest of the Flight document contains a ``payloads`` dictionary, which has
-payload names as keys and a dictionary containing payload information as the
-associated value::
+payload names/callsigns as keys and a dictionary containing payload
+information as the associated value::
     
     "payloads": {
         "habitat": {
@@ -141,7 +141,6 @@ below::
     "sentence": {
         "protocol": "UKHAS",
         "checksum": "crc16-ccitt",
-        "payload": "habitat",
         "fields": [
             {
                 "name": "message_count",

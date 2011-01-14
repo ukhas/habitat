@@ -71,6 +71,7 @@ class ParserSink(SimpleSink):
         parsed telemetry data.
         """
 
+        # Pre-parse to try and find a callsign
         callsign = None
         for module in self.modules:
             try:
@@ -79,9 +80,12 @@ class ParserSink(SimpleSink):
                 continue
 
         if callsign:
+            # Try to find a relevant configuration from Couch
             startkey = '["' + callsign + '", ' + str(int(time.time())) + ']'
-            result = self.server.db.view("habitat/payload_config", limit=1,
-                include_docs=True, startkey=startkey).first()["doc"]
+            result = self.server.db.view("habitat/payload_config",
+                limit=1, include_docs=True, startkey=startkey).first()["doc"]
+            if callsign not in result["payloads"].keys():
+                raise ValueError("Payload configration document not found.")
             config = result["payloads"][callsign]["sentence"]
             if config["protocol"] not in self.modules:
                 raise ValueError("Payload configuration document specifies a"
@@ -91,6 +95,8 @@ class ParserSink(SimpleSink):
                 data = self.modules[module].parse(message.data, config)
                 parsed_message = Message(message.source, Message.TELEM, data)
                 self.server.push_message(parsed_message)
+        else:
+            raise ValueError("No callsign found.")
 
 
     def shutdown(self):

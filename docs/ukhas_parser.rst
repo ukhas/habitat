@@ -39,30 +39,31 @@ least specify the field name and data type.
 
 For example, a configuration for the above typical sentence might be::
 
-    "sentence": {
-        "protocol": "UKHAS",
-        "payload": "habitat",
-        "checksum": "crc16-ccitt",
-        "fields": [
-            {
-                "name": "message_count",
-                "type": "int"
-            }, {
-                "name": "time",
-                "type": "time"
-            }, {
-                "name": "latitude",
-                "type": "coordinate",
-                "format": "dd.dddd"
-            }, {
-                "name": "longitude",
-                "type": "coordinate",
-                "format": "dd.dddd"
-            }, {
-                "name": "altitude",
-                "type": "int"
-            }
-        ]
+    "habitat": {
+        "sentence": {
+            "protocol": "UKHAS",
+            "checksum": "crc16-ccitt",
+            "fields": [
+                {
+                    "name": "message_count",
+                    "type": "int"
+                }, {
+                    "name": "time",
+                    "type": "time"
+                }, {
+                    "name": "latitude",
+                    "type": "coordinate",
+                    "format": "dd.dddd"
+                }, {
+                    "name": "longitude",
+                    "type": "coordinate",
+                    "format": "dd.dddd"
+                }, {
+                    "name": "altitude",
+                    "type": "int"
+                }
+            ]
+        }
     }
 
 Checksum Algorithms
