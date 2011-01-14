@@ -51,6 +51,19 @@ wrong_flight_doc = {
     }
 }
 
+wrong_p_flight_doc = {
+    "start": int(time.time()) - 86400,
+    "end": int(time.time()) + 86400,
+    "payloads": {
+        "habitat": {
+            "sentence": {
+                "protocol": "wrong",
+                "from_flight_doc": True
+            }
+        }
+    }
+}
+
 default_config = {
     "protocol": "Fake",
     "default": True
@@ -153,6 +166,15 @@ class WrongViewResults(object):
     def first(self):
         return {"value": None, "id": "1234567890abcdef", "key": ["wrong",
             wrong_flight_doc["end"]], "doc": wrong_flight_doc}
+
+class WrongProtocolViewResults(object):
+    """
+    A mocked up couchdbkit ViewResults that found our payload, but actually
+    it specifies some other protocol.
+    """
+    def first(self):
+        return {"value": None, "id": "1234567890abcdef", "key": ["habitat",
+            wrong_p_flight_doc["end"]], "doc": wrong_p_flight_doc}
 
 class FakeDB(object):
     """
@@ -295,6 +317,12 @@ class TestParserSink(object):
     @raises(ValueError)
     def test_errors_when_no_config_or_default_config_found(self):
         self.server.db.view_results = WrongViewResults()
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+
+    @raises(ValueError)
+    def test_errors_when_config_has_wrong_protocol(self):
+        self.server.db.view_results = WrongProtocolViewResults()
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
 

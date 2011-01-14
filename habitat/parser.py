@@ -101,6 +101,7 @@ class ParserSink(SimpleSink):
         continuing the loop.
         """
 
+        # Try using real configs
         for module in self.modules:
             try:
                 callsign = module["module"].pre_parse(message.data)
@@ -113,6 +114,7 @@ class ParserSink(SimpleSink):
             except ValueError:
                 continue
 
+        # If that didn't work, try using default configurations
         for module in self.modules:
             try:
                 config = module["default_config"]
@@ -124,6 +126,7 @@ class ParserSink(SimpleSink):
             except (ValueError, KeyError):
                 continue
 
+        # We're stuffed.
         raise ValueError("No data could be parsed.") 
 
     def _find_config_doc(self, callsign):
