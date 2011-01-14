@@ -308,6 +308,7 @@ class Program(object):
         crashmat.set_shutdown_function(self.shutdown)
 
     def main_execution(self):
+        self.server.start()
         self.scgiapp.start()
         self.thread.start()
 

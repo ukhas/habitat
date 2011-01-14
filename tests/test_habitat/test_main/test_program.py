@@ -78,8 +78,12 @@ dumbservers = []
 class DumbServer:
     def __init__(self, program):
         self.program = program
+        self.start_hits = 0
         self.shutdown_hits = 0
         dumbservers.append(self)
+
+    def start(self):
+        self.start_hits += 1
 
     def shutdown(self):
         self.shutdown_hits += 1
@@ -354,6 +358,7 @@ class TestProgram:
         # creates a server
         assert len(dumbservers) == 1
         assert dumbservers[0].program == p
+        assert dumbservers[0].start_hits == 0
 
         # creates a scgiapp
         assert len(dumbscgiapps) == 1
@@ -377,7 +382,8 @@ class TestProgram:
         # execution phase
         raises(Listening)(p.main_execution)()
 
-        # starts scgiapp and calls listen
+        # starts the server, the scgiapp and calls listen
+        assert dumbservers[0].start_hits == 1
         assert dumbscgiapps[0].start_hits == 1
         assert dumbsignallisteners[0].listen_hits == 1
 

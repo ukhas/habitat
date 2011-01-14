@@ -22,11 +22,12 @@ Tests the Server class
 import sys
 import time
 import threading
+import copy
 
 from nose.tools import raises, with_setup
 
 from habitat.message_server import Sink, SimpleSink, Message, Listener
-from habitat.utils import crashmat
+from habitat.utils import crashmat, dynamicloader
 
 from test_habitat.lib import threading_checks
 from test_habitat.lib.reloadable_module_writer import ReloadableModuleWriter
@@ -36,7 +37,7 @@ from habitat.message_server import Server
 
 # This would confuse an earlier version of of the software that would compare
 # dynamicloader.fullname with a string "loadable".
-from fakesink import TestSinkA, TestSinkB, FakeSink2, \
+from fakesink import TestSinkA, TestSinkB, TestSinkC, FakeSink2, \
                      SinkWithoutSetup, SinkWithoutMessage
 from pushback import PushbackSimpleSink, PushbackThreadedSink, \
                      PushbackReceiverSimpleSink, PushbackReceiverThreadedSink
@@ -51,6 +52,7 @@ class FakeSink(SimpleSink):
 class FakeProgram:
     db = {"message_server_config": { "sinks": [] }  }
     def __init__(self, sinks=[]):
+        self.db = copy.deepcopy(self.db)
         self.db["message_server_config"]["sinks"] = sinks
 
 class NonSink:
@@ -69,10 +71,12 @@ class TestServer:
         threading_checks.patch()
 
         self.server = Server(FakeProgram())
+        self.server.start()
         self.source = Listener("M0ZDR", "1.2.3.4")
 
     def teardown(self):
-        self.server.shutdown()
+        if self.server.thread.is_alive():
+            self.server.shutdown()
 
         threading_checks.restore()
 
@@ -80,23 +84,22 @@ class TestServer:
         message_rt = Message(self.source, Message.RECEIVED_TELEM, None)
         assert self.server.message_count == 0
         self.server.push_message(message_rt)
+        self.server.flush()
         assert self.server.message_count == 1
         for i in xrange(10):
             self.server.push_message(message_rt)
+        self.server.flush()
         assert self.server.message_count == 11
-
-    def test_uses_config(self):
-        self.server = Server(FakeProgram([FakeSink]))
-        assert len(self.server.sinks) == 1
 
     def test_repr(self):
         assert self.server.__class__.__name__ == "Server"
         assert self.server.__class__.__module__ == "habitat.message_server"
         expect_format = "<habitat.message_server.Server: %s>"
-        info_format = expect_format % "%s sinks loaded, %s messages so far"
+        info_format = expect_format % ("%s sinks loaded, " +
+                                       "%s messages so far, approx %s queued")
         locked_format = expect_format % "locked"
 
-        assert repr(self.server) == info_format % (0, 0)
+        assert repr(self.server) == info_format % (0, 0, 0)
         troll = LockTroll(self.server.lock)
         troll.start()
         assert repr(self.server) == locked_format
@@ -104,21 +107,32 @@ class TestServer:
 
         message_rt = Message(self.source, Message.RECEIVED_TELEM, None)
         self.server.push_message(message_rt)
-        assert repr(self.server) == info_format % (0, 1)
+        self.server.flush()
+        assert repr(self.server) == info_format % (0, 1, 0)
 
         self.server.load(TestSinkA)
-        assert repr(self.server) == info_format % (1, 1)
+        assert repr(self.server) == info_format % (1, 1, 0)
 
         self.server.push_message(message_rt)
+        self.server.flush()
         self.server.load(TestSinkB)
         self.server.push_message(message_rt)
         self.server.push_message(message_rt)
-        assert repr(self.server) == info_format % (2, 4)
+        self.server.flush()
+        assert repr(self.server) == info_format % (2, 4, 0)
 
         troll = LockTroll(self.server.lock)
         troll.start()
         assert repr(self.server) == locked_format
         troll.release()
+
+        self.server.shutdown()
+        assert repr(self.server) == info_format % (0, 4, 0)
+
+        self.server.push_message(message_rt)
+        self.server.push_message(message_rt)
+
+        assert repr(self.server) == info_format % (0, 4, 2)
 
     def test_can_load_fakesink(self):
         self.server.load(FakeSink)
@@ -239,6 +253,7 @@ class TestServer:
         self.server.push_message(message_li)
         self.server.push_message(message_rt)
         self.server.push_message(message_li)
+        self.server.flush()
         assert isinstance(self.server.sinks[0], TestSinkA)
         assert isinstance(self.server.sinks[1], TestSinkB)
         self.server.sinks[0].flush()
@@ -259,8 +274,12 @@ class TestServer:
         self.server.push_message(
             Message(self.source, Message.RECEIVED_TELEM, 6293))
 
-        for i in self.server.sinks:
-            i.flush()
+        # Flush twice
+        for r in xrange(0, 2):
+            self.server.flush()
+
+            for i in self.server.sinks:
+                i.flush()
 
         # Now check the results
         for i in self.server.sinks:
@@ -363,9 +382,55 @@ class TestServer:
         t.join()
         new_object = self.server.sinks[0]
 
+        self.server.flush()
+
         assert old_object.messages == 0
         assert new_object.messages == 3
 
     @raises(TypeError)
     def test_push_message_rejects_non_message(self):
-        self.server.load(123)
+        self.server.push_message(123)
+
+    def test_shutdown_shuts_down_thread_and_flushes_queue(self):
+        assert self.server.thread.is_alive()
+        self.check_function_clears_queue(self.server.shutdown)
+        assert not self.server.thread.is_alive()
+
+    def test_flush_clears_queue(self):
+        self.check_function_clears_queue(self.server.flush)
+
+    def check_function_clears_queue(self, f):
+        with self.server.lock:
+            m = Message(self.source, Message.TELEM, None)
+            self.server.push_message(m)
+            self.server.push_message(m)
+            assert self.server.queue.qsize() > 1
+
+        f()
+
+        assert self.server.queue.qsize() == 0
+
+    def test_push_message_is_instant(self):
+        lt = LockTroll(self.server.lock)
+        lt.start()
+        # If it wasn't instant/Queue, this would deadlock
+        m = Message(self.source, Message.TELEM, None)
+        self.server.push_message(m)
+        self.server.push_message(m)
+        self.server.push_message(m)
+        lt.release()
+
+class TestServerStartup:
+    def test_uses_config(self):
+        tserver = Server(FakeProgram([FakeSink]))
+        tserver.start()
+        assert len(tserver.sinks) == 1
+        tserver.shutdown()
+
+    def test_init_starts_no_threads(self):
+        tserver = Server(FakeProgram([dynamicloader.fullname(TestSinkC)]))
+        assert len(threading.enumerate()) == 1
+        tserver.start()
+        assert len(threading.enumerate()) == 3
+        tserver.shutdown()
+
