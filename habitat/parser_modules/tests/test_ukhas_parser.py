@@ -68,13 +68,13 @@ good_sentences = ["$$good,data", "$$good,data*CC", "$$good,data*CCCC",
 
 good_callsigns = ["good", "g00d", "G00D", "abcdef", "ABCDEF", "012345",
     "abcDEF123"]
-bad_callsigns = ["_", "-", "abcdef_123", "ABCµ", "$$", "almost good"]
-callsign_template = "$${0},data*CC"
+bad_callsigns = ["_", "-", "abcdef_123", u"ABCµ", "$$", "almost good"]
+callsign_template = u"$${0},data*CC"
 
 good_checksums = ["abcd", "ABCD", "abCD", "ab12", "AB12", "aB12", "ab", "aB",
     "AB", "a0", "A0"]
-bad_checksums = ["abcg", "123G", "$$", "*ABC", "defG", "123µ"]
-checksum_template = "$$good,data*{0}"
+bad_checksums = ["abcg", "123G", "$$", "*ABC", "defG", u"µ123"]
+checksum_template = u"$$good,data*{0}"
 
 # A configuration without a protocol key (should fail)
 config_no_protocol = deepcopy(base_config)
@@ -237,7 +237,7 @@ class TestUKHASParser:
     def test_pre_parse_accepts_good_checksums(self):
         for checksum in good_checksums:
             sentence = checksum_template.format(checksum)
-            assert self.p.pre_parse(sentence) == checksum
+            assert self.p.pre_parse(sentence) == "good"
     def test_parse_rejects_bad_sentences(self):
         for sentence in bad_sentences:
             assert_raises(ValueError, self.p.parse, sentence, base_config)
