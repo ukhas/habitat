@@ -177,6 +177,8 @@ class Server(object):
         """
 
         dynamicloader.expecthasattr(message, "type")
+        dynamicloader.expecthasattr(message, "source")
+        dynamicloader.expecthasattr(message, "data")
         self.queue.put(message)
 
     def flush(self):
@@ -384,6 +386,8 @@ class SimpleSink(Sink):
 
     def push_message(self, message):
         dynamicloader.expecthasattr(message, "type")
+        dynamicloader.expecthasattr(message, "source")
+        dynamicloader.expecthasattr(message, "data")
 
         if message.type in self.types:
             with self.cv:
@@ -471,6 +475,8 @@ class ThreadedSink(Sink, crashmat.Thread):
                 running = False
             else:
                 dynamicloader.expecthasattr(message, "type")
+                dynamicloader.expecthasattr(message, "source")
+                dynamicloader.expecthasattr(message, "data")
 
                 if message.type in self.types:
                     with self.stats_lock:
