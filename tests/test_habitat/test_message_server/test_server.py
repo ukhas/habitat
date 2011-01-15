@@ -404,6 +404,7 @@ class TestServer:
             m = Message(self.source, Message.TELEM, None)
             self.server.push_message(m)
             self.server.push_message(m)
+            self.server.push_message(m)
             assert self.server.queue.qsize() > 1
 
         f()
