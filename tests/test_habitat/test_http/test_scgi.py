@@ -112,9 +112,11 @@ class TestSCGIStartupShutdown:
         def new_process_request_thread(request, client_address):
             new_process_request_thread.hits += 1
             new_process_request_thread.event.set()
+            new_process_request_thread.cont.wait()
             old_process_request_thread(request, client_address)
         new_process_request_thread.hits = 0
         new_process_request_thread.event = threading.Event()
+        new_process_request_thread.cont = threading.Event()
         self.scgiapp.process_request_thread = new_process_request_thread
 
         self.scgiapp.start()
@@ -128,6 +130,7 @@ class TestSCGIStartupShutdown:
         new_process_request_thread.event.wait()
         assert new_process_request_thread.hits == 1
         assert len(threading.enumerate()) == 3
+        new_process_request_thread.cont.set()
 
         t1 = time.time()
         self.scgiapp.shutdown()
