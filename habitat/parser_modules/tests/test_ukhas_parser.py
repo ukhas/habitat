@@ -258,7 +258,9 @@ class TestUKHASParser:
                 [sentence_fletcher_16, config_checksum_fletcher_16],
                 [sentence_fletcher_16_256, config_checksum_fletcher_16_256]
             ]:
-            assert self.p.parse(sentence, config) == output_checksum_test
+            assert (self.p.parse(sentence, config) == 
+                    self.output_append_sentence(output_checksum_test,
+                        sentence))
     def test_parse_rejects_incorrect_checksums(self):
         for sentence, config in [
                 [sentence_bad_crc16_ccitt, config_checksum_crc16_ccitt],
@@ -288,8 +290,17 @@ class TestUKHASParser:
                 [sentence_good_5, output_good, base_config],
                 [sentence_good_6, output_good_6, base_config]
             ]:
-            assert self.p.parse(sentence, config) == output
+            assert (self.p.parse(sentence, config) ==
+                    self.output_append_sentence(output, sentence))
     def test_parse_handles_shorter_sentences(self):
-        assert self.p.parse(sentence_short, base_config) == output_short
+        assert (self.p.parse(sentence_short, base_config) ==
+                self.output_append_sentence(output_short, sentence_short))
     def test_parse_handles_longer_sentences(self):
-        assert self.p.parse(sentence_long, base_config) == output_long
+        print self.p.parse(sentence_long, base_config)
+        print self.output_append_sentence(output_long, sentence_long)
+        assert (self.p.parse(sentence_long, base_config)
+                == self.output_append_sentence(output_long, sentence_long))
+    def output_append_sentence(self, output, sentence):
+        output_copy = deepcopy(output)
+        output_copy["_sentence"] = sentence
+        return output_copy
