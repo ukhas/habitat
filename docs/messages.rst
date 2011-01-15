@@ -44,7 +44,8 @@ like in this example:
     {
         "callsign": "M0ZDR",
         "type": "LISTENER_INFO",
-        "time": { "created": 1295103598, "now": 1295103707 },
+        "time_created": 1295103598,
+        "time_uploaded": 1295103707,
         "data": { "name": "Daniel Richman", "icon": "car" }
     }
 
@@ -53,8 +54,8 @@ like in this example:
 **callsign** and the IP address from which the HTTP request came are passed to
 the initialiser of the :py:class:`Listener <habitat.message_server.Listener>`
 class, which imposes the restriction that the callsign must be composed of
-alphanumeric characters only. The resultant Listener object is the first
-argument to the initialiser of
+alphanumeric and /_ characters only (``a-zA-Z0-9/_``).
+The resultant Listener object is the first argument to the initialiser of
 :py:class:`Message <habitat.message_server.Message>`
 
 **type** must be the name of one of the message types (below), and cannot be
@@ -62,19 +63,18 @@ argument to the initialiser of
 inserted by HTTP. The type is converted to an integer, and is the second
 argument to the Message initialiser.
 
-**time** is an object with two name/value pairs, **created** and **now**.
-**created** must be the UNIX timestamp (that is, the number of seconds elapsed
-since midnight Coordinated Universal Time (UTC) of January 1, 1970, not
-counting leap seconds) representing the time when the message was created
-and queued to be uploaded. In the case of a **RECEIVED_TELEM** message, for
-example, this would be the second in which the last byte of that string was
-received. **now** is another timestamp. For the first attempt at uploading
-the message **time.created** would typically be the same as **time.now**,
-however, if the message is delayed, or the POST fails and has to be
-retried, **time.now** must be the local time when the HTTP request was
-sent. When the message is received by habitat, it takes the difference between
-**time.now** and UTC on the server running habitat, and adds that difference
-to **time.created** to get the time that the message was created,
+**time_created** and **time_uploaded** are UNIX timestamps.
+**time_created** represents the time when the message was created and queued
+to be uploaded, for example, in the case of a **RECEIVED_TELEM** message, this
+would be the second in which the last byte of that string was
+received. **time_uploaded** is the time that the HTTP request was started.
+For the first attempt at uploading the message **time_created** would
+typically be the same as **time_uploaded**, however, if the message is
+delayed, or the POST fails and has to be retried, **time_uploaded** must be
+the UTC time on the local clock when the HTTP request was sent.
+When the message is received by habitat, it takes the difference between
+**time_uploaded** and UTC on the server running habitat, and adds that
+difference to **time_created** to get the time that the message was created,
 with clock-difference compensated, to with a few seconds (which is accurate
 enough for our purposes). This "calculated" time, and the real local time
 when habitat received the message, are stored.

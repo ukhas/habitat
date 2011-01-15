@@ -21,6 +21,7 @@ more :py:class:`Sinks <Sink>`.
 """
 
 import sys
+import string
 import inspect
 import threading
 import Queue
@@ -626,9 +627,12 @@ class Listener(object):
     only *callsign* is considered.
     """
 
+    allowed_callsign_characters = string.letters + string.digits + "/_"
+
     def __init__(self, callsign, ip):
         """
-        *callsign*: string, must be alphanumeric
+        *callsign*: string, must be composed of alphanumeric and /_ only
+        (a-zA-Z0-9/_)
 
         *ip*: string, which will be validated and converted to an
         **IPAddress** object (the ``ipaddr`` module)
@@ -636,8 +640,13 @@ class Listener(object):
 
         if not isinstance(callsign, basestring):
             raise TypeError("callsign must derive from basestring")
-        if not callsign.isalnum():
-            raise ValueError("callsign must be alphanumeric")
+
+        if len(callsign) == 0:
+            raise ValueError("callsign must have atleast one letter")
+
+        for letter in callsign:
+            if letter not in self.allowed_callsign_characters:
+                raise ValueError("callsign must be alphanumeric")
 
         self.ip = ipaddr.IPAddress(ip)
         self.callsign = callsign.upper()

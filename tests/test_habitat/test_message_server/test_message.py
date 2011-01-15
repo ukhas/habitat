@@ -121,9 +121,22 @@ class TestListener:
     def test_rejects_garbage_callsign(self):
         Listener(0, "1.2.3.4")
 
+    def test_allows_good_callsigns(self):
+        for call in ["M0ZDR", "M0RND", "G4QQQ", "M0ZDR/MM", "MORND_CHASE",
+                     "M0RND_Chase", "_", "/", "/LOLWHATGRR"]:
+            self.check_allows_good_callsign(call)
+
+    def check_allows_good_callsign(self, call):
+        Listener(call, "1.2.3.4")
+
+    def test_rejects_bad_callsigns(self):
+        for call in ["M0ZDR'; DELETE TABLE BALLOONS; --", "",
+                     "#", "M0'", "M-", "-", "+", "~", "M0@ND"]:
+            self.check_rejects_bad_callsign(call)
+
     @raises(ValueError)
-    def test_rejects_nonalphanum_callsign(self):
-        Listener("M0ZDR'; DELETE TABLE BALLOONS; --", "1.2.3.4")
+    def check_rejects_bad_callsign(self, call):
+        Listener(call, "1.2.3.4")
 
     @raises(ValueError) # IPAddress() failures return ValueError
     def test_rejects_invalid_ip(self):
