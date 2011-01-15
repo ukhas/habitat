@@ -101,6 +101,8 @@ class ParserSink(SimpleSink):
         continuing the loop.
         """
 
+        data = None
+        
         # Try using real configs
         for module in self.modules:
             try:
@@ -109,9 +111,7 @@ class ParserSink(SimpleSink):
                 if config["protocol"] == module["name"]:
                     data = module["module"].parse(message.data, config)
                     data["_protocol"] = module["name"]
-                    new_message = Message(message.source, Message.TELEM, data)
-                    self.server.push_message(new_message)
-                    return
+                    break
             except ValueError:
                 continue
 
@@ -123,14 +123,16 @@ class ParserSink(SimpleSink):
                 data = module["module"].parse(message.data, config)
                 data["_protocol"] = module["name"]
                 data["_used_default_config"] = True
-                new_message = Message(message.source, Message.TELEM, data)
-                self.server.push_message(new_message)
-                return
+                break
             except (ValueError, KeyError):
                 continue
 
-        # We're stuffed.
-        raise ValueError("No data could be parsed.") 
+        if data:
+            data["_raw"] = message.data
+            new_message = Message(message.source, Message.TELEM, data)
+            self.server.push_message(new_message)
+        else:
+            raise ValueError("No data could be parsed.") 
 
     def _find_config_doc(self, callsign):
         """
