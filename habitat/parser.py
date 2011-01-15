@@ -116,16 +116,17 @@ class ParserSink(SimpleSink):
                 continue
 
         # If that didn't work, try using default configurations
-        for module in self.modules:
-            try:
-                config = module["default_config"]
-                callsign = module["module"].pre_parse(message.data)
-                data = module["module"].parse(message.data, config)
-                data["_protocol"] = module["name"]
-                data["_used_default_config"] = True
-                break
-            except (ValueError, KeyError):
-                continue
+        if not data:
+            for module in self.modules:
+                try:
+                    config = module["default_config"]
+                    callsign = module["module"].pre_parse(message.data)
+                    data = module["module"].parse(message.data, config)
+                    data["_protocol"] = module["name"]
+                    data["_used_default_config"] = True
+                    break
+                except (ValueError, KeyError):
+                    continue
 
         if data:
             data["_raw"] = message.data
