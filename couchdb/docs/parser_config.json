@@ -1,0 +1,12 @@
+{
+   "_id": "parser_config",
+   "type": "config",
+   "modules": [
+       {
+           "name": "UKHAS",
+           "class": "habitat.parser_modules.ukhas_parser.UKHASParser",
+           "pre-filters": [
+           ]
+       }
+   ]
+}

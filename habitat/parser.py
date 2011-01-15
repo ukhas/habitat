@@ -19,9 +19,10 @@
 The parser interprets incoming telemetry strings into useful telemetry data.
 """
 
-import inspect
+import time
 
 from habitat.message_server import SimpleSink, Message
+from habitat.utils import dynamicloader
 
 __all__ = ["ParserSink", "ParserModule"]
 
@@ -30,14 +31,18 @@ class ParserSink(SimpleSink):
     The Parser Sink
 
     The parser sink is the interface between the message server and the
-    parser. It is responsible for receiving raw telemetry from the message
-    server, turning it into beautiful telemetry data, and then sending that
-    back.
+    parser modules. It is responsible for receiving raw telemetry from the
+    message server, giving it to modules which turn it into beautiful
+    telemetry data, and then sending that back to the message server.
     """
 
     BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = locations = range(3)
 
     def setup(self):
+        """
+        Initialises the sink, adding the types of telemetry we care about
+        to our types list and setting up lists of filters and modules
+        """
         self.add_type(Message.RECEIVED_TELEM)
 
         self.before_filters = []
@@ -50,88 +55,124 @@ class ParserSink(SimpleSink):
         }
 
         self.modules = []
-
-    def add_filter(self, location, filter):
-        """
-        Add a new filter to the Parser.
-
-        *location*: when the filter should be run. one of
-        **ParserSink.BEFORE_FILTER**, **ParserSink.DURING_FILTER** or
-        **ParserSink.AFTER_FILTER**
-
-        *filter*: a function (or a __call__able class) to run, with
-        the single parameter message and which returns a message
-        """
-
-        if not hasattr(filter, '__call__'):
-            raise TypeError("filter must be callable")
-
-        # Inspect argument list based on type. Class __call__ methods will
-        # have a self argument, so account for that.
-        if inspect.isclass(filter):
-            args = len(inspect.getargspec(filter.__call__).args) - 1
-        elif inspect.isfunction(filter):
-            args = len(inspect.getargspec(filter).args)
-        else:
-            raise TypeError("filter must be a class or a function")
-
-        if args != 1:
-            raise ValueError("filter must only take one argument")
-
-        if location in self.filters.keys():
-            self.filters[location].append(filter)
-        else:
-            raise ValueError("Invalid location")
-
-    def remove_filter(self, location, filter):
-        """
-        Remove a filter from the Parser.
-        """
-
-        if location in self.filters.keys():
-            if filter in self.filters[location]:
-                self.filters[location].remove(filter)
-            else:
-                raise ValueError("Filter was not loaded")
-        else:
-            raise ValueError("Invalid location")
-
-    def add_module(self, module):
-        if not issubclass(module, ParserModule):
-            raise TypeError("Module must be a sub class of ParserModule")
-        self.modules.append(module)
-
-    def remove_module(self, module):
-        if module in self.modules:
-            self.modules.remove(module)
-        else:
-            raise ValueError("Module was not loaded")
-
-    def reload_module(self, module):
-        for loaded_module in self.modules:
-            if loaded_module.__name__ == module.__name__:
-                self.modules.remove(loaded_module)
-                self.modules.append(module)
-                return
-        raise ValueError("Module was not loaded")
+        
+        for module in self.server.db["parser_config"]["modules"]:
+            m = dynamicloader.load(module["class"])
+            dynamicloader.expecthasmethod(m, "pre_parse")
+            dynamicloader.expecthasmethod(m, "parse")
+            dynamicloader.expecthasnumargs(m.pre_parse, 1)
+            dynamicloader.expecthasnumargs(m.parse, 2)
+            module["module"] = m(self)
+            self.modules.append(module)
 
     def message(self, message):
         """
-        Parse an incoming message from the message server.
+        Handles a new message from the server, hopefully turning it into
+        parsed telemetry data.
 
-        *message*: a :py:class:`habitat.message_server.Message` object.
-        ``message.type`` should be **RECEIVED_TELEM**
+        This function attempts to determine which of the loaded parser
+        modules should be used to parse the message, and which config
+        file it should be given to do so.
+
+        For the priority ordered list self.modules, resolution proceeds as::
+
+            for module in modules:
+                module.pre_parse to find a callsign
+                if a callsign is found:
+                    look up the configuration document for that callsign
+                    if a configuration document is found:
+                        check it specifies that this module should be used
+                        if it does:
+                            module.parse to get the data
+                            return
+            if all modules were attempted but no config docs were found:
+                for module in modules:
+                    if this module has a default configuration:
+                        module.pre_parse to find a callsign
+                        if a callsign is found:
+                            use this module's default configuration
+                            module.parse to get the data
+                            return
+            if we still can't get any data:
+                error
+
+        Note that in the loops below, the pre_parse, _find_config_doc and
+        parse methods will all raise a ValueError if failure occurs,
+        continuing the loop.
+
+        The output is a new message of type Message.TELEM, with message.data
+        being the parsed data as well as any special fields, identified by
+        a leading underscore in the key.
+        
+        These fields may include:
+
+            * _protocol which gives the parser module name that was used to
+              decode this message
+            * _used_default_config is a boolean value set to True if a
+              default configuration was used for the module as no specific
+              configuration could be found
+            * _raw gives the original submitted data
+            * _sentence gives the ASCII sentence from the UKHAS parser
+            * _extra_data from the UKHAS parser, where the sentence contained
+              more data than the UKHAS parser was configured for
+
+        Parser modules should be wary when outputting field names with
+        leading underscores.
         """
 
-        if message.type != Message.RECEIVED_TELEM:
-            return
+        data = None
+        
+        # Try using real configs
+        for module in self.modules:
+            try:
+                callsign = module["module"].pre_parse(message.data)
+                config = self._find_config_doc(callsign)
+                if config["protocol"] == module["name"]:
+                    data = module["module"].parse(message.data, config)
+                    data["_protocol"] = module["name"]
+                    break
+            except ValueError:
+                continue
 
-        for filter in self.before_filters:
-            message = filter(message)
-        for filter in self.during_filters:
-            message = filter(message)
-        for filter in self.after_filters:
-            message = filter(message)
+        # If that didn't work, try using default configurations
+        if not data:
+            for module in self.modules:
+                try:
+                    config = module["default_config"]
+                    callsign = module["module"].pre_parse(message.data)
+                    data = module["module"].parse(message.data, config)
+                    data["_protocol"] = module["name"]
+                    data["_used_default_config"] = True
+                    break
+                except (ValueError, KeyError):
+                    continue
+
+        if data:
+            data["_raw"] = message.data
+            new_message = Message(message.source, Message.TELEM, data)
+            self.server.push_message(new_message)
+        else:
+            raise ValueError("No data could be parsed.") 
+
+    def _find_config_doc(self, callsign):
+        """
+        Check Couch for a configuration document we can use for this payload.
+        The Couch view first tries to find any Flight documents with this
+        callsign in their payloads dictionary, but will also return any
+        Sandbox documents with this payload if no valid Flight documents
+        could be found. Flight documents only count if their end time is
+        in the future.
+        If no config can be found, raises
+        :py:exc:`ValueError <exceptions.ValueError>`, otherwise returns
+        the sentence dictionary out of the payload config dictionary.
+        """
+        startkey = [callsign, int(time.time())]
+        result = self.server.db.view("habitat/payload_config", limit = 1,
+                include_docs = True, startkey = startkey).first()
+        if not result or callsign not in result["doc"]["payloads"]:
+            raise ValueError("No configuration document found for callsign.")
+        return result["doc"]["payloads"][callsign]["sentence"]
+
 
 class ParserModule(object):
     """
@@ -140,8 +181,26 @@ class ParserModule(object):
     ParserModules
 
      - can be given various configuration parameters.
-     - inherit from **ParserModule**.
+     - should probably inherit from **ParserModule**.
 
     """
+    def __init__(self, parser):
+        """Store the parser reference for later use."""
+        self.parser = parser
 
-    pass
+    def pre_parse(self, string):
+        """
+        Go though a string and attempt to extract a callsign, returning
+        it as a string. If no callsign could be extracted, a
+        :py:exc:`ValueError <exceptions.ValueError>` is raised.
+        """
+        raise ValueError()
+    
+    def parse(self, string, config):
+        """
+        Go through a string which has been identified as the format this
+        parser module should be able to parse, extracting the data as per
+        the information in the config parameter, which is the ``sentence``
+        dictionary extracted from the payload's configuration document.
+        """
+        raise ValueError()

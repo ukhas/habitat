@@ -11,6 +11,7 @@ Contents:
    installing
    configuration
    database
+   ukhas_parser
    reference/index
 
 Indices and tables

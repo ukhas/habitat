@@ -44,10 +44,9 @@ as 'fletcher-16-256'. Don't use it for new payloads.
 'none' may also be specified as a checksum type if no checksum is used; in
 this case the message should not include a terminating ``*``.
 
-Typical configuration (CouchDB doc in ``payloads`` DB)::
+Typical configuration (part of a payload dictionary in a flight document)::
 
-    {
-        "_id": "mypayload",
+    "habitat": {
         "radio": {
             "frequency": 434.075,
             "mode": "usb",
@@ -104,7 +103,7 @@ Supported types include:
 
 import time
 import math
-from string import hexdigits
+from string import ascii_lowercase, ascii_uppercase, digits, hexdigits
 
 from habitat.parser import ParserModule
 from habitat.utils import checksums
@@ -120,6 +119,8 @@ coordinate_formats = [
 
 class UKHASParser(ParserModule):
     """The UKHAS Parser Module"""
+    
+    allowed_callsign_characters = ascii_lowercase + ascii_uppercase + digits
 
     def _split_checksum(self, string):
         """
@@ -166,7 +167,7 @@ class UKHASParser(ParserModule):
         if string[:2] != "$$":
             raise ValueError("String does not start `$$'.")
         string, checksum = self._split_checksum(string)
-        if checksum != None:
+        if checksum:
             for letter in checksum:
                 if letter not in hexdigits:
                     raise ValueError(
@@ -192,6 +193,8 @@ class UKHASParser(ParserModule):
                 raise ValueError("Less than one fields are defined.")
             for field in config["fields"]:
                 field["name"]
+                if field["name"][0] == "_":
+                    raise ValueError("Field name starts with an underscore.")
                 if field["type"] not in field_types:
                     raise ValueError("Invalid field type specified.")
                 if field["type"] == "coordinate":
@@ -226,6 +229,12 @@ class UKHASParser(ParserModule):
         elif algorithm == "fletcher-16-256":
             if checksums.fletcher_16(string, 256) != checksum.upper():
                 raise ValueError("Invalid Fletcher-16-256 checksum.")
+
+    def _verify_callsign(self, callsign):
+        for letter in callsign:
+            if letter not in self.allowed_callsign_characters:
+                raise ValueError("Invalid callsign, contains characters "
+                        "besides A-Z and 0-9.")
     
     def _parse_field(self, field, field_config):
         """
@@ -264,9 +273,9 @@ class UKHASParser(ParserModule):
                 first, second = field.split(".")
                 degrees = float(first[:-2])
                 minutes = float(first[-2:] + "." + second)
+                if minutes > 60.0:
+                    raise ValueError("Minutes component > 60.")
                 m_to_d = minutes / 60.0
-                if m_to_d > 60.0:
-                    raise ValueError("Minutes value is greater than 60.")
                 degrees += math.copysign(m_to_d, degrees)
                 field_data = degrees
         return [field_name, field_data]
@@ -282,6 +291,7 @@ class UKHASParser(ParserModule):
 
         self._verify_basic_format(string)
         fields = self._extract_fields(string)
+        self._verify_callsign(fields[0])
         return fields[0]
         
     def parse(self, string, config):
@@ -291,18 +301,33 @@ class UKHASParser(ParserModule):
         *config* is a dictionary containing the sentence dictionary
         from the payload's configuration document.
 
+        Returns a dictionary of the parsed data, with field names as
+        keys and the result as the value. Also inserts a "payload" field
+        containing the payload name, a "_extra_data" field if more data
+        was in the sentence but not in the configuration, so could not be
+        parsed, and an _sentence field containing the ASCII sentence
+        that data was parsed from.
+
         :py:exc:`ValueError <exceptions.ValueError>` is raised on invalid
         messages. Return a dict of name:data.
         """
         self._verify_config(config)
         self._verify_basic_format(string)
         fields = self._extract_fields(string)
-        string, checksum = self._split_checksum(string[2:])
-        self._verify_checksum(string, checksum, config["checksum"])
-        output = {"payload": fields[0]}
+        strippedstring, checksum = self._split_checksum(string[2:])
+        self._verify_checksum(strippedstring, checksum, config["checksum"])
+        self._verify_callsign(fields[0])
+        output = {"payload": fields[0], "_sentence": string}
         for field_num in range(len(fields) - 1):
-            field = fields[field_num + 1]
-            field_config = config["fields"][field_num]
+            try:
+                field = fields[field_num + 1]
+                field_config = config["fields"][field_num]
+            except IndexError:
+                # This will happen when config["fields"] does not have
+                # enough fields for the sentence, so return everything
+                # we haven't been able to parse instead
+                output["_extra_data"] = fields[field_num + 1:]
+                break
             name, data = self._parse_field(field, field_config)
             output[name] = data
         return output

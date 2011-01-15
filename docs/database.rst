@@ -2,12 +2,14 @@
 Database Schema
 ================
 
-habitat stores information in a CouchDB database. At present five types of
+habitat stores information in a CouchDB database. At present six types of
 document are stored, identified by a ``type`` key:
 
     * Configuration documents for habitat itself (``type: "config"``)
     * Flight documents detailing a balloon flight and including payload
       settings (``type: "flight"``)
+    * Sandbox documents containing test payload configuration settings
+      not in a flight (``type: "sandbox"``)
     * Payload Telemetry documents containing parsed information from a
       telemetry message transmitted by a payload and associated with a Flight
       (``type: "payload_telemetry"``)
@@ -100,8 +102,8 @@ Payload Specific Data
 ---------------------
 
 The rest of the Flight document contains a ``payloads`` dictionary, which has
-payload names as keys and a dictionary containing payload information as the
-associated value::
+payload names/callsigns as keys and a dictionary containing payload
+information as the associated value::
     
     "payloads": {
         "habitat": {
@@ -141,7 +143,6 @@ below::
     "sentence": {
         "protocol": "UKHAS",
         "checksum": "crc16-ccitt",
-        "payload": "habitat",
         "fields": [
             {
                 "name": "message_count",
@@ -207,6 +208,14 @@ payload and as such may be rendered on the map::
         "M0RND",
         "2E0JSO"
     ]
+
+Sandbox Documents
+-----------------
+
+Sandbox documents are like Flight documents but only contain the *payloads*
+dictionary, and configuration from them will be used when no suitable flight
+is found for a given payload. They have a ``type`` of ``sandbox``.
+
 
 Telemetry Documents
 ===================
