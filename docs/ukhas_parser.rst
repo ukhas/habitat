@@ -37,7 +37,9 @@ The parser module expects to be given the payload name, the checksum algorithm,
 the protocol name ("UKHAS") and a list of fields, each of which should at
 least specify the field name and data type.
 
-For example, a configuration for the above typical sentence might be::
+For example, a configuration for the above typical sentence might be:
+
+.. code-block:: javascript
 
     "habitat": {
         "sentence": {

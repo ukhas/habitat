@@ -10,7 +10,8 @@ Contents:
    intro
    installing
    configuration
-   database
+   database/index
+   messages
    ukhas_parser
    reference/index
 

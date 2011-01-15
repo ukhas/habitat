@@ -44,7 +44,9 @@ as 'fletcher-16-256'. Don't use it for new payloads.
 'none' may also be specified as a checksum type if no checksum is used; in
 this case the message should not include a terminating ``*``.
 
-Typical configuration (part of a payload dictionary in a flight document)::
+Typical configuration (part of a payload dictionary in a flight document):
+
+.. code-block:: javascript
 
     "habitat": {
         "radio": {

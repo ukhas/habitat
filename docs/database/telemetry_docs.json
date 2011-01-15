@@ -10,11 +10,6 @@
     "type": "payload_telemetry",
     
     /*
-        Message is the original message string as transmitted by the payload
-    */
-    "message": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681",
-    
-    /*
         Estimated received time is calculated based on all the received times
         of individual listeners, who may have inaccurately synchronised clocks
         or be very far out indeed.
@@ -27,8 +22,39 @@
         longitude.
     */
     "data": {
+        /*
+            The name chosen in the parser config for the parser module
+            that parsed this telemetry
+        */
+        "_protocol": "UKHAS",
+
+        /*
+            _raw is the original message string as transmitted by the payload,
+            in base64. If the payload used an ascii protocol, and there were no
+            errors, and the whole message could be represented as ascii, 
+            then _sentence is also the original message string, but in ascii
+        */
+        "_raw": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ=="
+        "_sentence": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681"
+
+        /*
+            The callsign of the payload
+        */
         "payload": "habitat",
+
+        /*
+            Further data is typically protocol-specific, but the following
+            are typical of a telemetry message:
+        */
+
+        /*
+            Sequential Message ID
+        */
         "message_count": 123,
+
+        /*
+            GPS Data
+        */
         "time": {
             "hour": 12,
             "minute": 45,
@@ -38,24 +64,31 @@
         "longitude": 138.8568,
         "altitude": 0,
         "speed": 0.0,
+
+        /*
+            Other data
+        */
         "custom_string": "hab"
     },
     
     /*
         Receivers is a list of people who received this message, including when
         they think they received it, when habitat got their message and the
-        last position telemetry they sent about themselves.
+        CouchIDs of the last listener position telemetry and listener
+        information they sent about themselves.
     */
     "receivers": {
         "M0RND": {
             "received_time": 1292772125,
             "uploaded_time": 1292772130,
-            "latest_telemetry": "10bedc8832fe563c901596c900001906"
+            "latest_telemetry": "10bedc8832fe563c901596c900001906",
+            "latest_info": "10bedc8832fe563c901596c900038917"
         },
         "M0ZDR": {
             "received_time": 1292772126,
             "uploaded_time": 1292772122,
             "latest_telemetry": "10bedc8832fe563c901596c9000031dd"
+            "latest_info": "10bedc8832fe563c901596c9000079fe"
         }
     }
 },

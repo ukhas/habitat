@@ -1,6 +1,6 @@
-================
-Database Schema
-================
+===========
+Full Schema
+===========
 
 habitat stores information in a CouchDB database. At present six types of
 document are stored, identified by a ``type`` key:
@@ -22,6 +22,7 @@ Ideally all of these documents will be administrated by the web interface but
 manual intervention may be required, especially in the case of configuration
 and flight documents, so the schema in use is detailed below.
 
+.. seealso:: :doc:`example`
 
 Configuration Documents
 =======================
@@ -56,7 +57,9 @@ Common Flight Data
 ------------------
 
 The document ID is a standard Couch ID, and each flight document contains the
-``type`` field::
+``type`` field:
+
+.. code-block:: javascript
 
     "c89860d6f68b1f31ac9480ff9f95bb62": {
         "_id": "c89860d6f68b1f31ac9480ff9f95bb62",
@@ -65,18 +68,24 @@ The document ID is a standard Couch ID, and each flight document contains the
 A start and end date is given as a UNIX timestamp and reflects the time
 period that telemetry received for payloads listed on the document will be
 associated with this flight. Typically the end date will be 24 hours after
-the start date::
+the start date:
 
-    "start": 1292771680,
-    "end": 1292772670,
+.. code-block:: javascript
 
-Flight names are used for user interfaces and contain free text::
+        "start": 1292771680,
+        "end": 1292772670,
+
+Flight names are used for user interfaces and contain free text:
+
+.. code-block:: javascript
 
     "name": "Habitat Test Launch",
 
 The ``launch`` dictionary contains the actual time the flight launched as
 well as the timezone it launched in and the location it launched from, in
-decimal degrees::
+decimal degrees:
+
+.. code-block:: javascript
 
     "launch": {
         "time": 1292771780,
@@ -89,7 +98,9 @@ decimal degrees::
 
 The ``metadata`` dictionary contains human readable information about the
 flight which can be displayed in user interfaces and aid in navigating
-archives. All fields are optional and contain free text::
+archives. All fields are optional and contain free text:
+
+.. code-block:: javascript
 
     "metadata": {
         "location": "Churchill College, Cambridge, UK",
@@ -103,16 +114,20 @@ Payload Specific Data
 
 The rest of the Flight document contains a ``payloads`` dictionary, which has
 payload names/callsigns as keys and a dictionary containing payload
-information as the associated value::
+information as the associated value:
+
+.. code-block:: javascript
     
     "payloads": {
         "habitat": {
-            /* Payload information key:value pairs */
+            // Payload information key:value pairs
         },
     }
 
 The ``radio`` dictionary details the frequency (in MHz) and mode of
-transmissions::
+transmissions:
+
+.. code-block:: javascript
 
     "radio": {
         "frequency": 434.075,
@@ -120,7 +135,9 @@ transmissions::
     },
 
 The ``telemetry`` dictionary contains information for decoding the received
-audio from the radio::
+audio from the radio:
+
+.. code-block:: javascript
     
     "telemetry": {
         "modulation": "rtty",
@@ -138,7 +155,9 @@ decoding software appropriately.
 The ``sentence`` dictionary is used by the habitat parser to retrieve data
 from the message strings that listeners upload and as such its design depends
 on the parser in use. An example for the UKHAS protocol parser is given
-below::
+below:
+
+.. code-block:: javascript
 
     "sentence": {
         "protocol": "UKHAS",
@@ -181,7 +200,9 @@ may be specified as a callable, given as a Python path string, or as code
 stored in the document itself, as demonstrated below. In the case of callable
 filters, a ``config`` dictionary may be given which will be passed to the
 function along with the message itself, while hotfix filters specify the text
-content of a function which is given ``message`` as its only parameter::
+content of a function which is given ``message`` as its only parameter:
+
+.. code-block:: javascript
 
     "filters": {
         "intermediate": [
@@ -202,7 +223,9 @@ content of a function which is given ``message`` as its only parameter::
     },
 
 Finally, the ``chasers`` dictionary lists listeners who are out chasing the
-payload and as such may be rendered on the map::
+payload and as such may be rendered on the map:
+
+.. code-block:: javascript
 
     "chasers": [
         "M0RND",
@@ -233,25 +256,39 @@ encoded representation of the uploaded data as their document ID. This helps
 prevent a race condition if two people attempt to submit the same string at
 the same time -- Couch will prevent them from both adding an identically IDd
 document, so one can back off and update the first listener's document
-instead::
+instead:
+
+.. code-block:: javascript
 
     "8bcee9a6f1d0182f1cf1c23c3650d3e6d50a3f46737205b2f3929c7da674e082": {
         "_id": "8bcee9a6f1d0182f1cf1c23c3650d3e6d50a3f46737205b2f3929c7da674e082",
 
-The ``type`` field is set to ``payload_telemetry``::
+The ``type`` field is set to ``payload_telemetry``:
+
+.. code-block:: javascript
 
     "type": "payload_telemetry",
 
 As the listener clocks may be inaccurate, we attempt to calculate the
 time each piece of telemetry was received. This estimated value is stored
-in ``estimated_received_time``::
+in ``estimated_received_time``:
+
+.. code-block:: javascript
     
     "estimated_received_time": 1292772125,
 
 The information parsed out of the message string is stored in the ``data``
-dictionary, directly as returned by the parser::
+dictionary, directly as returned by the parser:
+
+.. seealso:: :doc:`../messages`, :doc:`example`,
+             :py:mod:`habitat.parser`, :py:mod:`habitat.parser_modules`
+
+.. code-block:: javascript
 
     "data": {
+        "_protocol": "UKHAS",
+        "_raw": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ=="
+        "_sentence": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681"
         "payload": "habitat",
         "message_count": 123,
         "time": {
@@ -263,30 +300,32 @@ dictionary, directly as returned by the parser::
         "longitude": 138.8568,
         "altitude": 0,
         "speed": 0.0,
-        "custom_string": "hab",
-        "_raw": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ==",
-        "_sentence": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681",
-        "_protocol": "UKHAS"
+        "custom_string": "hab"
     }
 
 Finally, there is a list of receivers -- listeners who submitted this
 piece of telemetry. For each receiver, we store their callsign or identifier
 as the key, and inside that dictionary the time they believe they received
 the packet (based on their local clock), the time we received their
-submission (based on the server clock) and the CouchID of their latest
+submission (based on the server clock), the CouchID of their latest
 piece of listener telemetry, used to locate them when they received that
-message (see the next section)::
+message (see the next section), and the CouchID of their latest listener
+information document:
+
+.. code-block:: javascript
 
     "receivers": {
         "M0RND": {
             "received_time": 1292772125,
             "uploaded_time": 1292772130,
-            "latest_telemetry": "10bedc8832fe563c901596c900001906"
+            "latest_telemetry": "10bedc8832fe563c901596c900001906",
+            "latest_info": "10bedc8832fe563c901596c900038917"
         },
         "M0ZDR": {
             "received_time": 1292772126,
             "uploaded_time": 1292772122,
             "latest_telemetry": "10bedc8832fe563c901596c9000031dd"
+            "latest_info": "10bedc8832fe563c901596c9000079fe"
         }
     }
 
@@ -296,7 +335,9 @@ Listener Telemetry
 Listener telemetry documents are shorter and simpler than payload telemetry.
 Each consists of a Couch ID, a ``type`` field of ``listener_telemetry``,
 the time the document was uploaded and some basic data about the listener,
-typically a callsign, time and GPS position::
+typically a callsign, time and GPS position:
+
+.. code-block:: javascript
 
     "10bedc8832fe563c901596c900001906": {
         "type": "listener_telemetry",
@@ -323,7 +364,9 @@ are essentially free-form, used to display information of interest in the
 user interface. They use Couch IDs for document IDs, and may typically
 contain information such as a human readable location, the radio or antenna
 system in use, a real name and a callsign or other identifier. An example
-follows::
+follows:
+
+.. code-block:: javascript
 
     "10bedc8832fe563c901596c9000026d3": {
         "type": "listener_info", 

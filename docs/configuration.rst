@@ -7,18 +7,24 @@ Startup Configuration
 
 There are two areas of configuration for habitat. At startup, a CouchDB
 database must be identified by a URI and database name, and a socket file given
-for CGI communications. These can be given either as command line arguments::
-    
+for CGI communications. These can be given either as command line arguments:
+
+.. code-block:: bash
+
     habitat.py -c http://user:pass@server:port -d database -s /tmp/socket
 
 habitat will also load configuration options from a configuration file. By
 default it will attempt to load /etc/habitat/habitat.cfg but won't complain
-if it can't. The config file location can be overridden on the command line::
-    
+if it can't. The config file location can be overridden on the command line:
+
+.. code-block:: bash
+
     habitat.py -f /etc/habitat/habitat_alternative.cfg
 
-The format of the configuration file is as follows::
-    
+The format of the configuration file is as follows:
+
+.. code-block:: ini
+
     [habitat]
     couch_uri = http://username:password@server:port
     couch_db = database
@@ -43,7 +49,9 @@ Message Server Configuration
 ----------------------------
 
 The message server takes a list of sinks that should be loaded at startup,
-given as Python path strings. An example configuration might be::
+given as Python path strings. An example configuration might be:
+
+.. code-block:: javascript
 
     "message_server_config": {
         "_id": "message_server_config",
@@ -70,7 +78,9 @@ The list of modules is given in priority order, with the first item on the
 list the first module to be attempted. You should sort them in the order
 you are most likely to receive data in.
 
-An example configuration would be::
+An example configuration would be:
+
+.. code-block:: javascript
 
     "parser_config": {
         "_id": "parser_config",
