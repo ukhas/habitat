@@ -20,6 +20,7 @@ The parser interprets incoming telemetry strings into useful telemetry data.
 """
 
 import time
+import base64
 
 from habitat.message_server import SimpleSink, Message
 from habitat.utils import dynamicloader
@@ -148,7 +149,7 @@ class ParserSink(SimpleSink):
                     continue
 
         if data:
-            data["_raw"] = message.data
+            data["_raw"] = base64.b64encode(message.data)
             new_message = Message(message.source, Message.TELEM, data)
             self.server.push_message(new_message)
         else:

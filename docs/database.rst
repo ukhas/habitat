@@ -228,22 +228,19 @@ payloads, such as position.
 Payload Telemetry
 -----------------
 
-Unlike other documents, payload telemetry uses the SHA256 sum of the sentence
-string as their document ID. This helps prevent a race condition if two
-people attempt to submit the same string at the same time -- Couch will
-prevent them from both adding an identically IDd document, so one can back
-off and update the first listener's document instead::
+Unlike other documents, payload telemetry uses the SHA256 sum of the base64
+encoded representation of the uploaded data as their document ID. This helps
+prevent a race condition if two people attempt to submit the same string at
+the same time -- Couch will prevent them from both adding an identically IDd
+document, so one can back off and update the first listener's document
+instead::
 
-    "ab2a7300684278180d5d26d614a85139d186a5a09038bbbfcfbfce07f953507b": {
-        "_id": "ab2a7300684278180d5d26d614a85139d186a5a09038bbbfcfbfce07f953507b",
+    "8bcee9a6f1d0182f1cf1c23c3650d3e6d50a3f46737205b2f3929c7da674e082": {
+        "_id": "8bcee9a6f1d0182f1cf1c23c3650d3e6d50a3f46737205b2f3929c7da674e082",
 
 The ``type`` field is set to ``payload_telemetry``::
 
     "type": "payload_telemetry",
-
-The message string as received by the listener is in the ``message`` field::
-
-    "message": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681",
 
 As the listener clocks may be inaccurate, we attempt to calculate the
 time each piece of telemetry was received. This estimated value is stored
@@ -266,7 +263,10 @@ dictionary, directly as returned by the parser::
         "longitude": 138.8568,
         "altitude": 0,
         "speed": 0.0,
-        "custom_string": "hab"
+        "custom_string": "hab",
+        "_raw": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ==",
+        "_sentence": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681",
+        "_protocol": "UKHAS"
     }
 
 Finally, there is a list of receivers -- listeners who submitted this

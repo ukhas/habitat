@@ -337,4 +337,4 @@ class TestParserSink(object):
         assert self.server.message.source.ip == "123.123.123.123"
         assert self.server.message.type == Message.TELEM
         assert self.server.message.data == {"data": True,
-            "_protocol": "Fake", "_raw": "test message"}
+            "_protocol": "Fake", "_raw": "dGVzdCBtZXNzYWdl"}
