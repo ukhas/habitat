@@ -56,7 +56,10 @@ the initialiser of the :py:class:`Listener <habitat.message_server.Listener>`
 class, which imposes the restriction that the callsign must be composed of
 alphanumeric and /_ characters only (``a-zA-Z0-9/_``).
 The resultant Listener object is the first argument to the initialiser of
-:py:class:`Message <habitat.message_server.Message>`
+:py:class:`Message <habitat.message_server.Message>`. Note that the callsign
+that the information in **LISTENER_TELEM** and **LISTENER_INFO** messages
+applies to is naturally ``message.source.callsign``, whereas for
+**TELEM** and **RECEIVED_TELEM** messages it is ``message.data["payload"]``.
 
 **type** must be the name of one of the message types (below), and cannot be
 **TELEM** - these types of messages are created by the Parser and cannot be
@@ -130,7 +133,6 @@ current location, like so:
 
     "data":
     {
-        "callsign": "M0RND",
         "time":
         {
             "hour": 12,
