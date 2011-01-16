@@ -28,7 +28,9 @@ class PushbackSink():
 
         if self.status == 0:
             assert message.type == Message.RECEIVED_TELEM
-            self.pbmsg = Message(message.source, Message.TELEM, message.data)
+            self.pbmsg = Message(message.source, Message.TELEM,
+                                 message.time_created, message.time_received,
+                                 message.data)
             self.status = 1
             self.server.push_message(self.pbmsg)
         elif self.status == 1:

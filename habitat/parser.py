@@ -150,7 +150,9 @@ class ParserSink(SimpleSink):
 
         if data:
             data["_raw"] = base64.b64encode(message.data)
-            new_message = Message(message.source, Message.TELEM, data)
+            new_message = Message(message.source, Message.TELEM,
+                                  message.time_created, message.time_received,
+                                  data)
             self.server.push_message(new_message)
         else:
             raise ValueError("No data could be parsed.") 

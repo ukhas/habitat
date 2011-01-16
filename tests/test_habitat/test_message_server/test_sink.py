@@ -167,18 +167,20 @@ class TestSink:
     def check_messagecount(self, sinkclass):
         sink = sinkclass(FakeServer())
         assert sink.message_count == 0
-        sink.push_message(Message(self.source, Message.TELEM, None))
-        sink.push_message(Message(self.source, Message.TELEM, None))
-        sink.push_message(Message(self.source, Message.TELEM, None))
-        sink.push_message(Message(self.source, Message.TELEM, None))
+        m = Message(self.source, Message.TELEM, 0, 0, None)
+        sink.push_message(m)
+        sink.push_message(m)
+        sink.push_message(m)
+        sink.push_message(m)
         sink.flush()
         assert sink.message_count == 0
-        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, None))
+        m = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
+        sink.push_message(m)
         sink.flush()
         assert sink.message_count == 1
-        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, None))
-        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, None))
-        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, None))
+        sink.push_message(m)
+        sink.push_message(m)
+        sink.push_message(m)
         sink.flush()
         assert sink.message_count == 4
         sink.shutdown()
@@ -197,7 +199,7 @@ class TestSink:
         assert repr(sink) == locked_format
         troll.release()
 
-        message = Message(self.source, Message.RECEIVED_TELEM, None)
+        message = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
 
         sink.push_message(message)
         sink.push_message(message)
@@ -233,7 +235,7 @@ class TestSink:
         assert repr(sink) == locked_format
         troll.release()
 
-        message = Message(self.source, Message.RECEIVED_TELEM, None)
+        message = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
 
         sink.push_message(message)
         sink.push_message(message)
@@ -377,11 +379,12 @@ class TestSink:
         yield self.check_push_requested_message, sink
 
     def check_push_unwanted_message(self, sink):
-        sink.push_message(Message(self.source, Message.TELEM, None))
+        message = Message(self.source, Message.TELEM, 0, 0, None)
+        sink.push_message(message)
         assert sink.test_messages == []
 
     def check_push_requested_message(self, sink):
-        message = Message(self.source, Message.RECEIVED_TELEM, 100)
+        message = Message(self.source, Message.RECEIVED_TELEM, 0, 0, 100)
         sink.push_message(message)
         assert sink.test_messages == [message]
         assert sink.test_messages[0].data == 100
@@ -393,9 +396,12 @@ class TestSink:
     def check_sink_changing_types_push(self, sink_class):
         sink = sink_class(FakeServer())
 
-        sink.push_message(Message(self.source, Message.LISTENER_INFO, 1))
-        sink.push_message(Message(self.source, Message.LISTENER_INFO, 2))
-        sink.push_message(Message(self.source, Message.RECEIVED_TELEM, 3))
+        sink.push_message(Message(self.source, Message.LISTENER_INFO,
+                                  0, 0, 1))
+        sink.push_message(Message(self.source, Message.LISTENER_INFO,
+                                  0, 0, 2))
+        sink.push_message(Message(self.source, Message.RECEIVED_TELEM,
+                                  0, 0, 3))
 
         # Clean up threaded sinks, do nothing to simple sinks.
         sink.shutdown()
@@ -406,11 +412,11 @@ class TestSink:
         sink = FakeThreadedSink(FakeServer())
 
         a = ThreadedPush(sink, Message(self.source,
-            Message.LISTENER_INFO, 1))
+            Message.LISTENER_INFO, 0, 0, 1))
         b = ThreadedPush(sink, Message(self.source,
-            Message.LISTENER_INFO, 2))
+            Message.LISTENER_INFO, 0, 0, 2))
         c = ThreadedPush(sink, Message(self.source,
-            Message.RECEIVED_TELEM, 3))
+            Message.RECEIVED_TELEM, 0, 0, 3))
 
         for t in [a, b, c]:
             t.start()
@@ -429,7 +435,7 @@ class TestSink:
         # Testing a race condition is quite difficult. (TODO ?)
         # SlowSink.message() will time.sleep(0.02)
         sink = sink_class(FakeServer())
-        message = Message(self.source, Message.TELEM, None)
+        message = Message(self.source, Message.TELEM, 0, 0, None)
         t = ThreadedPush(sink, message)
 
         t.start()

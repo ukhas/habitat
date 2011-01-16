@@ -38,29 +38,40 @@ class TestMessage:
 
     def test_initialiser_accepts_and_stores_data(self):
         mydata = {"asdf": "defg", "hjkl": "yuio"}
-        message = Message(self.source, Message.RECEIVED_TELEM, mydata)
+        message = Message(self.source, Message.RECEIVED_TELEM,
+                          18297895, 1238702, mydata)
         assert message.source == self.source
         assert message.type == Message.RECEIVED_TELEM
+        assert message.time_created == 18297895
+        assert message.time_received == 1238702
         assert message.data == mydata
 
     @raises(TypeError)
     def test_initialiser_rejects_garbage_source(self):
-        Message("asdf", Message.RECEIVED_TELEM, "asdf")
+        Message("asdf", Message.RECEIVED_TELEM, 123456, 123456, "asdf")
 
     @raises(TypeError)
     def test_initialiser_rejects_null_source(self):
-        Message(None, Message.RECEIVED_TELEM, "asdf")
+        Message(None, Message.RECEIVED_TELEM, 123456, 123456, "asdf")
 
     @raises(ValueError)
     def test_initialiser_rejects_invalid_type(self):
-        Message(self.source, 951, "asdf")
+        Message(self.source, 951, 123456, 123456, "asdf")
 
     @raises(ValueError)
     def test_initialiser_rejects_garbage_type(self):
-        Message(self.source, "asdf", "asdf")
+        Message(self.source, "asdf", 123456, 123456, "asdf")
 
     def test_initialiser_allows_no_data(self):
-        Message(self.source, Message.RECEIVED_TELEM, None)
+        Message(self.source, Message.RECEIVED_TELEM, 123456, 123456, None)
+
+    @raises(TypeError)
+    def test_initialiser_rejects_garbage_time_created(self):
+        Message(self.source, Message.TELEM, None, 123456, "asdf")
+
+    @raises(ValueError)
+    def test_initialiser_rejects_garbage_time_received(self):
+        Message(self.source, Message.TELEM, 1235123, "lolol", "asdf")
 
     @raises(ValueError)
     def test_validate_type_rejects_garbage_type(self):
@@ -74,13 +85,11 @@ class TestMessage:
         Message.validate_type(Message.LISTENER_TELEM)
 
     def test_repr(self):
-        repr_format = "<habitat.message_server.Message (%s) from %s: %s>"
+        repr_format = "<habitat.message_server.Message (%s) from %s>"
 
         for type in Message.types:
-            for data in [None, 123, "testing", {"data": 123, "more": "asdf"}]:
-                assert repr(Message(self.source, type, data)) == \
-                    repr_format % (Message.type_names[type],
-                                   repr(self.source), repr(data))
+            assert repr(Message(self.source, type, 123345, 123435, None)) == \
+                repr_format % (Message.type_names[type], repr(self.source))
 
 class TestListener:
     def setup(self):
