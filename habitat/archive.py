@@ -74,8 +74,8 @@ class ArchiveSink(SimpleSink):
         over anything in the database (though no data will be deleted without
         anything to replace it).
 
-        When new **LISTENER_TELEM** messages come in, they are directly created
-        as a new document.
+        When new **LISTENER_TELEM** messages come in, they are directly
+        created as a new document.
 
         When new **LISTENER_INFO** messages are received, a check is done on
         this callsign's latest document and a new one is only created if the
@@ -86,8 +86,28 @@ class ArchiveSink(SimpleSink):
         elif message.type == Message.TELEM:
             pass
         elif message.type == Message.LISTENER_INFO:
-            pass
+            doc = {"type": "listener_info", "data": message.data}
+            doc["data"]["callsign"] = message.source.callsign
+            lastdoc = self._get_listener_telem_doc(message.source.callsign)
+            if not lastdoc or doc["data"] != lastdoc["data"]:
+                self.server.db.save_doc(doc)
         elif message.type == Message.LISTENER_TELEM:
             doc = {"type": "listener_telem", "data": message.data}
             doc["data"]["callsign"] = message.source.callsign
             self.server.db.save_doc(doc)
+
+    def _get_listener_telem_doc(self, callsign):
+        """
+        Try to get the latest LISTENER_TELEM document from the database
+        for the given callsign, returning None if none could be found.
+        """
+        startkey = [callsign, None]
+        result = self.server.db.view("habitat/payload_config", limit = 1,
+                include_docs = True, startkey=startkey).first()
+        try:
+            if not result or result["doc"]["data"]["callsign"] != callsign:
+                return None
+        except (KeyError):
+            return None
+
+        return result["doc"]    
