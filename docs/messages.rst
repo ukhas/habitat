@@ -5,11 +5,11 @@ Message Data and HTTP Post Format
 Every :py:class:`Message <habtiat.message_server.Message>` object has three
 important attributes:
 
- - ``message.source``: a :py:class:`Listener <habitat.message_server.Listener>`
-   object that describes where the message came from (essentially only
-   ``message.source.callsign`` and ``message.source.ip`` are of importance)
- - ``message.type``: one of 4 (integer) types
- - ``message.data``: a dict of key:value pairs
+* ``message.source``: a :py:class:`Listener <habitat.message_server.Listener>`
+  object that describes where the message came from (essentially only
+  ``message.source.callsign`` and ``message.source.ip`` are of importance)
+* ``message.type``: one of 4 (integer) types
+* ``message.data``: a dict of key:value pairs
 
 The format of the ``data`` dict depends entirely on the type of message it is.
 
@@ -158,16 +158,16 @@ to parse the data. It varies with protocol, but an example is provided below.
 
 Certain keys are normally present:
 
- - **_protocol**: The name of the parser module used, as specified in its
-   configuration document (``db["parser_config"]["modules"][n]["name"]``)
- - **_raw**: The raw, binary, input to the parser, in base64.
- - **_sentence**: If the protocol used was an ASCII protocol, and there were
-   no errors, and every character can be represented as an ascii character,
-   the input to the parser in ascii form.
- - **payload**: The callsign of the payload
- - **message_count**: sequential message number, increases for each message
-   transmitted by the payload
- - **time**, **latitude**, **longitude**, **altitude**, **speed**: GPS data
+* **_protocol**: The name of the parser module used, as specified in its
+  configuration document (``db["parser_config"]["modules"][n]["name"]``)
+* **_raw**: The raw, binary, input to the parser, in base64.
+* **_sentence**: If the protocol used was an ASCII protocol, and there were
+  no errors, and every character can be represented as an ascii character,
+  the input to the parser in ascii form.
+* **payload**: The callsign of the payload
+* **message_count**: sequential message number, increases for each message
+  transmitted by the payload
+* **time**, **latitude**, **longitude**, **altitude**, **speed**: GPS data
 
 .. code-block:: javascript
 

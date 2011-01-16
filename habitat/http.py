@@ -123,13 +123,13 @@ class SCGIApplication(InsertApplication,
         The following arguments to **__init__** are passed to the
         initialiser of InsertApplication:
 
-         - *server*: the :py:class:`habitat.message_server.Server`
-         - *program*: the :py:class:`habitat.main.Program` object
+        * *server*: the :py:class:`habitat.message_server.Server`
+        * *program*: the :py:class:`habitat.main.Program` object
 
         The following arguments to **__init__** are passed to the
         initialiser of SocketServer.UnixStreamServer
 
-         - *socket_file*: string - the path of the socket to listen on
+        * *socket_file*: string - the path of the socket to listen on
 
         *timeout*: the timeout for all connections handled by
         the SCGI server.

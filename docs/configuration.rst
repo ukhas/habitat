@@ -69,10 +69,10 @@ The parser sink takes a list of parser modules that should be loaded at
 startup, again given as Python path strings but with some additional
 information:
 
-    * Name, to identify the parser module when a payload specifies it should be
-      used
-    * Pre-filters, Python functions that should be executed before any data is
-      passed to this module
+* Name, to identify the parser module when a payload specifies it should be
+  used
+* Pre-filters, Python functions that should be executed before any data is
+  passed to this module
 
 The list of modules is given in priority order, with the first item on the
 list the first module to be attempted. You should sort them in the order

@@ -107,15 +107,15 @@ class ParserSink(SimpleSink):
         
         These fields may include:
 
-            * _protocol which gives the parser module name that was used to
-              decode this message
-            * _used_default_config is a boolean value set to True if a
-              default configuration was used for the module as no specific
-              configuration could be found
-            * _raw gives the original submitted data
-            * _sentence gives the ASCII sentence from the UKHAS parser
-            * _extra_data from the UKHAS parser, where the sentence contained
-              more data than the UKHAS parser was configured for
+        * _protocol which gives the parser module name that was used to
+          decode this message
+        * _used_default_config is a boolean value set to True if a
+          default configuration was used for the module as no specific
+          configuration could be found
+        * _raw gives the original submitted data
+        * _sentence gives the ASCII sentence from the UKHAS parser
+        * _extra_data from the UKHAS parser, where the sentence contained
+          more data than the UKHAS parser was configured for
 
         Parser modules should be wary when outputting field names with
         leading underscores.
@@ -181,8 +181,8 @@ class ParserModule(object):
 
     ParserModules
 
-     - can be given various configuration parameters.
-     - should probably inherit from **ParserModule**.
+    * can be given various configuration parameters.
+    * should probably inherit from **ParserModule**.
 
     """
     def __init__(self, parser):

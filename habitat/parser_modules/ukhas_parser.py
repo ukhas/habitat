@@ -95,11 +95,11 @@ Typical configuration (part of a payload dictionary in a flight document):
 
 Supported types include:
 
- - string
- - float
- - int
- - time
- - coordinate
+* string
+* float
+* int
+* time
+* coordinate
 
 """
 

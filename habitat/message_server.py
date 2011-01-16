@@ -249,27 +249,27 @@ class Sink(object):
     update the internal set of message-types which the sink wishes to
     receive. These functions are for use by the sink class.
 
-     - **Sink.add_type**
-     - **Sink.add_types**
-     - **Sink.remove_type**
-     - **Sink.remove_types**
-     - **Sink.set_types**
-     - **Sink.clear_types**
+    * **Sink.add_type**
+    * **Sink.add_types**
+    * **Sink.remove_type**
+    * **Sink.remove_types**
+    * **Sink.set_types**
+    * **Sink.clear_types**
 
     They also will have the following functions, which are used
     internally by the message server
 
-     - :py:meth:`Sink.push_message`
-     - :py:meth:`Sink.flush`
-     - :py:meth:`Sink.shutdown`
+    * :py:meth:`Sink.push_message`
+    * :py:meth:`Sink.flush`
+    * :py:meth:`Sink.shutdown`
 
     A sink must define these functions:
 
-     - **setup()**: called once; the sink must call some of the
-       ``self.*type*`` functions in order to set up the set of types
-       that the sink would like to receive
-     - **message(message)**: called whenever a message is received for
-       the sink to process
+    * **setup()**: called once; the sink must call some of the
+      ``self.*type*`` functions in order to set up the set of types
+      that the sink would like to receive
+    * **message(message)**: called whenever a message is received for
+      the sink to process
 
     """
 
@@ -370,10 +370,10 @@ class SimpleSink(Sink):
 
     It must:
 
-      - be non blocking
-      - be thread safe (however you can't use mutexes, these block)
-      - tolerate multiple calls to **message** by multiple threads,
-        simultaneously
+    * be non blocking
+    * be thread safe (however you can't use mutexes, these block)
+    * tolerate multiple calls to **message** by multiple threads,
+      simultaneously
 
     If the sink wishes to place messages "back into" the server the it
     must tolerate recusrion (i.e., your **message** method will
@@ -545,16 +545,16 @@ class Message(object):
 
     After initialisation, the data is available in
 
-     - **message.source**
-     - **message.type**
-     - **message.data**
+    * **message.source**
+    * **message.type**
+    * **message.data**
 
     The following message types are available:
 
-     - **Message.RECEIVED_TELEM**: received telemetry string
-     - **Message.LISTENER_INFO**: listener information
-     - **Message.LISTENER_TELEM**: listener telemetry
-     - **Message.TELEM**: (parsed) telemetry data
+    * **Message.RECEIVED_TELEM**: received telemetry string
+    * **Message.LISTENER_INFO**: listener information
+    * **Message.LISTENER_TELEM**: listener telemetry
+    * **Message.TELEM**: (parsed) telemetry data
 
     """
 

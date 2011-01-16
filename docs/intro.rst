@@ -20,7 +20,8 @@ used to store data in CouchDB, and provides reference documentation for the
 habitat source code.
 
 Useful habitat links:
-    * `habitat on github <http://github.com/ukhas/habitat/>`_
-    * `habitat's continuous integration server <http://ci.habhub.org/>`_
-    * `this documentation <http://habitat.habhub.org/docs/>`_
-    * `habitat home page <http://habitat.habhub.org/>`_
+
+* `habitat on github <http://github.com/ukhas/habitat/>`_
+* `habitat's continuous integration server <http://ci.habhub.org/>`_
+* `this documentation <http://habitat.habhub.org/docs/>`_
+* `habitat home page <http://habitat.habhub.org/>`_

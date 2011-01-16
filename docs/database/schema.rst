@@ -5,18 +5,18 @@ Full Schema
 habitat stores information in a CouchDB database. At present six types of
 document are stored, identified by a ``type`` key:
 
-    * Configuration documents for habitat itself (``type: "config"``)
-    * Flight documents detailing a balloon flight and including payload
-      settings (``type: "flight"``)
-    * Sandbox documents containing test payload configuration settings
-      not in a flight (``type: "sandbox"``)
-    * Payload Telemetry documents containing parsed information from a
-      telemetry message transmitted by a payload and associated with a Flight
-      (``type: "payload_telemetry"``)
-    * Listener telemetry documents containing position data on someone
-      listening to a payload (``type: "listener_telemetry"``)
-    * Listener information documents containing metadata on a listener such as
-      name and radio (``type: "listener_info"``)
+* Configuration documents for habitat itself (``type: "config"``)
+* Flight documents detailing a balloon flight and including payload
+  settings (``type: "flight"``)
+* Sandbox documents containing test payload configuration settings
+  not in a flight (``type: "sandbox"``)
+* Payload Telemetry documents containing parsed information from a
+  telemetry message transmitted by a payload and associated with a Flight
+  (``type: "payload_telemetry"``)
+* Listener telemetry documents containing position data on someone
+  listening to a payload (``type: "listener_telemetry"``)
+* Listener information documents containing metadata on a listener such as
+  name and radio (``type: "listener_info"``)
 
 Ideally all of these documents will be administrated by the web interface but
 manual intervention may be required, especially in the case of configuration
@@ -72,8 +72,8 @@ the start date:
 
 .. code-block:: javascript
 
-        "start": 1292771680,
-        "end": 1292772670,
+    "start": 1292771680,
+    "end": 1292772670,
 
 Flight names are used for user interfaces and contain free text:
 

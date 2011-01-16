@@ -254,15 +254,15 @@ class Program(object):
 
         This method does the following:
 
-         - calls :py:func:`get_options`
-         - calls :py:func:`setup_logging` with appropriate arguments
-         - creates the CouchDB connection object and tests for connectivity
-         - creates a :py:class:`habitat.message_server.Server`
-         - creates a :py:class:`habitat.http.SCGIApplication`
-         - creates a :py:class:`SignalListener`
-         - starts the SCGI app thread
-         - starts the Program thread (see :py:meth:`Program.run`)
-         - starts the SignalListener thread
+        * calls :py:func:`get_options`
+        * calls :py:func:`setup_logging` with appropriate arguments
+        * creates the CouchDB connection object and tests for connectivity
+        * creates a :py:class:`habitat.message_server.Server`
+        * creates a :py:class:`habitat.http.SCGIApplication`
+        * creates a :py:class:`SignalListener`
+        * starts the SCGI app thread
+        * starts the Program thread (see :py:meth:`Program.run`)
+        * starts the SignalListener thread
 
         """
 
@@ -331,15 +331,15 @@ class Program(object):
         return instantly, the actual work requested by calling those
         methods is done by this thread.
 
-         - **RELOAD**: To be implemented
-         - **SHUTDOWN**: shuts down the :py:class:`SignalListener`,
-           :py:class:`habitat.http.SCGIApplication` and the
-           :py:class:`habitat.message_server.Server`, then returns,
-           killing this thread (``Program.thread``).
-           Having shut down the above three, there should be only two
-           threads executing: MainThread, which will be blocked in
-           ``Program.thread.join()``, and this thread. Therefore,
-           immediately after this function returns, the process exits.
+        * **RELOAD**: To be implemented
+        * **SHUTDOWN**: shuts down the :py:class:`SignalListener`,
+          :py:class:`habitat.http.SCGIApplication` and the
+          :py:class:`habitat.message_server.Server`, then returns,
+          killing this thread (``Program.thread``).
+          Having shut down the above three, there should be only two
+          threads executing: MainThread, which will be blocked in
+          ``Program.thread.join()``, and this thread. Therefore,
+          immediately after this function returns, the process exits.
 
         """
 
@@ -365,12 +365,12 @@ class SignalListener(object):
     The documentation for the :py:mod:`signal` module contains
     information on the various signal constant definitions.
 
-     - **SIGTERM**, **SIGINT**: calls :py:meth:`Program.shutdown`
-     - **SIGHUP**: calls :py:meth:`Program.reload`
-     - **SIGUSR1**: exits the :py:meth:`listen` loop by
-       calling :py:func:`sys.exit` / raising
-       :py:exc:`SystemExit <exceptions.SystemExit>`
-       (NB: the :py:meth:`listen` loop will be running in **MainThread**)
+    * **SIGTERM**, **SIGINT**: calls :py:meth:`Program.shutdown`
+    * **SIGHUP**: calls :py:meth:`Program.reload`
+    * **SIGUSR1**: exits the :py:meth:`listen` loop by
+      calling :py:func:`sys.exit` / raising
+      :py:exc:`SystemExit <exceptions.SystemExit>`
+      (NB: the :py:meth:`listen` loop will be running in **MainThread**)
 
     **SIGUSR1** is meant for internal use only, and is
     used to terminate the signal-listening thread when the program wishes

@@ -22,15 +22,15 @@ A generic dynamic python module loader.
 The main function to call is load(). In addition, several functions
 to quickly test the loaded object for certain conditions are provided:
 
- - **isclass**
- - **isfunction**
- - **isgeneratorfunction**
- - **isstandardfunction** (``isfunction and not isgeneratorfunction``)
- - **iscallable**
- - **issubclass**
- - **hasnumargs**
- - **hasmethod**
- - **hasattr**
+* **isclass**
+* **isfunction**
+* **isgeneratorfunction**
+* **isstandardfunction** (``isfunction and not isgeneratorfunction``)
+* **iscallable**
+* **issubclass**
+* **hasnumargs**
+* **hasmethod**
+* **hasattr**
 
 Further to that, functions expectisclass, expectisfunction, e.t.c, are
 provided which are identical to the above except they raise either a
