@@ -85,40 +85,6 @@ class TestArchiveSink(object):
         assert Message.TELEM in self.sink.types
 
     def test_stores_new_LISTENER_TELEM_documents(self):
-        # TODO: Should also involve a time
         self.sink.push_message(FakeListenerTelemMessage())
         assert len(self.server.db.docs) == 1
         assert self.server.db.docs[0] == listener_telem_doc
-
-    def test_rejects_LISTENER_TELEM_docs_without_data(self):
-        for key in ["latitude", "longitude", "altitude", "time"]:
-            data = deepcopy(listener_telem_data)
-            del data[key]
-            assert_raises(ValueError, self.sink.push_message,
-                FakeListenerTelemMessage(data))
-        for key in ["hour", "minute", "second"]:
-            data = deepcopy(listener_telem_data)
-            del data["time"][key]
-            assert_raises(ValueError, self.sink.push_message,
-                FakeListenerTelemMessage(data))
-
-    def test_rejects_LISTENER_TELEM_docs_with_invalid_data(self):
-        for key, newdata in (
-                ("latitude", "bad"),
-                ("longitude", "bad"),
-                ("altitude", "bad"),
-                ("time", "bad"),
-                ("time", {"hour": "bad", "minute": 32, "second": 32}),
-                ("time", {"hour": 12, "minute": "bad", "second": 32}),
-                ("time", {"hour": 12, "minute": 32, "second": "bad"}),
-                ("time", {"hour": -1, "minute": 23, "second": 23}),
-                ("time", {"hour": 13, "minute": 23, "second": 23}),
-                ("time", {"hour": 11, "minute": -1, "second": 23}),
-                ("time", {"hour": 11, "minute": 64, "second": 23}),
-                ("time", {"hour": 11, "minute": 11, "second": -1}),
-                ("time", {"hour": 11, "minute": 11, "second": 62})
-                ):
-            data = deepcopy(listener_telem_data)
-            data[key] = newdata
-            assert_raises(ValueError, self.sink.push_message,
-                FakeListenerTelemMessage(data))

@@ -66,11 +66,13 @@ class ArchiveSink(SimpleSink):
                 with their callsign.
 
         When a new **RECEIVED_TELEM** or **TELEM** message comes in, the
-        archive is searched for an existing document and if one is found
-        the new listener is appended to the existing listeners dictionary,
-        otherwise a new document is created. If the message is a **TELEM**
-        and contains data that doesn't exist in the document, that is saved
-        as well.
+        database is checked for an existing document for this message. If none
+        is found, a new one is created: in the case of **RECEIVED_TELEM**, the
+        new one contains the received data in **_raw** in **data**, while for
+        **TELEM** messages all the parsed data is put in **data**. If a
+        document is found, any new data from the current message is written
+        over anything in the database (though no data will be deleted without
+        anything to replace it).
 
         When new **LISTENER_TELEM** messages come in, they are directly created
         as a new document.
@@ -86,34 +88,6 @@ class ArchiveSink(SimpleSink):
         elif message.type == Message.LISTENER_INFO:
             pass
         elif message.type == Message.LISTENER_TELEM:
-            self._add_listener_telem_doc(message)
-
-    def _add_listener_telem_doc(self, message):
-        """Form a new document out of a LISTENER_TELEM message and save it."""
-        doc = {"type": "listener_telem", "data":{}}
-        try:
-            doc["data"]["callsign"] = str(message.source.callsign)
-            doc["data"]["latitude"] = float(message.data["latitude"])
-            doc["data"]["longitude"] = float(message.data["longitude"])
-            doc["data"]["altitude"] = int(message.data["altitude"])
-            doc["data"]["time"] = {}
-            doc["data"]["time"]["hour"] = int(message.data["time"]["hour"])
-            doc["data"]["time"]["minute"] = int(message.data["time"]["minute"])
-            doc["data"]["time"]["second"] = int(message.data["time"]["second"])
-        except KeyError:
-            raise ValueError(
-                "Could not find required data in a LISTENER_TELEM message.")
-        except (ValueError, TypeError):
-            raise ValueError(
-                "Invalid data type found in LISTENER_TELEM message.")
-        hour = doc["data"]["time"]["hour"]
-        minute = doc["data"]["time"]["minute"]
-        second = doc["data"]["time"]["second"]
-        if (
-            hour < 0 or hour > 12 or minute < 0 or minute > 59 or
-            second < 0 or second > 61
-            ):
-                raise ValueError(
-                    "Invalid time value found in LISTENER_TELEM message.")
-        self.server.db.save_doc(doc)
-
+            doc = {"type": "listener_telem", "data": message.data}
+            doc["data"]["callsign"] = message.source.callsign
+            self.server.db.save_doc(doc)
