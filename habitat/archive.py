@@ -20,6 +20,7 @@ ArchiveSink stores messages in a CouchDB datastore.
 """
 
 import hashlib
+import math
 from copy import deepcopy
 
 from habitat.message_server import SimpleSink, Message
@@ -119,6 +120,10 @@ class ArchiveSink(SimpleSink):
             "latest_telem": self._get_listener_telem_docid(callsign),
             "latest_info": self._get_listener_info_docid(callsign)
         }
+        times = []
+        for receiver in doc["receivers"]:
+            times.append(float(doc["receivers"][receiver]["received_time"]))
+        doc["estimated_received_time"] = self._estimate_received_time(times)
         for field in data:
             doc["data"][field] = data[field]
         self.server.db[doc_id] = doc
@@ -168,3 +173,29 @@ class ArchiveSink(SimpleSink):
         except (KeyError, IndexError):
             return None
         return result["id"]
+
+    def _estimate_received_time(self, times):
+        """
+        Estimate the correct received time based on all the available times,
+        by calculating the standard deviation, removing outliers > SD, then
+        iterating if necessary and finally calculating the mean of what's left
+        and returning that.
+        """
+        mean = self._get_mean(times)
+        devs = []
+        for time in times:
+            devs.append(abs(time - mean)**2)
+        sd = math.sqrt(self._get_mean(devs))
+        for time in deepcopy(times):
+            if abs(time - mean) > sd:
+                times.remove(time)
+        return int(self._get_mean(times))
+
+    def _get_mean(self, times):
+        """
+        Calculate the arithmetic mean in a simple iterative fashion.
+        """
+        total = 0
+        for time in times:
+            total += time
+        return total / len(times)

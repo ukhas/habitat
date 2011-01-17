@@ -104,6 +104,8 @@ view_results_wrong = fake_couchdb.ViewResults({
 # Telem and Received Telem docs
 listener_one = FakeListener("habitat_one")
 listener_two = FakeListener("habitat_two")
+listener_three = FakeListener("habitat_three")
+listener_four = FakeListener("habitat_four")
 raw_data = "dGVzdCBtZXNzYWdl"
 parsed_data = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": True}
 parsed_data_two = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": "two"}
@@ -145,7 +147,6 @@ message_new_parsed_from_two.time_received = 16
 
 listener_vr = fake_couchdb.ViewResults({"key": ["habitat_one", 123],
     "id": "abcdef"})
-
 bad_vr = fake_couchdb.ViewResults({"key": ["wrong", 123], "id": "bad"})
 
 class TestArchiveSink(object):
@@ -204,6 +205,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data},
             "receivers": {"habitat_one": {
                 "received_time": 1,
@@ -222,6 +224,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data},
             "receivers": {"habitat_one": {
                 "received_time": 1,
@@ -239,6 +242,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_two)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data},
             "receivers": {
                 "habitat_one": {
@@ -263,6 +267,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -282,6 +287,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_two)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -305,6 +311,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -324,6 +331,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -343,6 +351,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_two)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -367,6 +376,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -386,6 +396,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_two)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -410,6 +421,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -429,6 +441,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_two)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
@@ -453,6 +466,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_new_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True,
                 "newly_parsed": True},
             "receivers": {
@@ -473,6 +487,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_new_parsed_from_two)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data, "parsed_data": True,
                 "newly_parsed": True},
             "receivers": {
@@ -497,6 +512,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data},
             "receivers": {"habitat_one": {
                 "received_time": 1,
@@ -513,6 +529,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data},
             "receivers": {"habitat_one": {
                 "received_time": 1,
@@ -529,6 +546,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data},
             "receivers": {"habitat_one": {
                 "received_time": 1,
@@ -545,6 +563,7 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
+            "estimated_received_time": 1,
             "data": {"_raw": raw_data},
             "receivers": {"habitat_one": {
                 "received_time": 1,
@@ -555,3 +574,32 @@ class TestArchiveSink(object):
         }
         assert doc_id in self.server.db
         assert self.server.db[doc_id] == expected_doc
+
+    def test_ignore_outliers_when_estimating_time(self):
+        m1 = FakeMessage(raw_type, raw_data, listener_one)
+        m1.time_created = 3
+        m2 = FakeMessage(raw_type, raw_data, listener_two)
+        m2.time_created = 3
+        m3 = FakeMessage(raw_type, raw_data, listener_three)
+        m3.time_created = 3
+        m4 = FakeMessage(raw_type, raw_data, listener_four)
+        m4.time_created = 10
+        self.sink.push_message(m1)
+        self.sink.push_message(m2)
+        self.sink.push_message(m3)
+        self.sink.push_message(m4)
+        assert doc_id in self.server.db
+        assert self.server.db[doc_id]["estimated_received_time"] == 3
+
+    def test_finds_time_mean(self):
+        m1 = FakeMessage(raw_type, raw_data, listener_one)
+        m1.time_created = 3
+        m2 = FakeMessage(raw_type, raw_data, listener_two)
+        m2.time_created = 4
+        m3 = FakeMessage(raw_type, raw_data, listener_three)
+        m3.time_created = 5
+        self.sink.push_message(m1)
+        self.sink.push_message(m2)
+        self.sink.push_message(m3)
+        assert doc_id in self.server.db
+        assert self.server.db[doc_id]["estimated_received_time"] == 4
