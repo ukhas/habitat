@@ -128,19 +128,19 @@ message_new_parsed_from_two = FakeMessage(parsed_type, parsed_data_three,
 
 message_raw_from_one.time_created = 1
 message_raw_from_one.time_received = 2
-message_parsed_from_one.time_created = 3
+message_parsed_from_one.time_created = 1
 message_parsed_from_one.time_received = 4
-message_different_parsed_from_one.time_created = 5
+message_different_parsed_from_one.time_created = 1
 message_different_parsed_from_one.time_received = 6
-message_new_parsed_from_one.time_created = 7
+message_new_parsed_from_one.time_created = 1
 message_new_parsed_from_one.time_received = 8
-message_raw_from_two.time_created = 9
+message_raw_from_two.time_created = 1
 message_raw_from_two.time_received = 10
-message_parsed_from_two.time_created = 11
+message_parsed_from_two.time_created = 1
 message_parsed_from_two.time_received = 12
-message_different_parsed_from_two.time_created = 13
+message_different_parsed_from_two.time_created = 1
 message_different_parsed_from_two.time_received = 14
-message_new_parsed_from_two.time_created = 15
+message_new_parsed_from_two.time_created = 1
 message_new_parsed_from_two.time_received = 16
 
 listener_vr = fake_couchdb.ViewResults({"key": ["habitat_one", 123],
@@ -247,7 +247,7 @@ class TestArchiveSink(object):
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 9,
+                    "received_time": 1,
                     "uploaded_time": 10,
                     "latest_telem": None,
                     "latest_info": None
@@ -285,12 +285,12 @@ class TestArchiveSink(object):
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 3,
+                    "received_time": 1,
                     "uploaded_time": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 9,
+                    "received_time": 1,
                     "uploaded_time": 10,
                     "latest_telem": None,
                     "latest_info": None
@@ -308,7 +308,7 @@ class TestArchiveSink(object):
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 3,
+                    "received_time": 1,
                     "uploaded_time": 4,
                     "latest_telem": None,
                     "latest_info": None
@@ -327,7 +327,7 @@ class TestArchiveSink(object):
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 3,
+                    "received_time": 1,
                     "uploaded_time": 4,
                     "latest_telem": None,
                     "latest_info": None
@@ -351,7 +351,7 @@ class TestArchiveSink(object):
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 11,
+                    "received_time": 1,
                     "uploaded_time": 12,
                     "latest_telem": None,
                     "latest_info": None
@@ -370,7 +370,7 @@ class TestArchiveSink(object):
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 3,
+                    "received_time": 1,
                     "uploaded_time": 4,
                     "latest_telem": None,
                     "latest_info": None
@@ -389,12 +389,12 @@ class TestArchiveSink(object):
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 3,
+                    "received_time": 1,
                     "uploaded_time": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 11,
+                    "received_time": 1,
                     "uploaded_time": 12,
                     "latest_telem": None,
                     "latest_info": None
@@ -413,7 +413,7 @@ class TestArchiveSink(object):
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 3,
+                    "received_time": 1,
                     "uploaded_time": 4,
                     "latest_telem": None,
                     "latest_info": None
@@ -432,12 +432,12 @@ class TestArchiveSink(object):
             "data": {"_raw": raw_data, "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 5,
+                    "received_time": 1,
                     "uploaded_time": 6,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 11,
+                    "received_time": 1,
                     "uploaded_time": 12,
                     "latest_telem": None,
                     "latest_info": None
@@ -457,7 +457,7 @@ class TestArchiveSink(object):
                 "newly_parsed": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 7,
+                    "received_time": 1,
                     "uploaded_time": 8,
                     "latest_telem": None,
                     "latest_info": None
@@ -477,12 +477,12 @@ class TestArchiveSink(object):
                 "newly_parsed": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 3,
+                    "received_time": 1,
                     "uploaded_time": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 15,
+                    "received_time": 1,
                     "uploaded_time": 16,
                     "latest_telem": None,
                     "latest_info": None
