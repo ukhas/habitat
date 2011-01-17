@@ -194,7 +194,7 @@ class TestParserSink(object):
             }
         }
         self.server = FakeServer(docs)
-        self.server.db.view_results = fake_view_results
+        self.server.db.default_view_results = fake_view_results
         self.sink = ParserSink(self.server)
     
     def test_sets_data_types(self):
@@ -251,7 +251,7 @@ class TestParserSink(object):
                 flight_doc["payloads"]["habitat"]["sentence"])
     
     def test_uses_default_config_with_empty_results(self):
-        self.server.db.view_results = empty_view_results
+        self.server.db.default_view_results = empty_view_results
         self.server.db["parser_config"]["modules"][0]["default_config"] = \
             default_config
         sink = ParserSink(self.server)
@@ -259,7 +259,7 @@ class TestParserSink(object):
         assert sink.modules[0]["module"].config == default_config
 
     def test_uses_default_config_with_wrong_results(self):
-        self.server.db.view_results = wrong_view_results
+        self.server.db.default_view_results = wrong_view_results
         self.server.db["parser_config"]["modules"][0]["default_config"] = \
             default_config
         sink = ParserSink(self.server)
@@ -268,19 +268,19 @@ class TestParserSink(object):
 
     @raises(ValueError)
     def test_errors_when_no_config_or_default_config_found(self):
-        self.server.db.view_results = empty_view_results
+        self.server.db.default_view_results = empty_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
 
     @raises(ValueError)
     def test_errors_when_no_config_or_default_config_found(self):
-        self.server.db.view_results = wrong_view_results
+        self.server.db.default_view_results = wrong_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
 
     @raises(ValueError)
     def test_errors_when_config_has_wrong_protocol(self):
-        self.server.db.view_results = wrong_protocol_view_results
+        self.server.db.default_view_results = wrong_protocol_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
 

@@ -19,6 +19,9 @@
 ArchiveSink stores messages in a CouchDB datastore.
 """
 
+import hashlib
+from copy import deepcopy
+
 from habitat.message_server import SimpleSink, Message
 from habitat.utils import dynamicloader
 
@@ -82,9 +85,9 @@ class ArchiveSink(SimpleSink):
         new message is different from the current data in the database.
         """
         if message.type == Message.RECEIVED_TELEM:
-            pass
+            self._handle_telem(message, {"_raw": message.data})
         elif message.type == Message.TELEM:
-            pass
+            self._handle_telem(message, message.data)
         elif message.type == Message.LISTENER_INFO:
             doc = {"type": "listener_info", "data": message.data}
             doc["data"]["callsign"] = message.source.callsign
@@ -96,6 +99,30 @@ class ArchiveSink(SimpleSink):
             doc["data"]["callsign"] = message.source.callsign
             self.server.db.save_doc(doc)
 
+    def _handle_telem(self, message, data):
+        """
+        Given a message and (separately) some data, attempt to retrieve
+        the existing telemetry document from the database, merge as
+        appropriate and save the new document.
+        """
+        doc_id = hashlib.sha256(data["_raw"]).hexdigest()
+        doc = {}
+        if doc_id in self.server.db:
+            doc = self.server.db[doc_id]
+        else:
+            doc = {"type": "payload_telemetry", "data": deepcopy(data)}
+            doc["receivers"] = {}
+        callsign = message.source.callsign
+        doc["receivers"][callsign] = {
+            "received_time": message.time_created,
+            "uploaded_time": message.time_received,
+            "latest_telem": self._get_listener_telem_docid(callsign),
+            "latest_info": self._get_listener_info_docid(callsign)
+        }
+        for field in data:
+            doc["data"][field] = data[field]
+        self.server.db[doc_id] = doc
+
     def _get_listener_telem_doc(self, callsign):
         """
         Try to get the latest LISTENER_TELEM document from the database
@@ -103,7 +130,7 @@ class ArchiveSink(SimpleSink):
         """
         startkey = [callsign, None]
         result = self.server.db.view("habitat/payload_config", limit = 1,
-                include_docs = True, startkey=startkey).first()
+            include_docs = True, startkey=startkey).first()
         try:
             if not result or result["doc"]["data"]["callsign"] != callsign:
                 return None
@@ -111,3 +138,33 @@ class ArchiveSink(SimpleSink):
             return None
 
         return result["doc"]    
+
+    def _get_listener_info_docid(self, callsign):
+        """
+        Try to get the document ID for the latest listener info document
+        for this callsign, returning None if not found.
+        """
+        startkey = [callsign, None]
+        result = self.server.db.view("habitat/listener_info", limit = 1,
+            startkey=startkey).first()
+        try:
+            if not result or result["key"][0] != callsign:
+                return None
+        except (KeyError, IndexError):
+            return None
+        return result["id"]
+
+    def _get_listener_telem_docid(self, callsign):
+        """
+        Try to get the document ID for the latest listener telem document
+        for this callsign, returning None if not found.
+        """
+        startkey = [callsign, None]
+        result = self.server.db.view("habitat/listener_telem", limit = 1,
+            startkey=startkey).first()
+        try:
+            if not result or result["key"][0] != callsign:
+                return None
+        except (KeyError, IndexError):
+            return None
+        return result["id"]

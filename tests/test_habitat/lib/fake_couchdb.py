@@ -29,6 +29,7 @@ class ViewResults(object):
     """
     def __init__(self, result=None):
         self.result = result
+        self.results = {}
     def first(self):
         return self.result
 
@@ -42,7 +43,8 @@ class Database(object):
         self.saved_docs = []
         self.view_string = None
         self.view_params = None
-        self.view_results = ViewResults()
+        self.view_results = {}
+        self.default_view_results = ViewResults()
     def __getitem__(self, key):
         return self.docs[key]
     def __setitem__(self, key, item):
@@ -56,5 +58,8 @@ class Database(object):
     def view(self, view, **params):
         self.view_string = view
         self.view_params = params
-        return self.view_results
+        if view in self.view_results:
+            return self.view_results[view]
+        else:
+            return self.default_view_results
 
