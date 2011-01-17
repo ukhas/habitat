@@ -122,14 +122,19 @@ class ParserSink(SimpleSink):
         """
 
         data = None
+
+        try:
+            raw_data = base64.b64decode(message.data)
+        except TypeError:
+            raise ValueError("message.data was not valid base64.")
         
         # Try using real configs
         for module in self.modules:
             try:
-                callsign = module["module"].pre_parse(message.data)
+                callsign = module["module"].pre_parse(raw_data)
                 config = self._find_config_doc(callsign)
                 if config["protocol"] == module["name"]:
-                    data = module["module"].parse(message.data, config)
+                    data = module["module"].parse(raw_data, config)
                     data["_protocol"] = module["name"]
                     break
             except ValueError:
@@ -140,8 +145,8 @@ class ParserSink(SimpleSink):
             for module in self.modules:
                 try:
                     config = module["default_config"]
-                    callsign = module["module"].pre_parse(message.data)
-                    data = module["module"].parse(message.data, config)
+                    callsign = module["module"].pre_parse(raw_data)
+                    data = module["module"].parse(raw_data, config)
                     data["_protocol"] = module["name"]
                     data["_used_default_config"] = True
                     break
@@ -149,7 +154,7 @@ class ParserSink(SimpleSink):
                     continue
 
         if data:
-            data["_raw"] = base64.b64encode(message.data)
+            data["_raw"] = message.data
             new_message = Message(message.source, Message.TELEM,
                                   message.time_created, message.time_received,
                                   data)
