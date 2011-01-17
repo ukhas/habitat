@@ -172,6 +172,8 @@ class FakeMessage(object):
     def __init__(self):
         self.source = FakeListener()
         self.type = Message.RECEIVED_TELEM
+        self.time_created = 1234
+        self.time_received = 5768
         self.data = "test message"
 
 class WrongMessage(object):
@@ -179,6 +181,8 @@ class WrongMessage(object):
     def __init__(self):
         self.source = FakeListener()
         self.type = Message.RECEIVED_TELEM
+        self.time_created = 0
+        self.time_received = 0
         self.data = "wrong"
 
 class TestParserSink(object):
@@ -293,6 +297,8 @@ class TestParserSink(object):
         assert self.server.message
         assert self.server.message.source.callsign == "test callsign"
         assert self.server.message.source.ip == "123.123.123.123"
+        assert self.server.message.time_created == 1234
+        assert self.server.message.time_received == 5768
         assert self.server.message.type == Message.TELEM
         assert self.server.message.data == {"data": True,
             "_protocol": "Fake", "_raw": "dGVzdCBtZXNzYWdl"}

@@ -84,14 +84,19 @@ class InsertApplication(object):
 
         *ip*: string - the IP address of the client
 
-        Arguments should be supplied in ``args``; the following three are
-        required: "callsign", "type", "data". All are user supplied strings
+        Arguments should be supplied in ``args``; the following arguments are
+        required: "callsign", "type", "time_created", "time_uploaded", "data".
+        All are user supplied strings.
+
+        .. seealso:: :doc:`../messages`
         """
 
         # "superset" operation: requires every item in the second set to
         # exist in the first.
-        if not set(args.keys()) >= set(["callsign", "type", "data"]):
-            raise ValueError("required arguments: callsign, type, data")
+        if not set(args.keys()) >= set(["callsign", "type", "time_created",
+                                        "time_uploaded", "data"]):
+            raise ValueError("required arguments: callsign, type, "
+                             "time_created, time_uploaded, data")
 
         source = Listener(args["callsign"], ip)
 
@@ -99,11 +104,21 @@ class InsertApplication(object):
             raise ValueError("invalid type")
 
         type = getattr(Message, args["type"])
+        Message.validate_type(type)
 
         if type in self.FORBIDDEN_TYPES:
             raise ValueError("type forbidden for direct insertion")
 
-        message = Message(source, type, args["data"])
+        time_created = int(args["time_created"])
+        time_uploaded = int(args["time_uploaded"])
+        time_received = int(time.time())
+
+        clock_difference = time_received - time_uploaded
+        time_created += clock_difference
+
+        data = args["data"]
+
+        message = Message(source, type, time_created, time_received, data)
 
         self.server.push_message(message)
 

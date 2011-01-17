@@ -545,9 +545,11 @@ class Message(object):
 
     After initialisation, the data is available in
 
-    * **message.source**
-    * **message.type**
-    * **message.data**
+     - **message.source**
+     - **message.type**
+     - **message.time_created**
+     - **message.time_received**
+     - **message.data**
 
     The following message types are available:
 
@@ -555,6 +557,8 @@ class Message(object):
     * **Message.LISTENER_INFO**: listener information
     * **Message.LISTENER_TELEM**: listener telemetry
     * **Message.TELEM**: (parsed) telemetry data
+
+    .. seealso:: `../messages`
 
     """
 
@@ -564,11 +568,19 @@ class Message(object):
         locals()[type_name] = type
     del type, type_name
 
-    def __init__(self, source, type, data):
+    def __init__(self, source, type, time_created, time_received, data):
         """
         *source*: a Listener object
 
         *type*: one of the type constants
+
+        *time_created*: the time that the event that eventually caused this
+        Message to be created, e.g., for TELEM and RECEIVED_TELEM, this is
+        the time that the telemetry string was received over the radio.
+        (UNIX Timestamp format)
+
+        *time_received*: the time that habitat received the message.
+        (UNIX Timestamp)
 
         *data*: a type-specific data object, which will be validated
         """
@@ -579,8 +591,13 @@ class Message(object):
         dynamicloader.expecthasattr(source, "callsign")
         dynamicloader.expecthasattr(source, "ip")
 
+        time_created = int(time_created)
+        time_received = int(time_received)
+
         self.source = source
         self.type = type
+        self.time_created = time_created
+        self.time_received = time_received
         self.data = data
 
     def __repr__(self):
@@ -592,12 +609,11 @@ class Message(object):
 
         Returns something like:
         ``<RECEIVED_TELEM habitat.message_server.Message from \
-        <habitat.message_server.Listener M0ZDR at 127.0.0.1>: \
-        {"data": "test"}``
+        <habitat.message_server.Listener M0ZDR at 127.0.0.1>>``
         """
 
-        return "<habitat.message_server.Message (%s) from %s: %s>" % \
-               (self.type_names[self.type], repr(self.source), repr(self.data))
+        return "<habitat.message_server.Message (%s) from %s>" % \
+               (self.type_names[self.type], repr(self.source))
 
     @classmethod
     def validate_type(cls, type):

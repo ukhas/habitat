@@ -80,7 +80,7 @@ When the message is received by habitat, it takes the difference between
 difference to **time_created** to get the time that the message was created,
 with clock-difference compensated, to with a few seconds (which is accurate
 enough for our purposes). This "calculated" time, and the real local time
-when habitat received the message, are stored.
+when habitat received the message (**time_received**), are stored.
 
 The type and contents of **data** are entirely specific to the message type.
 **data** is passed as-is to the Message initialiser, but this intialiser will
