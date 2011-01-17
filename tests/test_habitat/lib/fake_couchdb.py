@@ -47,6 +47,8 @@ class Database(object):
         return self.docs[key]
     def __setitem__(self, key, item):
         self.docs[key] = item
+    def __contains__(self, key):
+        return key in self.docs
     def save_doc(self, doc):
         doc_id = unicode(uuid.uuid4())
         self.docs[doc_id] = doc

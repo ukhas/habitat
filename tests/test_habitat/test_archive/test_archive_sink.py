@@ -25,6 +25,32 @@ from test_habitat.lib import fake_couchdb
 from habitat.message_server import Message
 from habitat.archive import ArchiveSink
 
+class FakeServer(object):
+    def __init__(self):
+        self.db = fake_couchdb.Database()
+    def push_message(self, message):
+        pass
+
+class FakeListener(object):
+    def __init__(self, callsign="habitat", ip="123.123.123.123"):
+        self.callsign = callsign
+        self.ip = ip
+
+class FakeMessage(object):
+    def __init__(self, mtype, data, source=None, time_created=12345,
+            time_received=54321):
+        if source:
+            self.source = source
+        else:
+            self.source = FakeListener()
+        self.type = mtype
+        self.data = data
+        self.time_created = time_created
+        self.time_received = time_received
+
+###########################################################
+# Listener Telem docs
+
 listener_telem_data = {
     "time": {
         "hour": 12,
@@ -39,6 +65,9 @@ listener_telem_data = {
 listener_telem_doc = {"type": "listener_telem"}
 listener_telem_doc["data"] = deepcopy(listener_telem_data)
 listener_telem_doc["data"]["callsign"] = "habitat"
+
+###########################################################
+# Listener Info docs
 
 listener_info_data = {
     "name": "habitat project",
@@ -55,6 +84,10 @@ listener_info_doc_wrong["data"]["callsign"] = "wrong"
 listener_info_data_two = deepcopy(listener_info_data)
 listener_info_data_two["rating"] = "xtreme"
 
+listener_info_doc_two = {"type": "listener_info"}
+listener_info_doc_two["data"] = deepcopy(listener_info_data_two)
+listener_info_doc_two["data"]["callsign"] = "habitat"
+
 view_results_none = fake_couchdb.ViewResults()
 
 view_results_old = fake_couchdb.ViewResults({
@@ -67,22 +100,31 @@ view_results_wrong = fake_couchdb.ViewResults({
     "key": ["wrong", "2345"],
     "doc": listener_info_doc_wrong})
 
-class FakeServer(object):
-    def __init__(self):
-        self.db = fake_couchdb.Database()
-    def push_message(self, message):
-        pass
+###########################################################
+# Telem and Received Telem docs
+listener_one = FakeListener("habitat_one")
+listener_two = FakeListener("habitat_two")
+raw_data = "dGVzdCBtZXNzYWdl"
+parsed_data = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": True}
+parsed_data_two = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": "two"}
+parsed_data_three = {"_raw": "dGVzdCBtZXNzYWdl", "newly_parsed": True}
+doc_id = "03bde3390e8a8e803c4cebdc24c73ea6e1fed09d5bb3ab15f3dc364d82cfccc0"
 
-class FakeListener(object):
-    def __init__(self):
-        self.callsign = "habitat"
-        self.ip = "123.123.123.123"
+raw_type = Message.RECEIVED_TELEM
+parsed_type = Message.TELEM
 
-class FakeMessage(object):
-    def __init__(self, mtype, data):
-        self.type = mtype
-        self.data = data
-        self.source = FakeListener()
+message_raw_from_one = FakeMessage(raw_type, raw_data, listener_one)
+message_raw_from_two = FakeMessage(raw_type, raw_data, listener_two)
+message_parsed_from_one = FakeMessage(parsed_type, parsed_data, listener_one)
+message_parsed_from_two = FakeMessage(parsed_type, parsed_data, listener_two)
+message_different_parsed_from_one = FakeMessage(parsed_type, parsed_data_two,
+        listener_one)
+message_different_parsed_from_two = FakeMessage(parsed_type, parsed_data_two,
+        listener_two)
+message_new_parsed_from_one = FakeMessage(parsed_type, parsed_data_three,
+        listener_one)
+message_new_parsed_from_two = FakeMessage(parsed_type, parsed_data_three,
+        listener_two)
 
 class TestArchiveSink(object):
     def setup(self):
@@ -125,6 +167,7 @@ class TestArchiveSink(object):
         self.sink.push_message(
             FakeMessage(Message.LISTENER_INFO, listener_info_data))
         assert len(self.server.db.docs) == 1
+        assert self.server.db.saved_docs[0] == listener_info_doc
 
     def test_does_store_updated_LISTENER_INFO_document(self):
         self.sink.push_message(
@@ -133,3 +176,69 @@ class TestArchiveSink(object):
         self.sink.push_message(
             FakeMessage(Message.LISTENER_INFO, listener_info_data_two))
         assert len(self.server.db.docs) == 2
+        assert self.server.db.saved_docs[0] == listener_info_doc
+        assert self.server.db.saved_docs[1] == listener_info_doc_two
+    
+    def test_raw__no_existing__no_receiver(self):
+        """handles RECEIVED_TELEM with no existing data"""
+        pass
+
+    def test_raw__raw_existing__same_receiver(self):
+        """handles RECEIVED_TELEM with existing raw data from """
+        """the same receiver"""
+        pass
+
+    def test_raw__raw_existing__new_receiver(self):
+        """handles RECEIVED_TELEM with existing raw data from """
+        """another receiver"""
+        pass
+
+    def test_raw__parsed_existing__same_receiver(self):
+        """handles RECEIVED_TELEM with existing parsed data from """
+        """the same receiver"""
+        pass
+    
+    def test_raw__parsed_existing__new_receiver(self):
+        """handles RECEIVED_TELEM with existing parsed data from """
+        """another receiver"""
+        pass
+
+    def test_parsed__no_existing__no_receiver(self):
+        """handles TELEM with no existing data"""
+        pass
+
+    def test_parsed__raw_existing__same_receiver(self):
+        """handles TELEM with existing raw data from the same receiver"""
+        pass
+    
+    def test_parsed__raw_existing__new_receiver(self):
+        """handles TELEM with existing raw data from another receiver"""
+        pass
+
+    def test_parsed__parsed_existing__same_receiver(self):
+        """handles TELEM with existing parsed data from the same receiver"""
+        pass
+
+    def test_parsed__parsed_existing__new_receiver(self):
+        """handles TELEM with existing parsed data from another receiver"""
+        pass
+
+    def test_parsed__old_parsed_existing__same_receiver(self):
+        """handles TELEM containing changed data with existing parsed """
+        """data from the same receiver"""
+        pass
+
+    def test_parsed__old_parsed_existing__new_receiver(self):
+        """handles TELEM containing changed data with existing parsed """
+        """data from another receiver"""
+        pass
+    
+    def test_new_parsed__old_parsed_existing__same_receiver(self):
+        """handles TELEM containing new data with existing parsed data """
+        """from the same receiver"""
+        pass
+
+    def test_new_parsed__old_parsed_existing__new_receiver(self):
+        """handles TELEM containing new data with existing parsed data """
+        """from another receiver"""
+        pass
