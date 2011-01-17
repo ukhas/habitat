@@ -369,10 +369,13 @@ follows:
 .. code-block:: javascript
 
     "10bedc8832fe563c901596c9000026d3": {
-        "type": "listener_info", 
-        "callsign": "M0RND",
-        "name": "Adam Greig",
-        "location": "Cambridge, UK",
-        "radio": "ICOM IC-7000",
-        "antenna": "9el 434MHz Yagi"
+        "type": "listener_info",
+        "uploaded_time": 1292772135,
+        "data": {
+            "callsign": "M0RND",
+            "name": "Adam Greig",
+            "location": "Cambridge, UK",
+            "radio": "ICOM IC-7000",
+            "antenna": "9el 434MHz Yagi"
+        }
     }

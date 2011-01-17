@@ -16,16 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with habitat.  If not, see <http://www.gnu.org/licenses/>.
  */
-function(newDoc, oldDoc, userCtx) {
-    // Forbid deleting documents
-    if(newDoc._deleted)
-        throw({forbidden: "Documents may not be deleted."});
-
-    // Forbid changing/creating documents such as telemetry
-    // or listener information unless you are the habitat user
-    // (all such documents should go through the habitat backend)
-    if(newDoc.type != "flight" && userCtx.name != "habitat")
-        throw({forbidden:
-                "Only the habitat user may create non-flight documents"});
+function(doc) {
+    // Emit a row per current listener_info document containing their callsign
+    // and the time this LISTENER_INFO document was uploaded.
+    if(doc.type == "listener_telem") {
+        emit([doc.data.callsign, doc.uploaded_time], null);
+    }
 }
-

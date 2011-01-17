@@ -21,6 +21,7 @@ Unit tests for the Parser's Sink class.
 
 import time
 from nose.tools import raises
+from test_habitat.lib import fake_couchdb
 from habitat.message_server import Message
 
 from habitat.parser import ParserSink
@@ -142,75 +143,21 @@ class NoParseModule(object):
     def pre_parse(self, string):
         pass
 
-class FakeViewResults(object):
-    """
-    A mocked up couchdbkit ViewResults that can have first() called on it
-    and gives out a dictionary as though it were real.
-    """
-    def first(self):
-        return {"value": None, "id": "1234567890abcdef", "key": ["habitat",
-            flight_doc["end"]], "doc": flight_doc}
+fake_view_results = fake_couchdb.ViewResults({"value": None,
+    "key": ["habitat", flight_doc["end"]], "doc": flight_doc})
 
-class EmptyViewResults(object):
-    """
-    A mocked up couchdbkit ViewResults that didn't find anything.
-    """
-    def first(self):
-        return None
+empty_view_results = fake_couchdb.ViewResults()
 
-class WrongViewResults(object):
-    """
-    A mocked up couchdbkit ViewResults that didn't find anything with our
-    payload, but had others so returned one of those.
-    """
-    def first(self):
-        return {"value": None, "id": "1234567890abcdef", "key": ["wrong",
-            wrong_flight_doc["end"]], "doc": wrong_flight_doc}
+wrong_view_results = fake_couchdb.ViewResults({"value": None,
+    "key": ["wrong", wrong_flight_doc["end"]], "doc": wrong_flight_doc})
 
-class WrongProtocolViewResults(object):
-    """
-    A mocked up couchdbkit ViewResults that found our payload, but actually
-    it specifies some other protocol.
-    """
-    def first(self):
-        return {"value": None, "id": "1234567890abcdef", "key": ["habitat",
-            wrong_p_flight_doc["end"]], "doc": wrong_p_flight_doc}
-
-class FakeDB(object):
-    """
-    A mocked up CouchDB database which can be queried as normal for
-    a document and supports calling views (though it just logs the
-    view call).
-    """
-    def __init__(self):
-        self.parser_config = {
-            "modules": [
-                {
-                    "name": "Fake",
-                    "class": FakeModule
-                }
-            ]
-        }
-        self.view_string = None
-        self.view_params = None
-        self.view_results = FakeViewResults()
-
-    def __getitem__(self, item):
-        if item == "parser_config":
-            return self.parser_config
-        else:
-            raise Exception("FakeDB was asked for a non-existant document")
-
-    def view(self, view, **params):
-        self.view_string = view
-        self.view_params = params
-        return self.view_results
-        
+wrong_protocol_view_results = fake_couchdb.ViewResults({"value": None,
+    "key": ["habitat", wrong_p_flight_doc["end"]], "doc": wrong_p_flight_doc})
 
 class FakeServer(object):
     """A mocked up server which has a fake CouchDB"""
-    def __init__(self):
-        self.db = FakeDB()
+    def __init__(self, docs=None):
+        self.db = fake_couchdb.Database(docs)
         self.message = None
     def push_message(self, message):
         self.message = message
@@ -236,7 +183,18 @@ class WrongMessage(object):
 
 class TestParserSink(object):
     def setup(self):
-        self.server = FakeServer()
+        docs = {
+            "parser_config": {
+                "modules": [
+                    {
+                        "name": "Fake",
+                        "class": FakeModule
+                    }
+                ]
+            }
+        }
+        self.server = FakeServer(docs)
+        self.server.db.default_view_results = fake_view_results
         self.sink = ParserSink(self.server)
     
     def test_sets_data_types(self):
@@ -293,36 +251,36 @@ class TestParserSink(object):
                 flight_doc["payloads"]["habitat"]["sentence"])
     
     def test_uses_default_config_with_empty_results(self):
-        self.server.db.view_results = EmptyViewResults()
-        self.server.db.parser_config["modules"][0]["default_config"] = \
-                default_config
+        self.server.db.default_view_results = empty_view_results
+        self.server.db["parser_config"]["modules"][0]["default_config"] = \
+            default_config
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].config == default_config
 
     def test_uses_default_config_with_wrong_results(self):
-        self.server.db.view_results = WrongViewResults()
-        self.server.db.parser_config["modules"][0]["default_config"] = \
-                default_config
+        self.server.db.default_view_results = wrong_view_results
+        self.server.db["parser_config"]["modules"][0]["default_config"] = \
+            default_config
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].config == default_config
 
     @raises(ValueError)
     def test_errors_when_no_config_or_default_config_found(self):
-        self.server.db.view_results = EmptyViewResults()
+        self.server.db.default_view_results = empty_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
 
     @raises(ValueError)
     def test_errors_when_no_config_or_default_config_found(self):
-        self.server.db.view_results = WrongViewResults()
+        self.server.db.default_view_results = wrong_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
 
     @raises(ValueError)
     def test_errors_when_config_has_wrong_protocol(self):
-        self.server.db.view_results = WrongProtocolViewResults()
+        self.server.db.default_view_results = wrong_protocol_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
 
