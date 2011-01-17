@@ -23,6 +23,8 @@ import hashlib
 import math
 from copy import deepcopy
 
+from couchdbkit.exceptions import ResourceConflict
+
 from habitat.message_server import SimpleSink, Message
 from habitat.utils import dynamicloader
 
@@ -126,7 +128,11 @@ class ArchiveSink(SimpleSink):
         doc["estimated_received_time"] = self._estimate_received_time(times)
         for field in data:
             doc["data"][field] = data[field]
-        self.server.db[doc_id] = doc
+        try:
+            self.server.db[doc_id] = doc
+        except ResourceConflict:
+            # Recurse to attempt to merge the new document
+            self._handle_telem(message, data)
 
     def _get_listener_telem_doc(self, callsign):
         """

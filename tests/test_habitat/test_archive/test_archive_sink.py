@@ -21,6 +21,7 @@
 from nose.tools import assert_raises
 from copy import deepcopy
 from test_habitat.lib import fake_couchdb
+from couchdbkit.exceptions import ResourceConflict
 
 from habitat.message_server import Message
 from habitat.archive import ArchiveSink
@@ -47,6 +48,18 @@ class FakeMessage(object):
         self.data = data
         self.time_created = time_created
         self.time_received = time_received
+
+class ConflictingDatabase(fake_couchdb.Database):
+    def __init__(self, raise_on, docs=None):
+        self.raise_count = raise_on
+        fake_couchdb.Database.__init__(self, docs)
+    def __setitem__(self, key, item):
+        self.raise_count -= 1
+        if not self.raise_count:
+            raise ResourceConflict("Document update conflict.")
+        else:
+            fake_couchdb.Database.__setitem__(self, key, item)
+
 
 ###########################################################
 # Listener Telem docs
@@ -218,8 +231,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
 
     def test_raw__raw_existing__same_receiver(self):
-        """handles RECEIVED_TELEM with existing raw data from """
-        """the same receiver"""
+        """handles RECEIVED_TELEM with existing raw data from the same receiver"""
         self.sink.push_message(message_raw_from_one)
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
@@ -603,3 +615,31 @@ class TestArchiveSink(object):
         self.sink.push_message(m3)
         assert doc_id in self.server.db
         assert self.server.db[doc_id]["estimated_received_time"] == 4
+
+    def test_merges_after_resource_conflict(self):
+        # The database will through a ResourceConflict exception on the
+        # third attempted __setitem__, simulating a write conflict.
+        self.server.db = ConflictingDatabase(3)
+        self.sink.push_message(message_raw_from_one)
+        self.sink.push_message(message_parsed_from_one)
+        self.sink.push_message(message_raw_from_two)
+        expected_doc = {
+            "type": "payload_telemetry",
+            "estimated_received_time": 1,
+            "data": {"_raw": raw_data, "parsed_data": True},
+            "receivers": {
+                "habitat_one": {
+                    "received_time": 1,
+                    "uploaded_time": 4,
+                    "latest_telem": None,
+                    "latest_info": None
+                }, "habitat_two": {
+                    "received_time": 1,
+                    "uploaded_time": 10,
+                    "latest_telem": None,
+                    "latest_info": None
+                }
+            }
+        }
+        assert doc_id in self.server.db
+        assert self.server.db[doc_id] == expected_doc
