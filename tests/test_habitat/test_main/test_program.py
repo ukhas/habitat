@@ -421,3 +421,5 @@ class TestProgram:
         assert dumbsignallisteners[0].exit_hits == 1
         assert dumbscgiapps[0].shutdown_hits == 1
         assert dumbservers[0].shutdown_hits == 1
+        assert p.db.committed
+        assert p.db.closed
