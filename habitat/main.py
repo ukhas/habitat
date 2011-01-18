@@ -350,6 +350,8 @@ class Program(object):
                 self.signallistener.exit()
                 self.scgiapp.shutdown()
                 self.server.shutdown()
+                self.db.ensure_full_commit()
+                self.db.close()
                 return
             elif item == Program.RELOAD:
                 # TODO: Reload support

@@ -61,8 +61,14 @@ class FakeCouchDatabase:
     def __init__(self, server_uri, database_name):
         self.server_uri = server_uri
         self.database_name = database_name
+        self.committed = False
+        self.closed = False
     def info(self):
         pass
+    def ensure_full_commit(self):
+        self.committed = True
+    def close(self):
+        self.closed = True
 
 # A fake CouchDB server interface
 class FakeCouchServer:
