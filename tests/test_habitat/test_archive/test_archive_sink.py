@@ -16,6 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+Tests habitat.archive.ArchiveSink
 """
 
 from nose.tools import assert_raises
@@ -50,12 +51,12 @@ class FakeMessage(object):
         self.time_received = time_received
 
 class ConflictingDatabase(fake_couchdb.Database):
-    def __init__(self, raise_on, docs=None):
-        self.raise_count = raise_on
+    def __init__(self, docs=None):
+        self.conflict_count = 0
         fake_couchdb.Database.__init__(self, docs)
     def __setitem__(self, key, item):
-        self.raise_count -= 1
-        if not self.raise_count:
+        if self.conflict_count > 0:
+            self.conflict_count -= 1
             raise ResourceConflict("Document update conflict.")
         else:
             fake_couchdb.Database.__setitem__(self, key, item)
@@ -231,7 +232,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
 
     def test_raw__raw_existing__same_receiver(self):
-        """handles RECEIVED_TELEM with existing raw data from the same receiver"""
+        """handles RECEIVED_TELEM w. existing raw data from the same rxer"""
         self.sink.push_message(message_raw_from_one)
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
@@ -249,7 +250,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
 
     def test_raw__raw_existing__new_receiver(self):
-        """handles RECEIVED_TELEM with existing raw data from another receiver"""
+        """handles RECEIVED_TELEM w. existing raw data from another rxer"""
         self.sink.push_message(message_raw_from_one)
         self.sink.push_message(message_raw_from_two)
         expected_doc = {
@@ -274,7 +275,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
 
     def test_raw__parsed_existing__same_receiver(self):
-        """handles RECEIVED_TELEM with existing parsed data from the same receiver"""
+        """handles RECEIVED_TELEM w. existing parsed data from the same rxer"""
         self.sink.push_message(message_parsed_from_one)
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
@@ -294,7 +295,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
     
     def test_raw__parsed_existing__new_receiver(self):
-        """handles RECEIVED_TELEM with existing parsed data from another receiver"""
+        """handles RECEIVED_TELEM w. existing parsed data from another rxer"""
         self.sink.push_message(message_parsed_from_one)
         self.sink.push_message(message_raw_from_two)
         expected_doc = {
@@ -428,7 +429,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
 
     def test_parsed__old_parsed_existing__same_receiver(self):
-        """handles TELEM containing changed data with existing parsed data from the same receiver"""
+        """handles TELEM where data != current data (from the same rxer)"""
         self.sink.push_message(message_different_parsed_from_one)
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
@@ -448,7 +449,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
 
     def test_parsed__old_parsed_existing__new_receiver(self):
-        """handles TELEM containing changed data with existing parsed data from another receiver"""
+        """handles TELEM where data != current data (from another rxer)"""
         self.sink.push_message(message_different_parsed_from_one)
         self.sink.push_message(message_parsed_from_two)
         expected_doc = {
@@ -473,7 +474,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
     
     def test_new_parsed__old_parsed_existing__same_receiver(self):
-        """handles TELEM containing new data with existing parsed data from the same receiver"""
+        """handles TELEM where data has new keys (old data from same rxer)"""
         self.sink.push_message(message_parsed_from_one)
         self.sink.push_message(message_new_parsed_from_one)
         expected_doc = {
@@ -494,7 +495,7 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id] == expected_doc
 
     def test_new_parsed__old_parsed_existing__new_receiver(self):
-        """handles TELEM containing new data with existing parsed data from another receiver"""
+        """handles TELEM where data has new keys (old data frm another rxer)"""
         self.sink.push_message(message_parsed_from_one)
         self.sink.push_message(message_new_parsed_from_two)
         expected_doc = {
@@ -617,11 +618,14 @@ class TestArchiveSink(object):
         assert self.server.db[doc_id]["estimated_received_time"] == 4
 
     def test_merges_after_resource_conflict(self):
-        # The database will through a ResourceConflict exception on the
-        # third attempted __setitem__, simulating a write conflict.
-        self.server.db = ConflictingDatabase(3)
+        # The database will raise `n` ResourceConflict exceptions
+        # before allowing __setitem__ to proceed, when
+        # db.conflict is set to `n`, simulating a write conflict.
+        db = ConflictingDatabase()
+        self.server.db = db
         self.sink.push_message(message_raw_from_one)
         self.sink.push_message(message_parsed_from_one)
+        db.conflict_count = 1
         self.sink.push_message(message_raw_from_two)
         expected_doc = {
             "type": "payload_telemetry",
@@ -643,3 +647,14 @@ class TestArchiveSink(object):
         }
         assert doc_id in self.server.db
         assert self.server.db[doc_id] == expected_doc
+
+    def test_gives_up_after_30_merge_conflicts(self):
+        db = ConflictingDatabase()
+        self.server.db = db
+        db.conflict_count = 30
+        assert_raises(RuntimeError,
+                      self.sink.push_message, message_raw_from_one)
+        assert doc_id not in db
+        db.conflict_count = 29
+        self.sink.push_message(message_raw_from_one)
+        assert doc_id in db

@@ -28,8 +28,9 @@ __authors__ = "Adam Greig, Daniel Richman"
 __short_copyright__ = "2010 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-from . import main
-from . import http
-from . import message_server
-from . import parser
 from . import utils
+from . import message_server
+from . import http
+from . import main
+from . import archive
+from . import parser

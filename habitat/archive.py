@@ -102,12 +102,13 @@ class ArchiveSink(SimpleSink):
             doc["data"]["callsign"] = message.source.callsign
             self.server.db.save_doc(doc)
 
-    def _handle_telem(self, message, data):
+    def _handle_telem(self, message, data, attempts=0):
         """
         Given a message and (separately) some data, attempt to retrieve
         the existing telemetry document from the database, merge as
         appropriate and save the new document.
         """
+
         doc_id = hashlib.sha256(data["_raw"]).hexdigest()
         doc = {}
         if doc_id in self.server.db:
@@ -131,8 +132,11 @@ class ArchiveSink(SimpleSink):
         try:
             self.server.db[doc_id] = doc
         except ResourceConflict:
-            # Recurse to attempt to merge the new document
-            self._handle_telem(message, data)
+            attempts += 1
+            if attempts >= 30:
+                raise RuntimeError('Unable to save telem after many conflicts')
+            else:
+                self._handle_telem(message, data, attempts)
 
     def _get_listener_telem_doc(self, callsign):
         """
