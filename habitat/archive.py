@@ -94,7 +94,7 @@ class ArchiveSink(SimpleSink):
         elif message.type == Message.LISTENER_INFO:
             doc = {"type": "listener_info", "data": message.data}
             doc["data"]["callsign"] = message.source.callsign
-            lastdoc = self._get_listener_telem_doc(message.source.callsign)
+            lastdoc = self._get_listener_info_doc(message.source.callsign)
             if not lastdoc or doc["data"] != lastdoc["data"]:
                 self.server.db.save_doc(doc)
         elif message.type == Message.LISTENER_TELEM:
@@ -138,20 +138,19 @@ class ArchiveSink(SimpleSink):
             else:
                 self._handle_telem(message, data, attempts)
 
-    def _get_listener_telem_doc(self, callsign):
+    def _get_listener_info_doc(self, callsign):
         """
-        Try to get the latest LISTENER_TELEM document from the database
+        Try to get the latest LISTENER_INFO document from the database
         for the given callsign, returning None if none could be found.
         """
-        startkey = [callsign, None]
-        result = self.server.db.view("habitat/payload_config", limit = 1,
-            include_docs = True, startkey=startkey).first()
+        startkey = [callsign, []]
+        result = self.server.db.view("habitat/listener_info", limit=1,
+            include_docs=True, descending=True, startkey=startkey).first()
         try:
             if not result or result["doc"]["data"]["callsign"] != callsign:
                 return None
         except (KeyError):
             return None
-
         return result["doc"]    
 
     def _get_listener_info_docid(self, callsign):
@@ -159,9 +158,9 @@ class ArchiveSink(SimpleSink):
         Try to get the document ID for the latest listener info document
         for this callsign, returning None if not found.
         """
-        startkey = [callsign, None]
-        result = self.server.db.view("habitat/listener_info", limit = 1,
-            startkey=startkey).first()
+        startkey = [callsign, []]
+        result = self.server.db.view("habitat/listener_info", limit=1,
+            descending=True, startkey=startkey).first()
         try:
             if not result or result["key"][0] != callsign:
                 return None
@@ -174,9 +173,9 @@ class ArchiveSink(SimpleSink):
         Try to get the document ID for the latest listener telem document
         for this callsign, returning None if not found.
         """
-        startkey = [callsign, None]
-        result = self.server.db.view("habitat/listener_telem", limit = 1,
-            startkey=startkey).first()
+        startkey = [callsign, []]
+        result = self.server.db.view("habitat/listener_telem", limit=1,
+            descending=True, startkey=startkey).first()
         try:
             if not result or result["key"][0] != callsign:
                 return None
