@@ -700,14 +700,14 @@ class Message(object):
 
         if hour < 0 or hour > 12 or \
            minute < 0 or minute > 59 or \
-           second < 0 or second > 60:
+           second < 0 or second > 61:
             raise ValueError("Invalid time value in data")
 
         latitude = clean_data["latitude"]
         longitude = clean_data["longitude"]
 
         if latitude < -90.0 or latitude > 90.0 or \
-           longitude < -180.0 or longitude > 180:
+           longitude < -180.0 or longitude > 180.0:
             raise ValueError("Invalid location value in data")
 
         return clean_data
