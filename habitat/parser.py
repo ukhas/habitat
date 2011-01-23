@@ -56,7 +56,7 @@ class ParserSink(SimpleSink):
         }
 
         self.modules = []
-        
+
         for module in self.server.db["parser_config"]["modules"]:
             m = dynamicloader.load(module["class"])
             dynamicloader.expecthasmethod(m, "pre_parse")
@@ -104,7 +104,7 @@ class ParserSink(SimpleSink):
         The output is a new message of type Message.TELEM, with message.data
         being the parsed data as well as any special fields, identified by
         a leading underscore in the key.
-        
+
         These fields may include:
 
         * _protocol which gives the parser module name that was used to
@@ -124,7 +124,7 @@ class ParserSink(SimpleSink):
         data = None
 
         raw_data = base64.b64decode(message.data)
-        
+
         # Try using real configs
         for module in self.modules:
             try:
@@ -157,7 +157,7 @@ class ParserSink(SimpleSink):
                                   data)
             self.server.push_message(new_message)
         else:
-            raise ValueError("No data could be parsed.") 
+            raise ValueError("No data could be parsed.")
 
     def _find_config_doc(self, callsign):
         """
@@ -200,7 +200,7 @@ class ParserModule(object):
         :py:exc:`ValueError <exceptions.ValueError>` is raised.
         """
         raise ValueError()
-    
+
     def parse(self, string, config):
         """
         Go through a string which has been identified as the format this

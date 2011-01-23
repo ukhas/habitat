@@ -77,7 +77,7 @@ Checksum Algorithms
 -------------------
 
 Three algorithms are available:
-    
+
 * CRC16 CCITT (``crc16-ccitt``):
 
   The recommended algorithm, uses two bytes
@@ -110,13 +110,13 @@ Field Types
 -----------
 
 Supported types are:
-    
+
 * ``string``: a plain text string which is not interpreted in any way.
 * ``float``: a value that should be interpreted as a floating point
   number. Transmitted as a string, e.g., "123.45", rather than in
   binary.
 * ``int``: a value that should be interpreted as an integer.
-* ``time``: a field containing the time as either ``HH:MM:SS`` or just 
+* ``time``: a field containing the time as either ``HH:MM:SS`` or just
   ``HH:MM``. Will be interpreted into a time representation.
 * ``coordinate``: a coordinate, see below
 

@@ -10,7 +10,7 @@ The scripts here live and run on [[nessie.habhub.org]].
    Also locks a file to ensure that simultaneous updating isn't attempted.
  - update: bash script - pulls the latest git repo, builds the documentation,
    cleans the repo, generates a tarball, updates the homepage.
- - genhomepage: bash script - generates 
+ - genhomepage: bash script - generates
    [[http://habitat.habhub.org/index.html]] with the latest commit message.
  - sanitise.py: utility for genhomepage - escapes xml special characters.
 

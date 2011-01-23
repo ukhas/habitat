@@ -3,7 +3,7 @@
 */
 "c89860d6f68b1f31ac9480ff9f95bb62": {
     "type": "flight",
-    
+
     /*
         Start and end dates reflect the time period that telemetry for this
         payload will be logged against this flight, typically a 24 hour period
@@ -11,12 +11,12 @@
     */
     "start": 1292771680,
     "end": 1292772670,
-    
+
     /*
         Name is used to refer to this flight in various user interfaces.
     */
     "name": "Habitat Test Launch",
-    
+
     /*
         Launch time, timezone and location reflect when and where the launch
         actually happened. Timezone should be a tz db identifier e.g.,
@@ -30,7 +30,7 @@
             "longitude": 0.0968
         }
     }
-    
+
     /*
         Metadata stores various human-readable information about the flight,
         which can be used to identify it and be otherwise informative when
@@ -42,7 +42,7 @@
         "project": "Habitat",
         "group": "HabHub"
     },
-    
+
     /*
         Payloads contains complete information on each payload flying in this
         flight.  This includes radio settings and telemetry format.
@@ -57,7 +57,7 @@
                 "frequency": 434.075,
                 "mode": "USB"
             },
-            
+
             /*
                 Telemetry contains information for decoding the received audio.
             */
@@ -69,7 +69,7 @@
                 "parity": "none",
                 "stop": 2
             },
-            
+
             /*
                 Sentence contains information for parsing the received data
                 into useful data.  Protocol reflects what parser module should
@@ -111,7 +111,7 @@
                     }
                 ],
             },
-                
+
             /*
                 Filters is a list of intermediate or post parse filters
                 which are applied either before or after the parser
@@ -142,7 +142,7 @@
                     }
                 ]
             },
-            
+
             /*
                 Chasers are people out tracking the payloads and moving as they
                 do so, and therefore are also transmitting GPS telemetry.

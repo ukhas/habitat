@@ -121,7 +121,7 @@ coordinate_formats = [
 
 class UKHASParser(ParserModule):
     """The UKHAS Parser Module"""
-    
+
     allowed_callsign_characters = ascii_lowercase + ascii_uppercase + digits
 
     def _split_checksum(self, string):
@@ -139,7 +139,7 @@ class UKHASParser(ParserModule):
             return [string[:-5], string[-4:]]
         else:
             return [string, None]
-        
+
     def _extract_fields(self, string):
         """
         Splits the string into comma-separated fields.
@@ -206,7 +206,6 @@ class UKHASParser(ParserModule):
         except (KeyError, TypeError):
             raise ValueError("Invalid configuration document.")
 
-    
     def _verify_checksum(self, string, checksum, algorithm):
         """
         Verifies *string*'s checksum.
@@ -237,7 +236,7 @@ class UKHASParser(ParserModule):
             if letter not in self.allowed_callsign_characters:
                 raise ValueError("Invalid callsign, contains characters "
                         "besides A-Z and 0-9.")
-    
+
     def _parse_field(self, field, field_config):
         """
         Parse a *field* string using its configuration dictionary.
@@ -295,7 +294,7 @@ class UKHASParser(ParserModule):
         fields = self._extract_fields(string)
         self._verify_callsign(fields[0])
         return fields[0]
-        
+
     def parse(self, string, config):
         """
         Parse the message, extracting processed field data.

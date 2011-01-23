@@ -274,7 +274,7 @@ class TestUKHASParser:
                 [sentence_fletcher_16, config_checksum_fletcher_16],
                 [sentence_fletcher_16_256, config_checksum_fletcher_16_256]
             ]:
-            assert (self.p.parse(sentence, config) == 
+            assert (self.p.parse(sentence, config) ==
                     self.output_append_sentence(output_checksum_test,
                         sentence))
 

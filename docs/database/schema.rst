@@ -117,7 +117,7 @@ payload names/callsigns as keys and a dictionary containing payload
 information as the associated value:
 
 .. code-block:: javascript
-    
+
     "payloads": {
         "habitat": {
             // Payload information key:value pairs
@@ -138,7 +138,7 @@ The ``telemetry`` dictionary contains information for decoding the received
 audio from the radio:
 
 .. code-block:: javascript
-    
+
     "telemetry": {
         "modulation": "rtty",
         "shift": 425,
@@ -274,7 +274,7 @@ time each piece of telemetry was received. This estimated value is stored
 in ``estimated_received_time``:
 
 .. code-block:: javascript
-    
+
     "estimated_received_time": 1292772125,
 
 The information parsed out of the message string is stored in the ``data``

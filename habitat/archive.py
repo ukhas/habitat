@@ -50,7 +50,7 @@ class ArchiveSink(SimpleSink):
         Handle an incoming message, storing it in the datastore.
 
         There are four varients of incoming message:
-        
+
             * **RECEIVED_TELEM** (raw telemetry strings):
                 These are stored as ``payload_telemetry`` documents, with the
                 base64 encoded raw data in **_raw** inside **data**,
@@ -151,7 +151,7 @@ class ArchiveSink(SimpleSink):
                 return None
         except (KeyError):
             return None
-        return result["doc"]    
+        return result["doc"]
 
     def _get_listener_info_docid(self, callsign):
         """

@@ -8,14 +8,14 @@
 */
 "ab2a7300684278180d5d26d614a85139d186a5a09038bbbfcfbfce07f953507b": {
     "type": "payload_telemetry",
-    
+
     /*
         Estimated received time is calculated based on all the received times
         of individual listeners, who may have inaccurately synchronised clocks
         or be very far out indeed.
     */
     "estimated_received_time": 1292772125,
-    
+
     /*
         Data is the dict returned by the parser module, containing all the
         useful data from this string, hopefully including a latitude and
@@ -31,7 +31,7 @@
         /*
             _raw is the original message string as transmitted by the payload,
             in base64. If the payload used an ascii protocol, and there were no
-            errors, and the whole message could be represented as ascii, 
+            errors, and the whole message could be represented as ascii,
             then _sentence is also the original message string, but in ascii
         */
         "_raw": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ=="
@@ -70,7 +70,7 @@
         */
         "custom_string": "hab"
     },
-    
+
     /*
         Receivers is a list of people who received this message, including when
         they think they received it, when habitat got their message and the

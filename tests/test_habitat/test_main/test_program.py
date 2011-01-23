@@ -76,7 +76,7 @@ class FakeCouchServer:
         self.accessed_uri = uri
     def __getitem__(self, item):
         return FakeCouchDatabase(self.accessed_uri, item)
-    
+
 program_module.couchdbkit.Server = FakeCouchServer
 
 # Replace the Server class with something that does nothing
@@ -373,7 +373,7 @@ class TestProgram:
         assert dumbscgiapps[0].socket_file == "socketfile"
         assert dumbscgiapps[0].start_hits == 0
 
-        # creates a signal listener         
+        # creates a signal listener
         assert len(dumbsignallisteners) == 1
         assert dumbsignallisteners[0].setup_hits == 1
         assert dumbsignallisteners[0].listen_hits == 0

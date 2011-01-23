@@ -200,7 +200,7 @@ class TestParserSink(object):
         self.server = FakeServer(docs)
         self.server.db.default_view_results = fake_view_results
         self.sink = ParserSink(self.server)
-    
+
     def test_sets_data_types(self):
         assert self.sink.types == set([Message.RECEIVED_TELEM])
 
@@ -253,7 +253,7 @@ class TestParserSink(object):
         self.sink.message(FakeMessage())
         assert (self.sink.modules[0]["module"].config ==
                 flight_doc["payloads"]["habitat"]["sentence"])
-    
+
     def test_uses_default_config_with_empty_results(self):
         self.server.db.default_view_results = empty_view_results
         self.server.db["parser_config"]["modules"][0]["default_config"] = \

@@ -1,6 +1,6 @@
 % habitat overview
-% 
-% 
+%
+%
 
 # habitat overview
 
@@ -253,10 +253,10 @@ people using the html **map**.
         The operations (put and get) are exactly the same.
 
 
-habitat plan – Copyright Daniel Richman and Adam Greig 2010   
+habitat plan – Copyright Daniel Richman and Adam Greig 2010
 This work is licensed under a Creative Commons
 Attribution-NonCommerical-ShareAlike 2.0 UK:England & Wales License
-  
+
 [http://creativecommons.org/licenses/by-nc-sa/2.0/uk/](http://creativecommons.org/licenses/by-nc-sa/2.0/uk/)
 
 

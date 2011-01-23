@@ -214,7 +214,8 @@ class TestLoad:
         rmod.write_code(modulecode_2)
 
         # And finally like this:
-        asdf_2c = dynamicloader.load(roundabout_mod.loadable, force_reload=True)
+        asdf_2c = dynamicloader.load(roundabout_mod.loadable,
+                                     force_reload=True)
         assert asdf_2c != asdf_1c
         asdf_2c_object = asdf_2c()
         assert asdf_2c_object.test == 2

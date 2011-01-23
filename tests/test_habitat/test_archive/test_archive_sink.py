@@ -213,7 +213,7 @@ class TestArchiveSink(object):
         assert len(self.server.db.docs) == 2
         assert self.server.db.saved_docs[0] == listener_info_doc
         assert self.server.db.saved_docs[1] == listener_info_doc_two
-    
+
     def test_raw__no_existing__no_receiver(self):
         """handles RECEIVED_TELEM with no existing data"""
         self.sink.push_message(message_raw_from_one)
@@ -293,7 +293,7 @@ class TestArchiveSink(object):
         }
         assert doc_id in self.server.db
         assert self.server.db[doc_id] == expected_doc
-    
+
     def test_raw__parsed_existing__new_receiver(self):
         """handles RECEIVED_TELEM w. existing parsed data from another rxer"""
         self.sink.push_message(message_parsed_from_one)
@@ -357,7 +357,7 @@ class TestArchiveSink(object):
         }
         assert doc_id in self.server.db
         assert self.server.db[doc_id] == expected_doc
-    
+
     def test_parsed__raw_existing__new_receiver(self):
         """handles TELEM with existing raw data from another receiver"""
         self.sink.push_message(message_raw_from_one)
@@ -472,7 +472,7 @@ class TestArchiveSink(object):
         }
         assert doc_id in self.server.db
         assert self.server.db[doc_id] == expected_doc
-    
+
     def test_new_parsed__old_parsed_existing__same_receiver(self):
         """handles TELEM where data has new keys (old data from same rxer)"""
         self.sink.push_message(message_parsed_from_one)
@@ -519,7 +519,7 @@ class TestArchiveSink(object):
         }
         assert doc_id in self.server.db
         assert self.server.db[doc_id] == expected_doc
-    
+
     def test_locates_latest_listener_info(self):
         self.server.db.view_results["habitat/listener_telem"] = listener_vr
         self.sink.push_message(message_raw_from_one)

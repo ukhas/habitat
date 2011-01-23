@@ -18,7 +18,7 @@ Inserting Messages by HTTP POST
 
 habitat includes a SCGI server, which would therefore require a web server
 infront of it in order to make http requests to habitat. On
-`nessie.habhub.org <http://nessie.habhub.org/>`_, the 
+`nessie.habhub.org <http://nessie.habhub.org/>`_, the
 `cherokee <http://www.cherokee-project.com/>`_ web server is used.
 
 Messages inserted by HTTP POST are in JSON format. All text is Unicode UTF8
