@@ -123,10 +123,7 @@ class ParserSink(SimpleSink):
 
         data = None
 
-        try:
-            raw_data = base64.b64decode(message.data)
-        except TypeError:
-            raise ValueError("message.data was not valid base64.")
+        raw_data = base64.b64decode(message.data)
         
         # Try using real configs
         for module in self.modules:

@@ -19,9 +19,45 @@
 Tests the Message class
 """
 
-from nose.tools import raises
-
+import copy
+from nose.tools import raises, assert_raises
 from habitat.message_server import Message, Listener
+
+b64_valid = u"SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo="
+b64_invalid = u"asdfasd"
+# I actually tried using 'None' and '{ "lol, a dict": True }' but both,
+# when converted by str(), are semi-valid b64. >.>
+b64_garbage = { "lol, a dict?": "asdffsa" }
+
+listener_info_valid = { u"name": u"Daniel", u"location": u"Reading, UK",
+                        u"radio": u"Yaesu FT817",
+                        u"antenna": u"1/4 wave whip" }
+listener_info_extra = listener_info_valid.copy()
+listener_info_extra[u"badkey"] = True
+listener_info_invalid = listener_info_valid.copy()
+del listener_info_invalid["antenna"]
+
+listener_telem_truev = { "time": { "hour": 12, "minute": 40,
+                                   "second": 7 },
+                         "latitude": -35.11, "longitude": 137.567,
+                         "altitude": 12 }
+listener_telem_valid = { u"time": { u"hour": 12, u"minute": 40,
+                                    u"second": 7 },
+                         u"latitude": -35.11, u"longitude": 137.567,
+                         u"altitude": 12 }
+listener_telem_equal = { u"time": { u"hour": 12.00, u"minute": "40",
+                                    u"second": u"7" },
+                         u"latitude": u"-35.11", u"longitude": "137.567",
+                         u"altitude": "12",
+                         u"extrakey": u"Hello world!"}
+listener_telem_badkv = { u"time": { u"hour": "noint", u"minute": 90,
+                                    u"second": u"100" },
+                         u"latitude": u"100", u"longitude": 180.100,
+                         u"altitude": "maybe not." }
+
+telem_data = { "_protocol": "UKHAS", "_raw": "asdf", "time": { "a": 6 },
+               "z": 1, "asdf": u"There probably won't be any unicode data",
+               u"key": "But the test is that Message doesn't touch the dict." }
 
 class TestMessage:
     def setup(self):
@@ -37,14 +73,13 @@ class TestMessage:
         assert types == set(range(len(types)))
 
     def test_initialiser_accepts_and_stores_data(self):
-        mydata = {"asdf": "defg", "hjkl": "yuio"}
         message = Message(self.source, Message.RECEIVED_TELEM,
-                          18297895, 1238702, mydata)
+                          18297895, 1238702, b64_valid)
         assert message.source == self.source
         assert message.type == Message.RECEIVED_TELEM
         assert message.time_created == 18297895
         assert message.time_received == 1238702
-        assert message.data == mydata
+        assert message.data == b64_valid
 
     @raises(TypeError)
     def test_initialiser_rejects_garbage_source(self):
@@ -90,6 +125,86 @@ class TestMessage:
         for type in Message.types:
             assert repr(Message(self.source, type, 123345, 123435, None)) == \
                 repr_format % (Message.type_names[type], repr(self.source))
+
+    def good_message_data(self, type, data):
+        return Message(self.source, type, 123345, 123435, data)
+
+    def bad_message_data(self, type, data):
+        assert_raises(ValueError, self.good_message_data, type, data)
+
+    def wrongtype_message_data(self, type, data):
+        assert_raises(TypeError, self.good_message_data, type, data)
+
+    def test_message_coerces_received_telem(self):
+        m = self.good_message_data(Message.RECEIVED_TELEM, b64_valid)
+        assert m.data == b64_valid
+        assert isinstance(m.data, str)
+        self.bad_message_data(Message.RECEIVED_TELEM, b64_invalid)
+        # Almost everything coerces to str, so there's no TypeErrors.
+        self.bad_message_data(Message.RECEIVED_TELEM, b64_garbage)
+
+    def check_all_encodings(self, items, cl):
+        for i in items:
+            assert isinstance(i, cl)
+
+    def test_message_coerces_listener_info(self):
+        self.check_all_encodings(listener_info_valid.keys(), unicode)
+        self.check_all_encodings(listener_info_valid.values(), unicode)
+        m = self.good_message_data(Message.LISTENER_INFO, listener_info_valid)
+        assert m.data == listener_info_valid
+        self.check_all_encodings(m.data.keys(), str)
+        self.check_all_encodings(m.data.values(), unicode)
+
+        m = self.good_message_data(Message.LISTENER_INFO, listener_info_extra)
+        assert m.data == listener_info_valid
+
+        self.bad_message_data(Message.LISTENER_INFO, listener_info_invalid)
+        self.wrongtype_message_data(Message.LISTENER_INFO, None)
+        self.wrongtype_message_data(Message.LISTENER_INFO, 123)
+
+    def test_message_coerces_listener_telem(self):
+        self.check_all_encodings(listener_telem_valid.keys(), unicode)
+        m = self.good_message_data(Message.LISTENER_TELEM,
+                                   listener_telem_valid)
+        assert m.data == listener_telem_truev
+        self.check_all_encodings(m.data.keys(), str)
+
+        m = self.good_message_data(Message.LISTENER_TELEM,
+                                   listener_telem_equal)
+        assert m.data == listener_telem_truev
+
+        bad_keys = listener_telem_badkv.copy()
+
+        for key, value in bad_keys["time"].items():
+            d = copy.deepcopy(listener_telem_valid)
+            d["time"][key] = value
+            self.bad_message_data(Message.LISTENER_TELEM, d)
+
+        del bad_keys["time"]
+
+        for key, value in bad_keys.items():
+            d = listener_telem_valid.copy()
+            d[key] = value
+            self.bad_message_data(Message.LISTENER_TELEM, d)
+
+        self.wrongtype_message_data(Message.LISTENER_TELEM, None)
+        self.wrongtype_message_data(Message.LISTENER_TELEM, 123)
+
+    def test_message_leaves_telem_untouched(self):
+        m = self.good_message_data(Message.TELEM, telem_data)
+        for key in telem_data.keys():
+            assert telem_data[key] == m.data[key]
+
+        str_keys = [k for k in telem_data.keys() if isinstance(k, str)]
+        str_keys2 = [k for k in m.data.keys() if isinstance(k, str)]
+        uni_keys = [k for k in telem_data.keys() if isinstance(k, unicode)]
+        uni_keys2 = [k for k in m.data.keys() if isinstance(k, unicode)]
+
+        assert str_keys == str_keys2
+        assert uni_keys == uni_keys2
+
+        self.wrongtype_message_data(Message.TELEM, None)
+        self.wrongtype_message_data(Message.TELEM, 123)
 
 class TestListener:
     def setup(self):
