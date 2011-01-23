@@ -32,6 +32,7 @@ from nose.tools import raises
 
 from test_habitat import scratch_dir
 from test_habitat.lib import threading_checks
+from test_habitat.lib.sample_messages import SMessage
 from serverstub import ServerStub
 from do_scgi_request import do_scgi_request
 
@@ -143,10 +144,13 @@ class TestSCGIStartupShutdown:
 
 test_message_d = {}
 test_message_d["callsign"] = "M0ZDR"
-test_message_d["type"] = "RECEIVED_TELEM"
+test_message_d["type"] = "LISTENER_INFO"
 test_message_d["time_created"] = 0
 test_message_d["time_uploaded"] = 0
-test_message_d["data"] = "$$Garbage" + unichr(0x2603)
+# Grab some known valid data from the sample_messages module and add some
+# unicode.
+test_message_d["data"] = SMessage(type=Message.LISTENER_INFO).data
+test_message_d["data"]["name"] = u"Snowman " + unichr(0x2603)
 test_message = json.dumps(test_message_d)
 
 class TestSCGIBehaviour:
@@ -176,8 +180,8 @@ class TestSCGIBehaviour:
         assert headers["Status"].startswith("200")
         assert len(self.messages) == 1
         assert self.messages[0].source.callsign == "M0ZDR"
-        assert self.messages[0].type == Message.RECEIVED_TELEM
-        assert self.messages[0].data == "$$Garbage" + unichr(0x2603)
+        assert self.messages[0].type == Message.LISTENER_INFO
+        assert self.messages[0].data["name"] == "Snowman " + unichr(0x2603)
 
     def test_passes_correct_ip(self):
         scgi_req("/message", test_message, {"REMOTE_ADDR": "2.4.6.7"})

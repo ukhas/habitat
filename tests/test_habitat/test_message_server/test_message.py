@@ -83,30 +83,31 @@ class TestMessage:
 
     @raises(TypeError)
     def test_initialiser_rejects_garbage_source(self):
-        Message("asdf", Message.RECEIVED_TELEM, 123456, 123456, "asdf")
+        Message("asdf", Message.RECEIVED_TELEM, 123456, 123456, b64_valid)
 
     @raises(TypeError)
     def test_initialiser_rejects_null_source(self):
-        Message(None, Message.RECEIVED_TELEM, 123456, 123456, "asdf")
+        Message(None, Message.RECEIVED_TELEM, 123456, 123456, b64_valid)
 
     @raises(ValueError)
     def test_initialiser_rejects_invalid_type(self):
-        Message(self.source, 951, 123456, 123456, "asdf")
+        Message(self.source, 951, 123456, 123456, b64_valid)
 
     @raises(ValueError)
     def test_initialiser_rejects_garbage_type(self):
-        Message(self.source, "asdf", 123456, 123456, "asdf")
+        Message(self.source, "asdf", 123456, 123456, b64_valid)
 
     def test_initialiser_allows_no_data(self):
         Message(self.source, Message.RECEIVED_TELEM, 123456, 123456, None)
 
     @raises(TypeError)
     def test_initialiser_rejects_garbage_time_created(self):
-        Message(self.source, Message.TELEM, None, 123456, "asdf")
+        Message(self.source, Message.RECEIVED_TELEM, None, 123456, b64_valid)
 
     @raises(ValueError)
     def test_initialiser_rejects_garbage_time_received(self):
-        Message(self.source, Message.TELEM, 1235123, "lolol", "asdf")
+        Message(self.source, Message.RECEIVED_TELEM, 1235123, "lolol",
+                b64_valid)
 
     @raises(ValueError)
     def test_validate_type_rejects_garbage_type(self):
@@ -122,8 +123,13 @@ class TestMessage:
     def test_repr(self):
         repr_format = "<habitat.message_server.Message (%s) from %s>"
 
-        for type in Message.types:
-            assert repr(Message(self.source, type, 123345, 123435, None)) == \
+        valid_data = [ (Message.RECEIVED_TELEM, b64_valid),
+                       (Message.LISTENER_INFO, listener_info_valid),
+                       (Message.LISTENER_TELEM, listener_telem_valid),
+                       (Message.TELEM, {}) ]
+
+        for type, data in valid_data:
+            assert repr(Message(self.source, type, 123345, 123435, data)) == \
                 repr_format % (Message.type_names[type], repr(self.source))
 
     def good_message_data(self, type, data):
@@ -200,8 +206,8 @@ class TestMessage:
         uni_keys = [k for k in telem_data.keys() if isinstance(k, unicode)]
         uni_keys2 = [k for k in m.data.keys() if isinstance(k, unicode)]
 
-        assert str_keys == str_keys2
-        assert uni_keys == uni_keys2
+        assert set(str_keys) == set(str_keys2)
+        assert set(uni_keys) == set(uni_keys2)
 
         self.wrongtype_message_data(Message.TELEM, None)
         self.wrongtype_message_data(Message.TELEM, 123)

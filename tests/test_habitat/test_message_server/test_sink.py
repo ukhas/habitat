@@ -24,11 +24,12 @@ import functools
 
 from nose.tools import raises
 
-from habitat.message_server import Message, Listener
+from habitat.message_server import Message
 from habitat.utils.dynamicloader import fullname
 from habitat.utils import crashmat
 
 from test_habitat.lib import threading_checks
+from test_habitat.lib.sample_messages import SMessage
 from test_habitat.lib.locktroll import LockTroll
 
 from fakesink import SinkWithoutSetup, SinkWithoutMessage
@@ -95,13 +96,13 @@ class ChangeySink():
         # Message 2 will also be a LISTENER_INFO but we shouldn't get it
         # Message 3 will be a RECEIVED_TELEM
 
-        assert message.data != 2
+        assert message.testid != 2
 
-        if message.data == 1:
+        if message.testid == 1:
             assert self.status == 0
             self.remove_type(Message.LISTENER_INFO)
             self.status = 1
-        elif message.data == 3:
+        elif message.testid == 3:
             assert self.status == 1
             self.status = 2
         else:
@@ -143,8 +144,6 @@ class TestSink:
     def setup(self):
         threading_checks.patch()
 
-        self.source = Listener("M0ZDR", "1.2.3.4")
-
     def teardown(self):
         threading_checks.restore()
 
@@ -167,14 +166,14 @@ class TestSink:
     def check_messagecount(self, sinkclass):
         sink = sinkclass(FakeServer())
         assert sink.message_count == 0
-        m = Message(self.source, Message.TELEM, 0, 0, None)
+        m = SMessage(type=Message.TELEM)
         sink.push_message(m)
         sink.push_message(m)
         sink.push_message(m)
         sink.push_message(m)
         sink.flush()
         assert sink.message_count == 0
-        m = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
+        m = SMessage(type=Message.RECEIVED_TELEM)
         sink.push_message(m)
         sink.flush()
         assert sink.message_count == 1
@@ -199,7 +198,7 @@ class TestSink:
         assert repr(sink) == locked_format
         troll.release()
 
-        message = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
+        message = SMessage(type=Message.RECEIVED_TELEM)
 
         sink.push_message(message)
         sink.push_message(message)
@@ -235,7 +234,7 @@ class TestSink:
         assert repr(sink) == locked_format
         troll.release()
 
-        message = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
+        message = SMessage(type=Message.RECEIVED_TELEM)
 
         sink.push_message(message)
         sink.push_message(message)
@@ -379,15 +378,15 @@ class TestSink:
         yield self.check_push_requested_message, sink
 
     def check_push_unwanted_message(self, sink):
-        message = Message(self.source, Message.TELEM, 0, 0, None)
+        message = SMessage(type=Message.TELEM)
         sink.push_message(message)
         assert sink.test_messages == []
 
     def check_push_requested_message(self, sink):
-        message = Message(self.source, Message.RECEIVED_TELEM, 0, 0, 100)
+        message = SMessage(type=Message.RECEIVED_TELEM, testid=100)
         sink.push_message(message)
         assert sink.test_messages == [message]
-        assert sink.test_messages[0].data == 100
+        assert sink.test_messages[0].testid == 100
 
     def test_sink_changing_types_push(self):
         yield self.check_sink_changing_types_push, ChangeySimpleSink
@@ -396,12 +395,9 @@ class TestSink:
     def check_sink_changing_types_push(self, sink_class):
         sink = sink_class(FakeServer())
 
-        sink.push_message(Message(self.source, Message.LISTENER_INFO,
-                                  0, 0, 1))
-        sink.push_message(Message(self.source, Message.LISTENER_INFO,
-                                  0, 0, 2))
-        sink.push_message(Message(self.source, Message.RECEIVED_TELEM,
-                                  0, 0, 3))
+        sink.push_message(SMessage(type=Message.LISTENER_INFO, testid=1))
+        sink.push_message(SMessage(type=Message.LISTENER_INFO, testid=2))
+        sink.push_message(SMessage(type=Message.RECEIVED_TELEM, testid=3))
 
         # Clean up threaded sinks, do nothing to simple sinks.
         sink.shutdown()
@@ -411,12 +407,9 @@ class TestSink:
     def test_threaded_sink_executes_in_one_thread(self):
         sink = FakeThreadedSink(FakeServer())
 
-        a = ThreadedPush(sink, Message(self.source,
-            Message.LISTENER_INFO, 0, 0, 1))
-        b = ThreadedPush(sink, Message(self.source,
-            Message.LISTENER_INFO, 0, 0, 2))
-        c = ThreadedPush(sink, Message(self.source,
-            Message.RECEIVED_TELEM, 0, 0, 3))
+        a = ThreadedPush(sink, SMessage(type=Message.LISTENER_INFO, testid=1))
+        b = ThreadedPush(sink, SMessage(type=Message.LISTENER_INFO, testid=2))
+        c = ThreadedPush(sink, SMessage(type=Message.RECEIVED_TELEM, testid=3))
 
         for t in [a, b, c]:
             t.start()
@@ -435,7 +428,7 @@ class TestSink:
         # Testing a race condition is quite difficult. (TODO ?)
         # SlowSink.message() will time.sleep(0.02)
         sink = sink_class(FakeServer())
-        message = Message(self.source, Message.TELEM, 0, 0, None)
+        message = SMessage(type=Message.TELEM)
         t = ThreadedPush(sink, message)
 
         t.start()

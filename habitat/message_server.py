@@ -714,6 +714,11 @@ class Message(object):
 
     @classmethod
     def _coerce_data_telem(cls, data):
+        try:
+            data = dict(data)
+        except:
+            raise TypeError("data should be a dictionary")
+
         return data
 
 class Listener(object):

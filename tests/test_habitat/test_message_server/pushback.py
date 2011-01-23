@@ -16,6 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 from habitat.message_server import SimpleSink, ThreadedSink, Message
+from test_habitat.lib.sample_messages import SMessage
 
 class PushbackSink():
     def setup(self):
@@ -24,13 +25,11 @@ class PushbackSink():
         self.status = 0
 
     def message(self, message):
-        assert message.data == 6293
+        assert message.testid == 6293
 
         if self.status == 0:
             assert message.type == Message.RECEIVED_TELEM
-            self.pbmsg = Message(message.source, Message.TELEM,
-                                 message.time_created, message.time_received,
-                                 message.data)
+            self.pbmsg = SMessage(type=Message.TELEM, testid=message.testid)
             self.status = 1
             self.server.push_message(self.pbmsg)
         elif self.status == 1:
@@ -45,7 +44,7 @@ class PushbackReceiverSink():
         self.status = 0
 
     def message(self, message):
-        assert message.data == 6293
+        assert message.testid == 6293
         assert self.status == 0
         self.status = 2
 
