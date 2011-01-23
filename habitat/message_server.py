@@ -26,6 +26,7 @@ import inspect
 import threading
 import Queue
 import ipaddr
+import base64
 import couchdbkit.exceptions
 
 from habitat.utils import dynamicloader, crashmat
@@ -584,9 +585,9 @@ class Message(object):
 
         *data*: a type-specific data object, which will be validated
         """
-        # TODO data validation based on type
 
         self.validate_type(type)
+        data = self.validate_data(type, data)
 
         dynamicloader.expecthasattr(source, "callsign")
         dynamicloader.expecthasattr(source, "ip")
@@ -630,6 +631,95 @@ class Message(object):
         
         for type in types:
             Message.validate_type(type)
+
+    @classmethod
+    def validate_data(cls, type, data):
+        if type == cls.RECEIVED_TELEM:
+            return cls._coerce_data_received_telem(data)
+        elif type == cls.LISTENER_INFO:
+            return cls._coerce_data_listener_info(data)
+        elif type == cls.LISTENER_TELEM:
+            return cls._coerce_data_listener_telem(data)
+        elif type == cls.TELEM:
+            return cls._coerce_data_telem(data)
+
+    @classmethod
+    def _coerce_data_received_telem(cls, data):
+        try:
+            binary_data = base64.b64decode(str(data))
+        except TypeError:
+            raise ValueError("data was not valid base64.")
+
+        return base64.b64encode(binary_data)
+
+    @classmethod
+    def _coerce_data_listener_info(cls, data):
+        try:
+            data = dict(data)
+        except:
+            raise TypeError("data should be a dictionary")
+
+        clean_data = {}
+
+        try:
+            for i in ["name", "location", "radio", "antenna"]:
+                clean_data[i] = unicode(data[i])
+        except KeyError:
+            raise ValueError("A required key couldn't be found in data")
+        except (TypeError, ValueError):
+            raise ValueError("Invalid value in data")
+
+        return clean_data
+
+    @classmethod
+    def _coerce_data_listener_telem(cls, data):
+        try:
+            data = dict(data)
+        except:
+            raise TypeError("data should be a dictionary")
+
+        clean_data = {}
+
+        try:
+            for i in ["latitude", "longitude"]:
+                clean_data[i] = float(data[i])
+            
+            clean_data["altitude"] = int(data["altitude"])
+
+            clean_data["time"] = {}
+            for i in ["hour", "minute", "second"]:
+                clean_data["time"][i] = int(data["time"][i])
+        except KeyError:
+            raise ValueError("A required key couldn't be found in data")
+        except (TypeError, ValueError):
+            raise ValueError("Invalid value in data")
+
+        hour = clean_data["time"]["hour"]
+        minute = clean_data["time"]["minute"]
+        second = clean_data["time"]["second"]
+
+        if hour < 0 or hour > 12 or \
+           minute < 0 or minute > 59 or \
+           second < 0 or second > 61:
+            raise ValueError("Invalid time value in data")
+
+        latitude = clean_data["latitude"]
+        longitude = clean_data["longitude"]
+
+        if latitude < -90.0 or latitude > 90.0 or \
+           longitude < -180.0 or longitude > 180.0:
+            raise ValueError("Invalid location value in data")
+
+        return clean_data
+
+    @classmethod
+    def _coerce_data_telem(cls, data):
+        try:
+            data = dict(data)
+        except:
+            raise TypeError("data should be a dictionary")
+
+        return data
 
 class Listener(object):
     """

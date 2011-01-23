@@ -49,7 +49,7 @@ class TestInsertApplication:
                      "type": "RECEIVED_TELEM",
                      "time_created": fake_time_created,
                      "time_uploaded": fake_time_now - fake_time_lag,
-                     "data": "some$data"}
+                     "data": "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo="}
         self.app.message("2.7.5.8", self.args)
 
     def teardown(self):
@@ -80,7 +80,7 @@ class TestInsertApplication:
         assert self.messages[0].time_received == fake_time_now
 
     def test_message_pushes_data_correctly(self):
-        assert self.messages[0].data == "some$data"
+        assert self.messages[0].data == "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo="
 
     @raises(ValueError)
     def test_message_refuses_forbidden_types(self):

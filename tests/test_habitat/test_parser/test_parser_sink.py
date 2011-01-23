@@ -185,13 +185,6 @@ class WrongMessage(object):
         self.time_received = 0
         self.data = "d3Jvbmc="
 
-class NotB64Message(object):
-    """A fake message that won't result in a valid callsign"""
-    def __init__(self):
-        self.source = FakeListener()
-        self.type = Message.RECEIVED_TELEM
-        self.data = "wrong"
-
 class TestParserSink(object):
     def setup(self):
         docs = {
@@ -298,10 +291,6 @@ class TestParserSink(object):
     @raises(ValueError)
     def test_errors_when_no_callsign_found(self):
         self.sink.message(WrongMessage())
-
-    @raises(ValueError)
-    def test_errors_when_no_data_not_base64(self):
-        self.sink.message(NotB64Message())
 
     def test_pushes_message(self):
         self.sink.message(FakeMessage())

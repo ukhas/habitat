@@ -30,6 +30,7 @@ from habitat.message_server import Sink, SimpleSink, Message, Listener
 from habitat.utils import crashmat, dynamicloader
 
 from test_habitat.lib import threading_checks
+from test_habitat.lib.sample_messages import SMessage
 from test_habitat.lib.reloadable_module_writer import ReloadableModuleWriter
 from test_habitat.lib.locktroll import LockTroll
 
@@ -81,13 +82,13 @@ class TestServer:
         threading_checks.restore()
 
     def test_message_counter(self):
-        message_rt = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
+        m = SMessage()
         assert self.server.message_count == 0
-        self.server.push_message(message_rt)
+        self.server.push_message(m)
         self.server.flush()
         assert self.server.message_count == 1
         for i in xrange(10):
-            self.server.push_message(message_rt)
+            self.server.push_message(m)
         self.server.flush()
         assert self.server.message_count == 11
 
@@ -105,19 +106,19 @@ class TestServer:
         assert repr(self.server) == locked_format
         troll.release()
 
-        message_rt = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
-        self.server.push_message(message_rt)
+        m = SMessage()
+        self.server.push_message(m)
         self.server.flush()
         assert repr(self.server) == info_format % (0, 1, 0)
 
         self.server.load(TestSinkA)
         assert repr(self.server) == info_format % (1, 1, 0)
 
-        self.server.push_message(message_rt)
+        self.server.push_message(m)
         self.server.flush()
         self.server.load(TestSinkB)
-        self.server.push_message(message_rt)
-        self.server.push_message(message_rt)
+        self.server.push_message(m)
+        self.server.push_message(m)
         self.server.flush()
         assert repr(self.server) == info_format % (2, 4, 0)
 
@@ -129,8 +130,8 @@ class TestServer:
         self.server.shutdown()
         assert repr(self.server) == info_format % (0, 4, 0)
 
-        self.server.push_message(message_rt)
-        self.server.push_message(message_rt)
+        self.server.push_message(m)
+        self.server.push_message(m)
 
         assert repr(self.server) == info_format % (0, 4, 2)
 
@@ -246,8 +247,8 @@ class TestServer:
         assert len(self.server.sinks) == 0
 
     def test_pushes_to_sinks(self):
-        message_li = Message(self.source, Message.LISTENER_INFO, 0, 0, None)
-        message_rt = Message(self.source, Message.RECEIVED_TELEM, 0, 0, None)
+        message_li = SMessage(type=Message.LISTENER_INFO)
+        message_rt = SMessage(type=Message.RECEIVED_TELEM)
         self.server.load(TestSinkA)
         self.server.load(TestSinkB)
         self.server.push_message(message_li)
@@ -272,7 +273,7 @@ class TestServer:
         self.server.load(pushback_class)
         self.server.load(pushbackreceiver_class)
         self.server.push_message(
-            Message(self.source, Message.RECEIVED_TELEM, 0, 0, 6293))
+            SMessage(type=Message.RECEIVED_TELEM, testid=6293))
 
         # Flush twice
         for r in xrange(0, 2):
@@ -363,7 +364,7 @@ class TestServer:
 
     def test_reload_skips_no_messages(self):
         self.server.load(SlowShutdownSink)
-        m = Message(self.source, Message.TELEM, 0, 0, None)
+        m = SMessage(type=Message.TELEM)
 
         def f():
             self.server.reload(SlowShutdownSink)
@@ -401,7 +402,7 @@ class TestServer:
 
     def check_function_clears_queue(self, f):
         with self.server.lock:
-            m = Message(self.source, Message.TELEM, 0, 0, None)
+            m = SMessage()
             self.server.push_message(m)
             self.server.push_message(m)
             self.server.push_message(m)
@@ -415,7 +416,7 @@ class TestServer:
         lt = LockTroll(self.server.lock)
         lt.start()
         # If it wasn't instant/Queue, this would deadlock
-        m = Message(self.source, Message.TELEM, 0, 0, None)
+        m = SMessage()
         self.server.push_message(m)
         self.server.push_message(m)
         self.server.push_message(m)
