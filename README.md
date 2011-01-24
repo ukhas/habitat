@@ -16,6 +16,7 @@ libraries are required in order to use habitat
  - python-ipaddr
  - nosetests
  - couchdbkit
+ - crcmod
 
 ## Project Homepage
 
