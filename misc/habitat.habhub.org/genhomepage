@@ -49,10 +49,10 @@ cat <<-EOF
     <li><a href="docs">Pretty documentation!</a></li>
     <li>
       <a href="http://github.com/ukhas/habitat">Browse habitat's source on github</a>
-      <span class="small"><a href="source">(mirror)</a>
+      <span class="small"><a href="source">(mirror)</a></span>
     </li>
     <li><a href="https://www.pivotaltracker.com/projects/112268">habitat on Pivotal Tracker</a> (roadmap, etc.)</li>
-    <li><a href="http://ci.habhub.org/">habitat's continuous integration server</li>
+    <li><a href="http://ci.habhub.org/">habitat's continuous integration server</a></li>
     <li>
       <code>git checkout git://github.com/ukhas/habitat.git</code>
       <span class="small">(mirror at <code><a href="habitat.git">http://habitat.habhub.org/habitat.git</a></code>)</span>
