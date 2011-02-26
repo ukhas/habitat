@@ -34,8 +34,8 @@ listener_info_valid = { u"name": u"Daniel", u"location": u"Reading, UK",
                         u"antenna": u"1/4 wave whip" }
 listener_info_extra = listener_info_valid.copy()
 listener_info_extra[u"badkey"] = True
-listener_info_invalid = listener_info_valid.copy()
-del listener_info_invalid["antenna"]
+listener_info_missing = listener_info_valid.copy()
+del listener_info_missing["antenna"]
 
 listener_telem_truev = { "time": { "hour": 12, "minute": 40,
                                    "second": 7 },
@@ -164,7 +164,14 @@ class TestMessage:
         m = self.good_message_data(Message.LISTENER_INFO, listener_info_extra)
         assert m.data == listener_info_valid
 
-        self.bad_message_data(Message.LISTENER_INFO, listener_info_invalid)
+        m = self.good_message_data(Message.LISTENER_INFO,
+                                   listener_info_missing)
+        assert isinstance(m.data["antenna"], unicode)
+        assert m.data["antenna"] == ""
+        compare = copy.deepcopy(m.data)
+        compare["antenna"] = listener_info_valid["antenna"]
+        assert compare == listener_info_valid
+
         self.wrongtype_message_data(Message.LISTENER_INFO, None)
         self.wrongtype_message_data(Message.LISTENER_INFO, 123)
 

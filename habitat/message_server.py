@@ -661,13 +661,13 @@ class Message(object):
 
         clean_data = {}
 
-        try:
-            for i in ["name", "location", "radio", "antenna"]:
+        for i in ["name", "location", "radio", "antenna"]:
+            try:
                 clean_data[i] = unicode(data[i])
-        except KeyError:
-            raise ValueError("A required key couldn't be found in data")
-        except (TypeError, ValueError):
-            raise ValueError("Invalid value in data")
+            except KeyError:
+                clean_data[i] = u""
+            except (TypeError, ValueError):
+                raise ValueError("Invalid value in data")
 
         return clean_data
 
