@@ -168,7 +168,7 @@ class TestLoad:
 
         roundabout_mod = ReloadableModuleWriter(modname + "_alias", "asdf")
         assert not roundabout_mod.is_loaded()
-        roundabout_mod.write_code("from %s import asdf" % modname)
+        roundabout_mod.write_code("from {0} import asdf".format(modname))
 
         rmod.write_code(modulecode_1)
 
