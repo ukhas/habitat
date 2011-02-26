@@ -92,11 +92,18 @@ RECEIVED_TELEM: received telemetry string
 A single string of telemetry, not necessarily correct or without errors,
 from a listener with a radio.
 
-**data** must be a string containing base64 encoded binary data, for example:
+**data** is a JSON object/python dict containing name:value pairs. It must
+contain the key **string**, which must be a string containing base64
+encoded binary data. In addition, some metadata may optionally be included.
+The permitted keys feature below in this example:
 
 .. code-block:: javascript
 
-    "data": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ=="
+    "data":
+    {
+        "string": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ==",
+        "frequency": 434075199.23  // Frequency the data was received on, in Hz
+    }
 
 LISTENER_INFO: listener information
 ===================================
@@ -111,7 +118,7 @@ messages.
 
 **data** is a JSON object/python dict consisting of name:value pairs, where
 the value is always a string. The following example shows the permitted
-name/value pairs:
+name/value pairs, all of which are optional:
 
 .. code-block:: javascript
 

@@ -644,20 +644,42 @@ class Message(object):
             return cls._coerce_data_telem(data)
 
     @classmethod
-    def _coerce_data_received_telem(cls, data):
-        try:
-            binary_data = base64.b64decode(str(data))
-        except TypeError:
-            raise ValueError("data was not valid base64.")
-
-        return base64.b64encode(binary_data)
-
-    @classmethod
-    def _coerce_data_listener_info(cls, data):
+    def _coerce_data_dict(cls, data):
         try:
             data = dict(data)
         except:
             raise TypeError("data should be a dictionary")
+
+        return data
+
+    @classmethod
+    def _coerce_data_received_telem(cls, data):
+        data = cls._coerce_data_dict(data)
+
+        clean_data = {}
+
+        try:
+            binary_data = base64.b64decode(str(data["string"]))
+        except TypeError:
+            raise ValueError("string was not valid base64.")
+
+        clean_data["string"] = str(base64.b64encode(binary_data))
+
+        try:
+            clean_data["frequency"] = float(data["frequency"])
+        except KeyError:
+            pass
+        except (TypeError, ValueError):
+            raise ValueError("Invalid frequency")
+        else:
+            if clean_data["frequency"] < 0:
+                raise ValueError("Invalid frequency")
+
+        return clean_data
+
+    @classmethod
+    def _coerce_data_listener_info(cls, data):
+        data = cls._coerce_data_dict(data)
 
         clean_data = {}
 
@@ -665,7 +687,7 @@ class Message(object):
             try:
                 clean_data[i] = unicode(data[i])
             except KeyError:
-                clean_data[i] = u""
+                pass
             except (TypeError, ValueError):
                 raise ValueError("Invalid value in data")
 
@@ -673,10 +695,7 @@ class Message(object):
 
     @classmethod
     def _coerce_data_listener_telem(cls, data):
-        try:
-            data = dict(data)
-        except:
-            raise TypeError("data should be a dictionary")
+        data = cls._coerce_data_dict(data)
 
         clean_data = {}
 
@@ -714,12 +733,7 @@ class Message(object):
 
     @classmethod
     def _coerce_data_telem(cls, data):
-        try:
-            data = dict(data)
-        except:
-            raise TypeError("data should be a dictionary")
-
-        return data
+        return cls._coerce_data_dict(data)
 
 class Listener(object):
     """
