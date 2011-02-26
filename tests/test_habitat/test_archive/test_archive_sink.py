@@ -120,7 +120,7 @@ listener_one = FakeListener("habitat_one")
 listener_two = FakeListener("habitat_two")
 listener_three = FakeListener("habitat_three")
 listener_four = FakeListener("habitat_four")
-raw_data = "dGVzdCBtZXNzYWdl"
+raw_data = {"string": "dGVzdCBtZXNzYWdl", "should_ignore_metadata": True}
 parsed_data = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": True}
 parsed_data_two = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": "two"}
 parsed_data_three = {"_raw": "dGVzdCBtZXNzYWdl", "newly_parsed": True}
@@ -220,7 +220,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data},
+            "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
                 "received_time": 1,
                 "uploaded_time": 2,
@@ -238,7 +238,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data},
+            "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
                 "received_time": 1,
                 "uploaded_time": 2,
@@ -256,7 +256,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data},
+            "data": {"_raw": raw_data["string"]},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -281,7 +281,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -301,7 +301,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -325,7 +325,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -345,7 +345,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -365,7 +365,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -390,7 +390,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -410,7 +410,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -435,7 +435,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -455,7 +455,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,
@@ -480,7 +480,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True,
+            "data": {"_raw": raw_data["string"], "parsed_data": True,
                 "newly_parsed": True},
             "receivers": {
                 "habitat_one": {
@@ -501,7 +501,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True,
+            "data": {"_raw": raw_data["string"], "parsed_data": True,
                 "newly_parsed": True},
             "receivers": {
                 "habitat_one": {
@@ -526,7 +526,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data},
+            "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
                 "received_time": 1,
                 "uploaded_time": 2,
@@ -543,7 +543,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data},
+            "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
                 "received_time": 1,
                 "uploaded_time": 2,
@@ -560,7 +560,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data},
+            "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
                 "received_time": 1,
                 "uploaded_time": 2,
@@ -577,7 +577,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data},
+            "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
                 "received_time": 1,
                 "uploaded_time": 2,
@@ -630,7 +630,7 @@ class TestArchiveSink(object):
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_received_time": 1,
-            "data": {"_raw": raw_data, "parsed_data": True},
+            "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
                     "received_time": 1,

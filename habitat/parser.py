@@ -123,7 +123,7 @@ class ParserSink(SimpleSink):
 
         data = None
 
-        raw_data = base64.b64decode(message.data)
+        raw_data = base64.b64decode(message.data["string"])
 
         # Try using real configs
         for module in self.modules:
@@ -151,7 +151,7 @@ class ParserSink(SimpleSink):
                     continue
 
         if data:
-            data["_raw"] = message.data
+            data["_raw"] = message.data["string"]
             new_message = Message(message.source, Message.TELEM,
                                   message.time_created, message.time_received,
                                   data)

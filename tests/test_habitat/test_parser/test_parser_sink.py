@@ -174,7 +174,7 @@ class FakeMessage(object):
         self.type = Message.RECEIVED_TELEM
         self.time_created = 1234
         self.time_received = 5768
-        self.data = "dGVzdCBtZXNzYWdl"
+        self.data = { "string": "dGVzdCBtZXNzYWdl", "metametadata": "asdf" }
 
 class WrongMessage(object):
     """A fake message that won't result in a valid callsign"""
@@ -183,7 +183,7 @@ class WrongMessage(object):
         self.type = Message.RECEIVED_TELEM
         self.time_created = 0
         self.time_received = 0
-        self.data = "d3Jvbmc="
+        self.data = { "string": "d3Jvbmc=", "ignorethis": 1234 }
 
 class TestParserSink(object):
     def setup(self):

@@ -88,7 +88,7 @@ class ArchiveSink(SimpleSink):
         new message is different from the current data in the database.
         """
         if message.type == Message.RECEIVED_TELEM:
-            self._handle_telem(message, {"_raw": message.data})
+            self._handle_telem(message, {"_raw": message.data["string"]})
         elif message.type == Message.TELEM:
             self._handle_telem(message, message.data)
         elif message.type == Message.LISTENER_INFO:
