@@ -30,6 +30,7 @@ import logging
 
 from nose.tools import raises
 
+from test_habitat import scratch_dir
 from test_habitat.lib import threading_checks
 
 from habitat.utils import crashmat
@@ -48,8 +49,7 @@ def new_get_options():
 new_get_options.hits = 0
 
 # Make sure it doesn't read a configuration file
-missing_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "habitat_missing.cfg")
+missing_file = os.path.join(scratch_dir, "habitat_missing.cfg")
 
 # Replace setup_logging with a function that does nothing
 def new_setup_logging(*args):
@@ -80,13 +80,11 @@ class FakeCouchServer:
 program_module.couchdbkit.Server = FakeCouchServer
 
 # Replace the Server class with something that does nothing
-dumbservers = []
 class DumbServer:
     def __init__(self, program):
         self.program = program
         self.start_hits = 0
         self.shutdown_hits = 0
-        dumbservers.append(self)
 
     def start(self):
         self.start_hits += 1
@@ -95,7 +93,6 @@ class DumbServer:
         self.shutdown_hits += 1
 
 # Replace SCGIApplication with something that does nothing
-dumbscgiapps = []
 class DumbSCGIApplication:
     def __init__(self, server, program, socket_file, timeout=1):
         self.server = server
@@ -104,7 +101,6 @@ class DumbSCGIApplication:
         self.timeout = timeout
         self.start_hits = 0
         self.shutdown_hits = 0
-        dumbscgiapps.append(self)
 
     def start(self):
         self.start_hits += 1
@@ -125,14 +121,12 @@ class DumbSCGIApplication:
 class Listening(Exception):
     pass
 
-dumbsignallisteners = []
 class DumbSignalListener:
     def __init__(self, program):
         self.program = program
         self.setup_hits = 0
         self.listen_hits = 0
         self.exit_hits = 0
-        dumbsignallisteners.append(self)
 
     def setup(self):
         self.setup_hits += 1
@@ -145,9 +139,9 @@ class DumbSignalListener:
         self.exit_hits += 1
 
 # A replacement for crashmat.set_shutdown_function
-shutdown_functions = []
 def new_set_shutdown_function(func):
-    shutdown_functions.append(func)
+    new_set_shutdown_function.funcs.append(func)
+new_set_shutdown_function.funcs = []
 
 def new_panic():
     new_panic.calls += 1
@@ -240,15 +234,13 @@ class TestProgram:
 
         # Clear the list, reset the counter, reset the functions
         new_get_options.hits = 0
-        dumbservers[:] = []
-        dumbscgiapps[:] = []
-        dumbsignallisteners[:] = []
-        shutdown_functions[:] = []
         new_main_setup.action = action_nothing
         new_main_execution.action = action_nothing
         new_main_setup.calls = 0
         new_main_execution.calls = 0
         new_panic.calls = 0
+        assert new_run.queue.qsize() == 0
+        new_set_shutdown_function.funcs[:] = []
 
         # Replace argv
         self.old_argv = sys.argv
@@ -362,36 +354,33 @@ class TestProgram:
         assert p.db.database_name == "database"
 
         # creates a server
-        assert len(dumbservers) == 1
-        assert dumbservers[0].program == p
-        assert dumbservers[0].start_hits == 0
+        assert p.server.program == p
+        assert p.server.start_hits == 0
 
         # creates a scgiapp
-        assert len(dumbscgiapps) == 1
-        assert dumbscgiapps[0].program == p
-        assert dumbscgiapps[0].server == dumbservers[0]
-        assert dumbscgiapps[0].socket_file == "socketfile"
-        assert dumbscgiapps[0].start_hits == 0
+        assert p.scgiapp.program == p
+        assert p.scgiapp.server == p.server
+        assert p.scgiapp.socket_file == "socketfile"
+        assert p.scgiapp.start_hits == 0
 
         # creates a signal listener
-        assert len(dumbsignallisteners) == 1
-        assert dumbsignallisteners[0].setup_hits == 1
-        assert dumbsignallisteners[0].listen_hits == 0
+        assert p.signallistener.setup_hits == 1
+        assert p.signallistener.listen_hits == 0
 
         # creates a thread, but doesn't run it yet
         assert p.thread.is_alive() == False
 
         # calls set_shutdown_function
-        assert len(shutdown_functions) == 1
-        assert shutdown_functions[0] == p.shutdown
+        assert len(new_set_shutdown_function.funcs) == 1
+        assert new_set_shutdown_function.funcs[0] == p.shutdown
 
         # execution phase
         raises(Listening)(p.main_execution)()
 
         # starts the server, the scgiapp and calls listen
-        assert dumbservers[0].start_hits == 1
-        assert dumbscgiapps[0].start_hits == 1
-        assert dumbsignallisteners[0].listen_hits == 1
+        assert p.server.start_hits == 1
+        assert p.scgiapp.start_hits == 1
+        assert p.signallistener.listen_hits == 1
 
         # starts p.thread
         assert new_run.queue.get() == p.thread
@@ -418,8 +407,8 @@ class TestProgram:
         p.shutdown()
         p.thread.join()
 
-        assert dumbsignallisteners[0].exit_hits == 1
-        assert dumbscgiapps[0].shutdown_hits == 1
-        assert dumbservers[0].shutdown_hits == 1
+        assert p.signallistener.exit_hits == 1
+        assert p.scgiapp.shutdown_hits == 1
+        assert p.server.shutdown_hits == 1
         assert p.db.committed
         assert p.db.closed
