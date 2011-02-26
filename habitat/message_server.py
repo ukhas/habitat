@@ -698,7 +698,7 @@ class Message(object):
         minute = clean_data["time"]["minute"]
         second = clean_data["time"]["second"]
 
-        if hour < 0 or hour > 12 or \
+        if hour < 0 or hour > 24 or \
            minute < 0 or minute > 59 or \
            second < 0 or second > 61:
             raise ValueError("Invalid time value in data")

@@ -212,6 +212,15 @@ class TestMessage:
         self.wrongtype_message_data(Message.TELEM, None)
         self.wrongtype_message_data(Message.TELEM, 123)
 
+class TestMessageBugs:
+    def test_message_listener_telem_allows_24hrs(self):
+        """LISTENER_TELEM.data["time"]["hour"] can be > 12 (#9648375)"""
+        # https://www.pivotaltracker.com/story/show/9648375
+        test_data = copy.deepcopy(listener_telem_valid)
+        test_data["time"]["hour"] = 15
+        Message(Listener("M0ZDR", "1.2.3.4"), Message.LISTENER_TELEM,
+                123345, 123435, test_data)
+
 class TestListener:
     def setup(self):
         # NB: b & d have different IPs
