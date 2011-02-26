@@ -50,4 +50,3 @@ for doc in docs:
 # doc prevents the creation of non-flight documents by anything except
 # the habitat user)
 push("habitat", db)
-

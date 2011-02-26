@@ -29,17 +29,17 @@ class SMessage(Message):
             if type == Message.RECEIVED_TELEM:
                 data = "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo="
             elif type == Message.LISTENER_INFO:
-                data = { "name": "Habitatat", "location": "He's behind you!",
-                         "radio": "Nerve endings on my tongue",
-                         "antenna": "Flagpole" }
+                data = {"name": "Habitatat", "location": "He's behind you!",
+                        "radio": "Nerve endings on my tongue",
+                        "antenna": "Flagpole"}
             elif type == Message.LISTENER_TELEM:
-                data = { "time": { "hour": 12, "minute": 40, "second": 7 },
-                         "latitude": 52, "longitude": 137, "altitude": -5 }
+                data = {"time": {"hour": 12, "minute": 40, "second": 7},
+                        "latitude": 52, "longitude": 137, "altitude": -5}
             elif type == Message.TELEM:
-                data = { "_protocol": "URANDOM",
-                         "_raw": "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo=",
-                         "sentence": "But what is the question?",
-                         "lock_status": "I have no clue where I am" }
+                data = {"_protocol": "URANDOM",
+                        "_raw": "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo=",
+                        "sentence": "But what is the question?",
+                        "lock_status": "I have no clue where I am"}
 
         Message.__init__(self, source, type, time_created, time_received, data)
         self.testid = testid

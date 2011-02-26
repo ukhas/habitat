@@ -223,7 +223,7 @@ class TestSink:
     def test_repr_threaded(self):
         sink = DelayableThreadedSink(FakeServer())
 
-        base_format = "<" + fullname(sink.__class__)  + " (ThreadedSink): %s>"
+        base_format = "<" + fullname(sink.__class__) + " (ThreadedSink): %s>"
         info_format = base_format % "%s messages so far, roughly %s queued%s"
         locked_format = base_format % "locked"
 
@@ -354,7 +354,7 @@ class TestSink:
 
     @raises(TypeError)
     def check_rejects_garbage_set(self, func):
-        func(1337) # An int, not a set
+        func(1337)  # An int, not a set
 
     @raises(ValueError)
     def check_rejects_invalid_type(self, func):

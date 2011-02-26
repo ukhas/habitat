@@ -62,4 +62,3 @@ class Database(object):
             return self.view_results[view]
         else:
             return self.default_view_results
-

@@ -3,7 +3,8 @@
 # habitat documentation build configuration file, created by
 # sphinx-quickstart on Sat Dec 11 14:40:10 2010.
 
-import sys, os
+import sys
+import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 import habitat

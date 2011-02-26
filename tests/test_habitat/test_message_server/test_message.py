@@ -25,39 +25,39 @@ from habitat.message_server import Message, Listener
 
 b64_valid = u"SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo="
 b64_invalid = u"asdfasd"
-# I actually tried using 'None' and '{ "lol, a dict": True }' but both,
+# I actually tried using 'None' and '{"lol, a dict": True}' but both,
 # when converted by str(), are semi-valid b64. >.>
-b64_garbage = { "lol, a dict?": "asdffsa" }
+b64_garbage = {"lol, a dict?": "asdffsa"}
 
-listener_info_valid = { u"name": u"Daniel", u"location": u"Reading, UK",
-                        u"radio": u"Yaesu FT817",
-                        u"antenna": u"1/4 wave whip" }
+listener_info_valid = {u"name": u"Daniel", u"location": u"Reading, UK",
+                       u"radio": u"Yaesu FT817",
+                       u"antenna": u"1/4 wave whip"}
 listener_info_extra = listener_info_valid.copy()
 listener_info_extra[u"badkey"] = True
 listener_info_invalid = listener_info_valid.copy()
 del listener_info_invalid["antenna"]
 
-listener_telem_truev = { "time": { "hour": 12, "minute": 40,
-                                   "second": 7 },
-                         "latitude": -35.11, "longitude": 137.567,
-                         "altitude": 12 }
-listener_telem_valid = { u"time": { u"hour": 12, u"minute": 40,
-                                    u"second": 7 },
-                         u"latitude": -35.11, u"longitude": 137.567,
-                         u"altitude": 12 }
-listener_telem_equal = { u"time": { u"hour": 12.00, u"minute": "40",
-                                    u"second": u"7" },
-                         u"latitude": u"-35.11", u"longitude": "137.567",
-                         u"altitude": "12",
-                         u"extrakey": u"Hello world!"}
-listener_telem_badkv = { u"time": { u"hour": "noint", u"minute": 90,
-                                    u"second": u"100" },
-                         u"latitude": u"100", u"longitude": 180.100,
-                         u"altitude": "maybe not." }
+listener_telem_truev = {"time": {"hour": 12, "minute": 40,
+                                 "second": 7},
+                        "latitude": -35.11, "longitude": 137.567,
+                        "altitude": 12}
+listener_telem_valid = {u"time": {u"hour": 12, u"minute": 40,
+                                  u"second": 7},
+                        u"latitude": -35.11, u"longitude": 137.567,
+                        u"altitude": 12}
+listener_telem_equal = {u"time": {u"hour": 12.00, u"minute": "40",
+                                  u"second": u"7"},
+                        u"latitude": u"-35.11", u"longitude": "137.567",
+                        u"altitude": "12",
+                        u"extrakey": u"Hello world!"}
+listener_telem_badkv = {u"time": {u"hour": "noint", u"minute": 90,
+                                  u"second": u"100"},
+                        u"latitude": u"100", u"longitude": 180.100,
+                        u"altitude": "maybe not."}
 
-telem_data = { "_protocol": "UKHAS", "_raw": "asdf", "time": { "a": 6 },
-               "z": 1, "asdf": u"There probably won't be any unicode data",
-               u"key": "But the test is that Message doesn't touch the dict." }
+telem_data = {"_protocol": "UKHAS", "_raw": "asdf", "time": {"a": 6},
+              "z": 1, "asdf": u"There probably won't be any unicode data",
+              u"key": "But the test is that Message doesn't touch the dict."}
 
 class TestMessage:
     def setup(self):
@@ -123,10 +123,10 @@ class TestMessage:
     def test_repr(self):
         repr_format = "<habitat.message_server.Message (%s) from %s>"
 
-        valid_data = [ (Message.RECEIVED_TELEM, b64_valid),
-                       (Message.LISTENER_INFO, listener_info_valid),
-                       (Message.LISTENER_TELEM, listener_telem_valid),
-                       (Message.TELEM, {}) ]
+        valid_data = [(Message.RECEIVED_TELEM, b64_valid),
+                      (Message.LISTENER_INFO, listener_info_valid),
+                      (Message.LISTENER_TELEM, listener_telem_valid),
+                      (Message.TELEM, {})]
 
         for type, data in valid_data:
             assert repr(Message(self.source, type, 123345, 123435, data)) == \
@@ -268,10 +268,10 @@ class TestListener:
     def check_rejects_bad_callsign(self, call):
         Listener(call, "1.2.3.4")
 
-    @raises(ValueError) # IPAddress() failures return ValueError
+    @raises(ValueError)
     def test_rejects_invalid_ip(self):
         # We use ipaddr which is well tested, so we don't need to spend too
-        # much time making sure it works.
+        # much time making sure it works. Upon failure it returns ValueError
         Listener("M0ZDR", "1234.1.1.1")
 
     def test_ip_compares(self):

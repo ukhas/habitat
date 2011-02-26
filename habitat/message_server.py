@@ -47,7 +47,7 @@ class Server(object):
         """
         *program*: a :py:class:`habitat.main.Program` object
         """
-        
+
         self.program = program
         self.db = self.program.db
 
@@ -628,7 +628,7 @@ class Message(object):
         """Checks that types is a set of valid integer message types"""
 
         dynamicloader.expecthasattr(types, "__iter__")
-        
+
         for type in types:
             Message.validate_type(type)
 
@@ -683,7 +683,7 @@ class Message(object):
         try:
             for i in ["latitude", "longitude"]:
                 clean_data[i] = float(data[i])
-            
+
             clean_data["altitude"] = int(data["altitude"])
 
             clean_data["time"] = {}

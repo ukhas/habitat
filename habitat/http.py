@@ -277,7 +277,7 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
         for i in xrange(0, len(envdata), 2):
             self.environ[envdata[i]] = envdata[i + 1]
 
-        if self.environ.has_key("CONTENT_LENGTH"):
+        if "CONTENT_LENGTH" in self.environ:
             post_len = long(self.environ['CONTENT_LENGTH'])
 
             while post_len > len(self.buf):

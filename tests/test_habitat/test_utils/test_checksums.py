@@ -28,4 +28,3 @@ class TestChecksums:
         assert checksums.fletcher_16(self.data) == "8C65"
     def test_calculates_fletcher_16_checksum_modulus_256(self):
         assert checksums.fletcher_16(self.data, 256) == "8848"
-
