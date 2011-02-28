@@ -28,6 +28,16 @@ b64_invalid = u"asdfasd"
 # I actually tried using 'None' and '{"lol, a dict": True}' but both,
 # when converted by str(), are semi-valid b64. >.>
 b64_garbage = {"lol, a dict?": "asdffsa"}
+received_telem_truev = { "string": "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo=",
+                         "frequency": 1.23 }
+received_telem_valid = { u"string": u"SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo=",
+                         u"frequency": 1.23 }
+received_telem_equal = { u"string": u"SSBrbm93IHdoZXJ       \n" +
+                                     "lIHlvdSBsaXZlLgo=",
+                         u"frequency": "1.23" }
+received_telem_invalid = { u"string": u"asdfasd", u"frequency": "asd.f" }
+received_telem_extra = received_telem_valid.copy()
+received_telem_extra["knock_knock"] = "Who's there?"
 
 listener_info_valid = {u"name": u"Daniel", u"location": u"Reading, UK",
                        u"radio": u"Yaesu FT817",
@@ -74,40 +84,42 @@ class TestMessage:
 
     def test_initialiser_accepts_and_stores_data(self):
         message = Message(self.source, Message.RECEIVED_TELEM,
-                          18297895, 1238702, b64_valid)
+                          18297895, 1238702, received_telem_valid)
         assert message.source == self.source
         assert message.type == Message.RECEIVED_TELEM
         assert message.time_created == 18297895
         assert message.time_received == 1238702
-        assert message.data == b64_valid
+        assert message.data == received_telem_truev
 
     @raises(TypeError)
     def test_initialiser_rejects_garbage_source(self):
-        Message("asdf", Message.RECEIVED_TELEM, 123456, 123456, b64_valid)
+        Message("asdf", Message.RECEIVED_TELEM, 123456, 123456,
+                received_telem_valid)
 
     @raises(TypeError)
     def test_initialiser_rejects_null_source(self):
-        Message(None, Message.RECEIVED_TELEM, 123456, 123456, b64_valid)
+        Message(None, Message.RECEIVED_TELEM, 123456, 123456,
+                received_telem_valid)
 
     @raises(ValueError)
     def test_initialiser_rejects_invalid_type(self):
-        Message(self.source, 951, 123456, 123456, b64_valid)
+        Message(self.source, 951, 123456, 123456,
+                received_telem_valid)
 
     @raises(ValueError)
     def test_initialiser_rejects_garbage_type(self):
-        Message(self.source, "asdf", 123456, 123456, b64_valid)
-
-    def test_initialiser_allows_no_data(self):
-        Message(self.source, Message.RECEIVED_TELEM, 123456, 123456, None)
+        Message(self.source, "asdf", 123456, 123456,
+                received_telem_valid)
 
     @raises(TypeError)
     def test_initialiser_rejects_garbage_time_created(self):
-        Message(self.source, Message.RECEIVED_TELEM, None, 123456, b64_valid)
+        Message(self.source, Message.RECEIVED_TELEM, None, 123456,
+                received_telem_valid)
 
     @raises(ValueError)
     def test_initialiser_rejects_garbage_time_received(self):
         Message(self.source, Message.RECEIVED_TELEM, 1235123, "lolol",
-                b64_valid)
+                received_telem_valid)
 
     @raises(ValueError)
     def test_validate_type_rejects_garbage_type(self):
@@ -123,10 +135,10 @@ class TestMessage:
     def test_repr(self):
         repr_format = "<habitat.message_server.Message (%s) from %s>"
 
-        valid_data = [(Message.RECEIVED_TELEM, b64_valid),
-                      (Message.LISTENER_INFO, listener_info_valid),
-                      (Message.LISTENER_TELEM, listener_telem_valid),
-                      (Message.TELEM, {})]
+        valid_data = [ (Message.RECEIVED_TELEM, received_telem_valid),
+                       (Message.LISTENER_INFO, listener_info_valid),
+                       (Message.LISTENER_TELEM, listener_telem_valid),
+                       (Message.TELEM, {}) ]
 
         for type, data in valid_data:
             assert repr(Message(self.source, type, 123345, 123435, data)) == \
@@ -142,12 +154,29 @@ class TestMessage:
         assert_raises(TypeError, self.good_message_data, type, data)
 
     def test_message_coerces_received_telem(self):
-        m = self.good_message_data(Message.RECEIVED_TELEM, b64_valid)
-        assert m.data == b64_valid
-        assert isinstance(m.data, str)
-        self.bad_message_data(Message.RECEIVED_TELEM, b64_invalid)
-        # Almost everything coerces to str, so there's no TypeErrors.
-        self.bad_message_data(Message.RECEIVED_TELEM, b64_garbage)
+        m = self.good_message_data(Message.RECEIVED_TELEM,
+                                   received_telem_valid)
+        assert m.data == received_telem_truev
+
+        # Also tests that whitespace in the b64 is removed.
+        m = self.good_message_data(Message.RECEIVED_TELEM,
+                                   received_telem_equal)
+        assert m.data == received_telem_truev
+
+        assert isinstance(m.data["string"], str)
+        assert isinstance(m.data["frequency"], float)
+
+        for k, v in received_telem_invalid.items():
+            t = received_telem_valid.copy()
+            t[k] = v
+            self.bad_message_data(Message.RECEIVED_TELEM, t)
+
+        m = self.good_message_data(Message.RECEIVED_TELEM,
+                                   received_telem_extra)
+        assert m.data == received_telem_truev
+
+        self.wrongtype_message_data(Message.RECEIVED_TELEM, None)
+        self.wrongtype_message_data(Message.RECEIVED_TELEM, 123)
 
     def check_all_encodings(self, items, cl):
         for i in items:
@@ -166,8 +195,7 @@ class TestMessage:
 
         m = self.good_message_data(Message.LISTENER_INFO,
                                    listener_info_missing)
-        assert isinstance(m.data["antenna"], unicode)
-        assert m.data["antenna"] == ""
+        assert "antenna" not in m.data
         compare = copy.deepcopy(m.data)
         compare["antenna"] = listener_info_valid["antenna"]
         assert compare == listener_info_valid

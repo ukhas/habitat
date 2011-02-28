@@ -27,7 +27,8 @@ class SMessage(Message):
 
         if not data:
             if type == Message.RECEIVED_TELEM:
-                data = "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo="
+                data = { "string": "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo=",
+                         "frequency": 434075123.456 }
             elif type == Message.LISTENER_INFO:
                 data = {"name": "Habitatat", "location": "He's behind you!",
                         "radio": "Nerve endings on my tongue",
