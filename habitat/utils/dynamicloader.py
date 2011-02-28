@@ -255,4 +255,3 @@ expecthasmethod = expectgenerator(
         TypeError("Does not have a required method"))(hasmethod)
 expecthasattr = expectgenerator(
         TypeError("Does not have a required attribute"))(hasattr)
-

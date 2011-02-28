@@ -63,15 +63,17 @@ class TestSCGIStartupShutdown:
         threading_checks.restore()
 
     def test_start_does_not_fork(self):
-        old_fork = os.fork
         def new_fork(*args, **kwargs):
             new_fork.hits += 1
-            return old_fork(*args, **kwargs)
+            return new_fork.old(*args, **kwargs)
         new_fork.hits = 0
+        new_fork.old = os.fork
         os.fork = new_fork
 
         self.scgiapp.start()
         assert new_fork.hits == 0
+
+        os.fork = new_fork.old
 
     def test_start_creates_one_acceptor_thread(self):
         # The SocketServer library creates one thread that calls accept()
@@ -102,19 +104,19 @@ class TestSCGIStartupShutdown:
         client = socket.socket(socket.AF_UNIX)
 
         # handle_error will kick up a fuss
-        old_handle_error = self.scgiapp.handle_error
         def new_handle_error(request, client_address):
             type = sys.exc_info()[0]
             if type != socket.timeout:
-                old_handle_error(request, client_address)
+                new_handle_error.old(request, client_address)
+        new_handle_error.old = self.scgiapp.handle_error
         self.scgiapp.handle_error = new_handle_error
 
-        old_process_request_thread = self.scgiapp.process_request_thread
         def new_process_request_thread(request, client_address):
             new_process_request_thread.hits += 1
             new_process_request_thread.event.set()
             new_process_request_thread.cont.wait()
-            old_process_request_thread(request, client_address)
+            new_process_request_thread.old(request, client_address)
+        new_process_request_thread.old = self.scgiapp.process_request_thread
         new_process_request_thread.hits = 0
         new_process_request_thread.event = threading.Event()
         new_process_request_thread.cont = threading.Event()

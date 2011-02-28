@@ -45,5 +45,4 @@ def fletcher_16(data, modulus=255):
         b += a
     a %= modulus
     b %= modulus
-    return hex((a<<8) | b)[2:].upper().zfill(4)
-
+    return hex((a << 8) | b)[2:].upper().zfill(4)

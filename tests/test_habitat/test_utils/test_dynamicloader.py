@@ -71,11 +71,11 @@ class TestLoad:
         assert "whichdb" not in sys.modules
 
         # Wrap reload to work out how many times it was called.
-        old_reload = dynamicloader.__builtins__["reload"]
         def new_reload(*args, **kwargs):
             new_reload.hits += 1
-            return old_reload(*args, **kwargs)
+            return new_reload.old(*args, **kwargs)
         new_reload.hits = 0
+        new_reload.old = dynamicloader.__builtins__["reload"]
 
         dynamicloader.__builtins__["reload"] = new_reload
 
@@ -85,10 +85,10 @@ class TestLoad:
         assert dynamicloader.load("whichdb", force_reload=True).whichdb
         assert new_reload.hits == 1
 
-        dynamicloader.__builtins__["reload"] = old_reload
+        dynamicloader.__builtins__["reload"] = new_reload.old
 
         assert dynamicloader.load("whichdb", force_reload=True).whichdb
-        assert new_reload.hits == 1 # no change; no longer wrapped
+        assert new_reload.hits == 1  # no change; no longer wrapped
 
     def test_can_load_notyetimported_function(self):
         """can load an object from a module that has not been imported yet"""
@@ -111,10 +111,8 @@ class TestLoad:
         a = dynamicloader.load(dynamicloadme.GFunction.__fullname__)
         b = dynamicloader.load(dynamicloadme.GFunction)
         t = ["Hello", "World"]
-        ta = []
-        tb = []
-        for i in a(): ta.append(i)
-        for i in b(): tb.append(i)
+        ta = [i for i in a()]
+        tb = [i for i in b()]
         assert ta == tb == t
 
     @raises(TypeError)
@@ -170,7 +168,7 @@ class TestLoad:
 
         roundabout_mod = ReloadableModuleWriter(modname + "_alias", "asdf")
         assert not roundabout_mod.is_loaded()
-        roundabout_mod.write_code("from %s import asdf" % modname)
+        roundabout_mod.write_code("from {0} import asdf".format(modname))
 
         rmod.write_code(modulecode_1)
 
@@ -294,11 +292,11 @@ class TestInspectors:
         self.check_function_failure(fni, exi, "asdf", TypeError)
 
     def test_hasnumargs(self):
-        for func, val in [ (dynamicloadme.AFunction, 0),
-                           (dynamicloadme.BFunction, 3),
-                           (dynamicloadme.CClass, 2),
-                           (dynamicloadme.DClass, 2),
-                           (dynamicloadme.BClass.a_method, 0) ]:
+        for func, val in [(dynamicloadme.AFunction, 0),
+                          (dynamicloadme.BFunction, 3),
+                          (dynamicloadme.CClass, 2),
+                          (dynamicloadme.DClass, 2),
+                          (dynamicloadme.BClass.a_method, 0)]:
 
             self.check_value_function(dynamicloader.hasnumargs,
                                       dynamicloader.expecthasnumargs,

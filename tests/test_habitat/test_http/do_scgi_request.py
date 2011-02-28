@@ -45,7 +45,7 @@ def do_scgi_request(socket_type, socket_addr, url, data=None, headers=None):
     for (k, v) in headers.items():
         headers_data.append(k)
         headers_data.append(v)
-    headers_data = "\0".join(headers_data) + "\0" # add a final separator
+    headers_data = "\0".join(headers_data) + "\0"  # add a final separator
 
     request = str(len(headers_data)) + ":" + headers_data + "," + data
 

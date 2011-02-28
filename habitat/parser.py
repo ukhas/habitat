@@ -172,8 +172,9 @@ class ParserSink(SimpleSink):
         the sentence dictionary out of the payload config dictionary.
         """
         startkey = [callsign, int(time.time())]
-        result = self.server.db.view("habitat/payload_config", limit = 1,
-                include_docs = True, startkey = startkey).first()
+        result = self.server.db.view("habitat/payload_config", limit=1,
+                                     include_docs=True,
+                                     startkey=startkey).first()
         if not result or callsign not in result["doc"]["payloads"]:
             raise ValueError("No configuration document found for callsign.")
         return result["doc"]["payloads"][callsign]["sentence"]

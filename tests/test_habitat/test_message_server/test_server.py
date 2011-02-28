@@ -51,7 +51,7 @@ class FakeSink(SimpleSink):
         pass
 
 class FakeProgram:
-    db = {"message_server_config": { "sinks": [] }  }
+    db = {"message_server_config": {"sinks": []}}
     def __init__(self, sinks=[]):
         self.db = copy.deepcopy(self.db)
         self.db["message_server_config"]["sinks"] = sinks
@@ -352,10 +352,10 @@ class TestServer:
         self.server.load(FakeSink)
 
         # Wrap sink shutdown
-        old_shutdown = self.server.sinks[0].shutdown
         def new_shutdown(*args, **kwargs):
             new_shutdown.hits += 1
-            return old_shutdown(*args, **kwargs)
+            return new_shutdown.old(*args, **kwargs)
+        new_shutdown.old = self.server.sinks[0].shutdown
         new_shutdown.hits = 0
         self.server.sinks[0].shutdown = new_shutdown
 
@@ -435,4 +435,3 @@ class TestServerStartup:
         tserver.start()
         assert len(threading.enumerate()) == 3
         tserver.shutdown()
-

@@ -42,10 +42,10 @@ from habitat.main import Program, SignalListener, get_options, setup_logging, \
 import habitat.main as program_module
 
 # Replace get_options
-old_get_options = get_options
 def new_get_options():
     new_get_options.hits += 1
-    return old_get_options()
+    return new_get_options.old()
+new_get_options.old = get_options
 new_get_options.hits = 0
 
 # Make sure it doesn't read a configuration file
@@ -230,7 +230,7 @@ class TestProgram:
         crashmat.set_shutdown_function = new_set_shutdown_function
         crashmat.panic = new_panic
         self.new_logging = FakeLogging()
-        program_module.logging  = self.new_logging
+        program_module.logging = self.new_logging
 
         # Clear the list, reset the counter, reset the functions
         new_get_options.hits = 0

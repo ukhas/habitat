@@ -47,7 +47,7 @@ class Server(object):
         """
         *program*: a :py:class:`habitat.main.Program` object
         """
-        
+
         self.program = program
         self.db = self.program.db
 
@@ -209,6 +209,13 @@ class Server(object):
 
             self.sinks = []
 
+    _repr_general_format = "<habitat.message_server.Server: {status}>"
+    _repr_locked = _repr_general_format.format(status="locked")
+    _repr_info = "{sinks} sinks loaded, {msgs} messages so far, " + \
+                 "approx {qsz} queued"
+    _repr_info_format = _repr_general_format.format(status=_repr_info)
+    del _repr_general_format, _repr_info
+
     def __repr__(self):
         """
         Concisely describes the current state of the **Server**
@@ -223,19 +230,15 @@ class Server(object):
         52 messages so far, approx 1 queued>`` is returned.
         """
 
-        general_format = "<habitat.message_server.Server: %s>"
-        locked_format = general_format % "locked"
-        info_format = general_format % ("%s sinks loaded, " +
-                                        "%s messages so far, approx %s queued")
-
         acquired = self.lock.acquire(blocking=False)
 
         if not acquired:
-            return locked_format
+            return self._repr_locked
 
         try:
-            return info_format % (len(self.sinks), self.message_count,
-                                  self.queue.qsize())
+            return self._repr_info_format.format(sinks=len(self.sinks),
+                                                 msgs=self.message_count,
+                                                 qsz=self.queue.qsize())
         finally:
             self.lock.release()
 
@@ -410,6 +413,12 @@ class SimpleSink(Sink):
     def shutdown(self):
         self.flush()
 
+    _repr_general_format = "<{{fullname}} (SimpleSink): {status}>"
+    _repr_locked_format = _repr_general_format.format(status="locked")
+    _repr_info = "{msgs} messages so far, {exc} executing now"
+    _repr_info_format = _repr_general_format.format(status=_repr_info)
+    del _repr_general_format, _repr_info
+
     def __repr__(self):
         """
         Concisely describes the current state of the **Sink**
@@ -424,18 +433,16 @@ class SimpleSink(Sink):
         is returned.
         """
 
-        general_format = "<%s (SimpleSink): %%s>" % \
-                         dynamicloader.fullname(self.__class__)
-        locked_format = general_format % "locked"
-        info_format = general_format % "%s messages so far, %s executing now"
-
+        fullname = dynamicloader.fullname(self.__class__)
         acquired = self.cv.acquire(blocking=False)
 
         if not acquired:
-            return locked_format
+            return self._repr_locked_format.format(fullname=fullname)
 
         try:
-            return info_format % (self.message_count, self.executing_count)
+            return self._repr_info_format.format(fullname=fullname,
+                                                 msgs=self.message_count,
+                                                 exc=self.executing_count)
         finally:
             self.cv.release()
 
@@ -500,6 +507,14 @@ class ThreadedSink(Sink, crashmat.Thread):
         self.flush()
         self.join()
 
+    _repr_info = "{msgs} messages so far, roughly {qsz} queued"
+    _repr_einfo = _repr_info + ", currently executing"
+    _repr_general_format = "<{{fullname}} (ThreadedSink): {status}>"
+    _repr_locked_format = _repr_general_format.format(status="locked")
+    _repr_info_format = _repr_general_format.format(status=_repr_info)
+    _repr_einfo_format = _repr_general_format.format(status=_repr_einfo)
+    del _repr_info, _repr_einfo, _repr_general_format
+
     def __repr__(self):
         """
         Concisely describes the current state of the **Sink**
@@ -514,22 +529,21 @@ class ThreadedSink(Sink, crashmat.Thread):
         is returned.
         """
 
-        general_format = "<%s (ThreadedSink): %%s>" % \
-                         dynamicloader.fullname(self.__class__)
-        info = "%s messages so far, roughly %s queued"
-        locked_format = general_format % "locked"
-        info_format = general_format % info
-        einfo_format = general_format % (info + ", currently executing")
-
+        fullname = dynamicloader.fullname(self.__class__)
         acquired = self.stats_lock.acquire(blocking=False)
 
         if not acquired:
-            return locked_format
+            return self._repr_locked_format.format(fullname=fullname)
 
         try:
             if self.executing:
-                info_format = einfo_format
-            return info_format % (self.message_count, self.queue.qsize())
+                info_format = self._repr_einfo_format
+            else:
+                info_format = self._repr_info_format
+
+            return info_format.format(fullname=fullname,
+                                      msgs=self.message_count,
+                                      qsz=self.queue.qsize())
         finally:
             self.stats_lock.release()
 
@@ -601,6 +615,8 @@ class Message(object):
         self.time_received = time_received
         self.data = data
 
+    _repr_format = "<habitat.message_server.Message ({type}) from {source}>"
+
     def __repr__(self):
         """
         Concisely describes the **Message**
@@ -613,8 +629,8 @@ class Message(object):
         <habitat.message_server.Listener M0ZDR at 127.0.0.1>>``
         """
 
-        return "<habitat.message_server.Message (%s) from %s>" % \
-               (self.type_names[self.type], repr(self.source))
+        return self._repr_format.format(type=self.type_names[self.type],
+                                        source=repr(self.source))
 
     @classmethod
     def validate_type(cls, type):
@@ -628,7 +644,7 @@ class Message(object):
         """Checks that types is a set of valid integer message types"""
 
         dynamicloader.expecthasattr(types, "__iter__")
-        
+
         for type in types:
             Message.validate_type(type)
 
@@ -683,7 +699,7 @@ class Message(object):
         try:
             for i in ["latitude", "longitude"]:
                 clean_data[i] = float(data[i])
-            
+
             clean_data["altitude"] = int(data["altitude"])
 
             clean_data["time"] = {}
@@ -763,6 +779,8 @@ class Listener(object):
         except:
             return False
 
+    _repr_format = "<habitat.message_server.Listener {callsign} at {ip}>"
+
     def __repr__(self):
         """
         Concisely describes the **Listener**
@@ -774,5 +792,5 @@ class Listener(object):
         ``<habitat.message_server.Listener M0ZDR at 127.0.0.1>``
         """
 
-        return "<habitat.message_server.Listener %s at %s>" % \
-               (self.callsign, str(self.ip))
+        return self._repr_format.format(callsign=self.callsign,
+                                        ip=str(self.ip))

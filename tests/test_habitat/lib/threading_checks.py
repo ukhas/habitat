@@ -26,23 +26,23 @@ from habitat.utils import crashmat
 
 __all__ = ["patch", "restore"]
 
-old_init = threading.Thread.__init__
 def new_init(self, *args, **kwargs):
     assert isinstance(self, crashmat.Thread)
-    return old_init(self, *args, **kwargs)
+    return new_init.old(self, *args, **kwargs)
+new_init.old = threading.Thread.__init__
 
 default_threadname = re.compile("^Thread-\d+$")
 
-old_start = threading.Thread.start
 def new_start(self, *args, **kwargs):
     assert default_threadname.match(self.name) == None
-    return old_start(self, *args, **kwargs)
+    return new_start.old(self, *args, **kwargs)
+new_start.old = threading.Thread.start
 
 magic = 157346
 
 def patch():
-    assert threading.Thread.__init__ == old_init
-    assert threading.Thread.start == old_start
+    assert threading.Thread.__init__ == new_init.old
+    assert threading.Thread.start == new_start.old
     threading.Thread.__init__ = new_init
     threading.Thread.start = new_start
 
@@ -59,5 +59,5 @@ def restore():
         (magic, threading.Thread.__init__, threading.Thread.start)
     del threading.Thread.threading_checks_patch
 
-    threading.Thread.__init__ = old_init
-    threading.Thread.start = old_start
+    threading.Thread.__init__ = new_init.old
+    threading.Thread.start = new_start.old

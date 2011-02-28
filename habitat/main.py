@@ -56,9 +56,9 @@ config_section = "habitat"
 # I would use optparse.set_defaults, but instead we need to have command
 # line options, config file options, and defaults, overriding each
 # other in that order.
-default_options = { "couch_uri": None, "couch_db": None, "socket_file": None,
-                    "log_stderr_level": "WARN", "log_file": None,
-                    "log_file_level": None }
+default_options = {"couch_uri": None, "couch_db": None, "socket_file": None,
+                   "log_stderr_level": "WARN", "log_file": None,
+                   "log_file_level": None}
 
 parser = optparse.OptionParser(usage=usage, version=version,
                                description=header)
@@ -67,7 +67,7 @@ parser.add_option("-f", "--config-file", metavar="CONFIG_FILE",
                   help="file from which other options may be read")
 parser.add_option("-c", "--couch-uri", metavar="COUCH_URI",
                   dest="couch_uri",
-                  help="couch server to connect to"+
+                  help="couch server to connect to" +
                     " (http://username:password@host:port/)")
 parser.add_option("-d", "--couch-db", metavar="COUCH_DATABASE",
                   dest="couch_db",
@@ -112,7 +112,7 @@ def get_options():
     for dest in default_options:
         if cmdline_options[dest] != None:
             options[dest] = cmdline_options[dest]
-        elif config_options.has_key(dest) and config_options[dest] != None:
+        elif dest in config_options and config_options[dest] != None:
             options[dest] = config_options[dest]
 
     get_options_check_required(options)

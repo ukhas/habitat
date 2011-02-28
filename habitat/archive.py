@@ -193,7 +193,7 @@ class ArchiveSink(SimpleSink):
         mean = self._get_mean(times)
         devs = []
         for time in times:
-            devs.append(abs(time - mean)**2)
+            devs.append(abs(time - mean) ** 2)
         sd = math.sqrt(self._get_mean(devs))
         for time in deepcopy(times):
             if abs(time - mean) > sd:

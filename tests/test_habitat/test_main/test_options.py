@@ -51,71 +51,71 @@ class TestOptions:
         main.default_configuration_file = "/etc/habitat/habitat.cfg"
 
     def test_optparse_is_setup_correctly(self):
-        expect_options = [ ("-f", "--config-file"),
-                           ("-c", "--couch-uri"),
-                           ("-d", "--couch-db"),
-                           ("-s", "--socket"),
-                           ("-v", "--verbosity"),
-                           ("-l", "--log-file"),
-                           ("-e", "--log-level") ]
+        expect_options = [("-f", "--config-file"),
+                          ("-c", "--couch-uri"),
+                          ("-d", "--couch-db"),
+                          ("-s", "--socket"),
+                          ("-v", "--verbosity"),
+                          ("-l", "--log-file"),
+                          ("-e", "--log-level")]
 
         for (short, long) in expect_options:
             assert main.parser.get_option(short).get_opt_string() == long
 
     def test_get_options(self):
         self.create_config_file(default_file,
-            { "couch_uri": "http://habitat:password@localhost:5984",
-              "couch_db": "habitat",
-              "socket_file": "/tmp/habitat.sock",
-              "log_stderr_level": "QUIET",
-              "log_file": "/var/log/habitat",
-              "log_file_level": "INFO" })
+            {"couch_uri": "http://habitat:password@localhost:5984",
+             "couch_db": "habitat",
+             "socket_file": "/tmp/habitat.sock",
+             "log_stderr_level": "QUIET",
+             "log_file": "/var/log/habitat",
+             "log_file_level": "INFO"})
 
         self.create_config_file(alternate_file,
-            { "couch_uri": "http://user:pass@example.com:1234",
-              "couch_db": "rehab",
-              "socket_file": "/var/run/habitat/sck" })
+            {"couch_uri": "http://user:pass@example.com:1234",
+             "couch_db": "rehab",
+             "socket_file": "/var/run/habitat/sck"})
 
         # Test loading default config file
         self.check_get_options([],
-            { "couch_uri": "http://habitat:password@localhost:5984",
-              "couch_db": "habitat",
-              "socket_file": "/tmp/habitat.sock",
-              "log_stderr_level": None,
-              "log_file": "/var/log/habitat",
-              "log_file_level": logging.INFO })
+            {"couch_uri": "http://habitat:password@localhost:5984",
+             "couch_db": "habitat",
+             "socket_file": "/tmp/habitat.sock",
+             "log_stderr_level": None,
+             "log_file": "/var/log/habitat",
+             "log_file_level": logging.INFO})
 
         # Test loading config from an alternate file.
         self.check_get_options(["-f", alternate_file],
-            { "couch_uri": "http://user:pass@example.com:1234",
-              "couch_db": "rehab",
-              "socket_file": "/var/run/habitat/sck",
-              "log_stderr_level": logging.WARN,
-              "log_file": None,
-              "log_file_level": None })
+            {"couch_uri": "http://user:pass@example.com:1234",
+             "couch_db": "rehab",
+             "socket_file": "/var/run/habitat/sck",
+             "log_stderr_level": logging.WARN,
+             "log_file": None,
+             "log_file_level": None})
 
         # Test config by command line options only
         self.check_get_options(
             ["-c", "cmdline_c", "-d", "cmdline_d", "-s", "cmdline_s",
              "-v", "DEBUG", "-l", "~/test", "-e", "ERROR"],
-            { "couch_uri": "cmdline_c",
-              "couch_db": "cmdline_d",
-              "socket_file": "cmdline_s",
-              "log_stderr_level": logging.DEBUG,
-              "log_file": "~/test",
-              "log_file_level": logging.ERROR })
+            {"couch_uri": "cmdline_c",
+             "couch_db": "cmdline_d",
+             "socket_file": "cmdline_s",
+             "log_stderr_level": logging.DEBUG,
+             "log_file": "~/test",
+             "log_file_level": logging.ERROR})
 
         # Test command line options override config options, which
         # override default options
         self.check_get_options(
             ["-c", "cmdline_c", "-l", "asdf", "-e", "DEBUG",
              "-f", alternate_file],
-            { "couch_uri": "cmdline_c",
-              "couch_db": "rehab",
-              "socket_file": "/var/run/habitat/sck",
-              "log_stderr_level": logging.WARN,
-              "log_file": "asdf",
-              "log_file_level": logging.DEBUG })
+            {"couch_uri": "cmdline_c",
+             "couch_db": "rehab",
+             "socket_file": "/var/run/habitat/sck",
+             "log_stderr_level": logging.WARN,
+             "log_file": "asdf",
+             "log_file_level": logging.DEBUG})
 
     def test_invalid_config_file_fails(self):
         with open(invalid_file, "wb") as f:
@@ -173,36 +173,36 @@ class TestOptions:
         self.check_get_options(
             ["-c", "cmdline_c", "-d", "cmdline_d", "-s", "cmdline_s",
              "-v", "DEBUG", "-l", "~/test", "-e", "ERROR"],
-            { "couch_uri": "cmdline_c",
-              "couch_db": "cmdline_d",
-              "socket_file": "cmdline_s",
-              "log_stderr_level": logging.DEBUG,
-              "log_file": "~/test",
-              "log_file_level": logging.ERROR })
+            {"couch_uri": "cmdline_c",
+             "couch_db": "cmdline_d",
+             "socket_file": "cmdline_s",
+             "log_stderr_level": logging.DEBUG,
+             "log_file": "~/test",
+             "log_file_level": logging.ERROR})
 
         # Test default options for logging
         self.check_get_options(
             ["-c", "cmdline_c", "-d", "cmdline_d", "-s", "cmdline_s"],
-            { "couch_uri": "cmdline_c",
-              "couch_db": "cmdline_d",
-              "socket_file": "cmdline_s",
-              "log_stderr_level": logging.WARN,
-              "log_file": None,
-              "log_file_level": None })
+            {"couch_uri": "cmdline_c",
+             "couch_db": "cmdline_d",
+             "socket_file": "cmdline_s",
+             "log_stderr_level": logging.WARN,
+             "log_file": None,
+             "log_file_level": None})
 
     def test_default_stderr_level_override(self):
         self.remove_default()
 
-        for (level, expect) in [ ("NONE", None), ("ERROR", logging.ERROR) ]:
+        for (level, expect) in [("NONE", None), ("ERROR", logging.ERROR)]:
             self.check_get_options(
                 ["-c", "cmdline_c", "-d", "cmdline_d", "-s", "cmdline_s",
                  "-v", level],
-                { "couch_uri": "cmdline_c",
-                  "couch_db": "cmdline_d",
-                  "socket_file": "cmdline_s",
-                  "log_stderr_level": expect,
-                  "log_file": None,
-                  "log_file_level": None })
+                {"couch_uri": "cmdline_c",
+                 "couch_db": "cmdline_d",
+                 "socket_file": "cmdline_s",
+                 "log_stderr_level": expect,
+                 "log_file": None,
+                 "log_file_level": None})
 
     def test_missing_explicitly_stated_default_file_does_fail(self):
         self.remove_default()
@@ -234,18 +234,18 @@ class TestOptions:
         self.check_get_options_fails(argv)
 
     def test_log_levels(self):
-        levels = [ ("CRITICAL", logging.CRITICAL),
-                   ("ERROR", logging.ERROR),
-                   ("WARN", logging.WARN),
-                   ("INFO", logging.INFO),
-                   ("DEBUG", logging.DEBUG) ]
+        levels = [("CRITICAL", logging.CRITICAL),
+                  ("ERROR", logging.ERROR),
+                  ("WARN", logging.WARN),
+                  ("INFO", logging.INFO),
+                  ("DEBUG", logging.DEBUG)]
         nlevels = ["QUIET", "SILENT", "NONE"]
 
         for (level, expect) in levels:
             self.check_log_level(level, expect)
 
     def check_log_level(self, level, expect):
-        options = { "couch_uri": "c", "couch_db": "d", "socket_file": "s" }
+        options = {"couch_uri": "c", "couch_db": "d", "socket_file": "s"}
 
         test = options.copy()
         test["log_stderr_level"] = level
