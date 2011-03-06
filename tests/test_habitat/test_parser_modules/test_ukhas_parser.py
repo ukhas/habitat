@@ -59,7 +59,7 @@ base_config = {
 # Each of these is a totally invalid stub that should just fail.
 # The last one might be valid but has non-hexadecimal checksum characters.
 bad_sentences = ["", "bad", "$$bad*", "bad*CC", "bad*CCCC", "bad,bad,bad,bad",
-    "$$bad*GH", "$$bad,bad*GHIJ", "$$_invalid_,data*CCCC"]
+    "$$bad*GH", "$$bad,bad*GHIJ", "$$_invalid_,data*CCCC", "$$good,data,\x01"]
 
 # Each of these short stubs should pass pre-parsing and return a callsign
 good_sentences = ["$$good,data", "$$good,data*CC", "$$good,data*CCCC",

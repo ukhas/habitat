@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Adam Greig
+# Copyright 2011 (C) Adam Greig, Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -105,6 +105,7 @@ Supported types include:
 
 import time
 import math
+import re
 from string import ascii_lowercase, ascii_uppercase, digits, hexdigits
 
 from habitat.parser import ParserModule
@@ -122,7 +123,8 @@ coordinate_formats = [
 class UKHASParser(ParserModule):
     """The UKHAS Parser Module"""
 
-    allowed_callsign_characters = ascii_lowercase + ascii_uppercase + digits
+    string_exp = re.compile("^[\\x20-\\x7E]+$")
+    callsign_exp = re.compile("^[a-zA-Z0-9]+$")
 
     def _split_checksum(self, string):
         """
@@ -164,6 +166,9 @@ class UKHASParser(ParserModule):
 
         Raises :py:exc:`ValueError <exceptions.ValueError>` on error.
         """
+        if not self.string_exp.search(string):
+            raise ValueError("String contains characters that are not "
+                             "printable ASCII.")
         if len(string) < 7:
             raise ValueError("String is less than 7 characters.")
         if string[:2] != "$$":
@@ -232,10 +237,9 @@ class UKHASParser(ParserModule):
                 raise ValueError("Invalid Fletcher-16-256 checksum.")
 
     def _verify_callsign(self, callsign):
-        for letter in callsign:
-            if letter not in self.allowed_callsign_characters:
-                raise ValueError("Invalid callsign, contains characters "
-                        "besides A-Z and 0-9.")
+        if not self.callsign_exp.search(callsign):
+            raise ValueError("Invalid callsign, contains characters "
+                             "besides A-Z and 0-9.")
 
     def _parse_field(self, field, field_config):
         """
