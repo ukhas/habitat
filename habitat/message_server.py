@@ -28,6 +28,7 @@ import Queue
 import ipaddr
 import base64
 import couchdbkit.exceptions
+from copy import deepcopy
 
 from habitat.utils import dynamicloader, crashmat
 
@@ -662,24 +663,26 @@ class Message(object):
     @classmethod
     def _coerce_data_dict(cls, data):
         try:
-            data = dict(data)
+            data = deepcopy(dict(data))
         except:
             raise TypeError("data should be a dictionary")
 
         return data
 
     @classmethod
+    def _coerce_data_base64(cls, string):
+        try:
+            binary_data = base64.b64decode(str(string))
+        except TypeError:
+            raise ValueError("string was not valid base64.")
+        return str(base64.b64encode(binary_data))
+
+    @classmethod
     def _coerce_data_received_telem(cls, data):
         data = cls._coerce_data_dict(data)
 
         clean_data = {}
-
-        try:
-            binary_data = base64.b64decode(str(data["string"]))
-        except TypeError:
-            raise ValueError("string was not valid base64.")
-
-        clean_data["string"] = str(base64.b64encode(binary_data))
+        clean_data["string"] = cls._coerce_data_base64(data["string"])
 
         try:
             clean_data["frequency"] = float(data["frequency"])
@@ -749,7 +752,23 @@ class Message(object):
 
     @classmethod
     def _coerce_data_telem(cls, data):
-        return cls._coerce_data_dict(data)
+        data = cls._coerce_data_dict(data)
+
+        clean_data = {}
+
+        try:
+            clean_data["_raw"] = cls._coerce_data_base64(data["_raw"])
+            clean_data["_listener_metadata"] = \
+                cls._coerce_data_dict(data["_listener_metadata"])
+        except KeyError:
+            raise ValueError("A required key couldn't be found in data")
+
+        # Remove _raw and _listener_metadata, then copy all keys across
+        del data["_raw"]
+        del data["_listener_metadata"]
+        clean_data.update(data)
+
+        return clean_data
 
 class Listener(object):
     """

@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Adam Greig
+# Copyright 2011 (C) Adam Greig, Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -21,7 +21,7 @@ ArchiveSink stores messages in a CouchDB datastore.
 
 import hashlib
 import math
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from couchdbkit.exceptions import ResourceConflict
 
@@ -88,47 +88,58 @@ class ArchiveSink(SimpleSink):
         new message is different from the current data in the database.
         """
         if message.type == Message.RECEIVED_TELEM:
-            self._handle_telem(message, {"_raw": message.data["string"]})
+            self._handle_telem(message)
         elif message.type == Message.TELEM:
-            self._handle_telem(message, message.data)
+            self._handle_telem(message)
         elif message.type == Message.LISTENER_INFO:
-            doc = {"type": "listener_info", "data": message.data}
-            doc["data"]["callsign"] = message.source.callsign
+            doc = self._simple_doc_from_message(message, "listener_info")
             lastdoc = self._get_listener_info_doc(message.source.callsign)
             if not lastdoc or doc["data"] != lastdoc["data"]:
                 self.server.db.save_doc(doc)
         elif message.type == Message.LISTENER_TELEM:
-            doc = {"type": "listener_telem", "data": message.data}
-            doc["data"]["callsign"] = message.source.callsign
+            doc = self._simple_doc_from_message(message, "listener_telem")
             self.server.db.save_doc(doc)
 
-    def _handle_telem(self, message, data, attempts=0):
+    def _simple_doc_from_message(self, message, doc_type):
+        doc = {"type": doc_type, "data": message.data}
+        doc["data"]["callsign"] = message.source.callsign
+        doc["received_time"] = message.time_created
+        doc["uploaded_time"] = message.time_received
+        return doc
+
+    def _handle_telem(self, message, attempts=0):
         """
-        Given a message and (separately) some data, attempt to retrieve
-        the existing telemetry document from the database, merge as
-        appropriate and save the new document.
+        Given a message, attempt to retrieve the existing telemetry document
+        from the database, merge as appropriate and save the new document.
         """
 
-        doc_id = hashlib.sha256(data["_raw"]).hexdigest()
-        doc = {}
+        # RECEIVED_TELEM and TELEM are subtly different. We need the
+        # information about the message (telem_data) and the information
+        # that the listener attached to it (listener_metadata)
+
+        # Since all we're doing is removing one item from the dict only a
+        # shallow copy is necessary.
+
+        if message.type == Message.RECEIVED_TELEM:
+            telem_data = {"_raw": message.data["string"]}
+            listener_metadata = copy(message.data)
+            del listener_metadata["string"]
+        elif message.type == Message.TELEM:
+            telem_data = copy(message.data)
+            del telem_data["_listener_metadata"]
+            listener_metadata = message.data["_listener_metadata"]
+
+        doc_id = hashlib.sha256(telem_data["_raw"]).hexdigest()
+
         if doc_id in self.server.db:
             doc = self.server.db[doc_id]
         else:
-            doc = {"type": "payload_telemetry", "data": deepcopy(data)}
-            doc["receivers"] = {}
-        callsign = message.source.callsign
-        doc["receivers"][callsign] = {
-            "received_time": message.time_created,
-            "uploaded_time": message.time_received,
-            "latest_telem": self._get_listener_telem_docid(callsign),
-            "latest_info": self._get_listener_info_docid(callsign)
-        }
-        times = []
-        for receiver in doc["receivers"]:
-            times.append(float(doc["receivers"][receiver]["received_time"]))
-        doc["estimated_received_time"] = self._estimate_received_time(times)
-        for field in data:
-            doc["data"][field] = data[field]
+            doc = {"type": "payload_telemetry", "data": {}, "receivers": {}}
+
+        doc["data"].update(telem_data)
+        self._add_telem_metadata(doc, message, listener_metadata)
+        self._update_estimated_received_time(doc)
+
         try:
             self.server.db[doc_id] = doc
         except ResourceConflict:
@@ -136,7 +147,30 @@ class ArchiveSink(SimpleSink):
             if attempts >= 30:
                 raise RuntimeError('Unable to save telem after many conflicts')
             else:
-                self._handle_telem(message, data, attempts)
+                self._handle_telem(message, attempts)
+
+    def _add_telem_metadata(self, doc, message, listener_metadata):
+        """
+        Update or create an entry in doc["data"]["receivers"], based on
+        the callsign and time data from **message**, and **listener_metadata**
+        """
+
+        callsign = message.source.callsign
+
+        receiver_info = {}
+        receiver_info.update(listener_metadata)
+        receiver_info["received_time"] = message.time_created
+        receiver_info["uploaded_time"] = message.time_received
+        receiver_info["latest_telem"] = self._get_listener_telem_docid(callsign)
+        receiver_info["latest_info"] = self._get_listener_info_docid(callsign)
+
+        doc["receivers"][callsign] = receiver_info
+
+    def _update_estimated_received_time(self, doc):
+        times = []
+        for receiver in doc["receivers"]:
+            times.append(float(doc["receivers"][receiver]["received_time"]))
+        doc["estimated_received_time"] = self._estimate_received_time(times)
 
     def _get_listener_info_doc(self, callsign):
         """

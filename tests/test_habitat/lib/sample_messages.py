@@ -39,6 +39,7 @@ class SMessage(Message):
             elif type == Message.TELEM:
                 data = {"_protocol": "URANDOM",
                         "_raw": "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo=",
+                        "_listener_metadata": { "frequency": 434075123.456 },
                         "sentence": "But what is the question?",
                         "lock_status": "I have no clue where I am"}
 

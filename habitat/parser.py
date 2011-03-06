@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Adam Greig
+# Copyright 2011 (C) Adam Greig, Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -21,6 +21,7 @@ The parser interprets incoming telemetry strings into useful telemetry data.
 
 import time
 import base64
+from copy import deepcopy
 
 from habitat.message_server import SimpleSink, Message
 from habitat.utils import dynamicloader
@@ -152,6 +153,11 @@ class ParserSink(SimpleSink):
 
         if data:
             data["_raw"] = message.data["string"]
+
+            # Every key apart from string contains RECEIVED_TELEM metadata
+            data["_listener_metadata"] = deepcopy(message.data)
+            del data["_listener_metadata"]["string"]
+
             new_message = Message(message.source, Message.TELEM,
                                   message.time_created, message.time_received,
                                   data)

@@ -301,4 +301,5 @@ class TestParserSink(object):
         assert self.server.message.time_received == 5768
         assert self.server.message.type == Message.TELEM
         assert self.server.message.data == {"data": True,
-            "_protocol": "Fake", "_raw": "dGVzdCBtZXNzYWdl"}
+            "_protocol": "Fake", "_raw": "dGVzdCBtZXNzYWdl",
+            '_listener_metadata': {'metametadata': 'asdf'}}

@@ -79,6 +79,8 @@ listener_telem_data = {
 listener_telem_doc = {"type": "listener_telem"}
 listener_telem_doc["data"] = deepcopy(listener_telem_data)
 listener_telem_doc["data"]["callsign"] = "habitat"
+listener_telem_doc["received_time"] = 12345
+listener_telem_doc["uploaded_time"] = 54321
 
 ###########################################################
 # Listener Info docs
@@ -91,6 +93,8 @@ listener_info_data = {
 listener_info_doc = {"type": "listener_info"}
 listener_info_doc["data"] = deepcopy(listener_info_data)
 listener_info_doc["data"]["callsign"] = "habitat"
+listener_info_doc["received_time"] = 12345
+listener_info_doc["uploaded_time"] = 54321
 
 listener_info_doc_wrong = deepcopy(listener_info_doc)
 listener_info_doc_wrong["data"]["callsign"] = "wrong"
@@ -101,6 +105,8 @@ listener_info_data_two["rating"] = "xtreme"
 listener_info_doc_two = {"type": "listener_info"}
 listener_info_doc_two["data"] = deepcopy(listener_info_data_two)
 listener_info_doc_two["data"]["callsign"] = "habitat"
+listener_info_doc_two["received_time"] = 12345
+listener_info_doc_two["uploaded_time"] = 54321
 
 view_results_none = fake_couchdb.ViewResults()
 
@@ -120,10 +126,17 @@ listener_one = FakeListener("habitat_one")
 listener_two = FakeListener("habitat_two")
 listener_three = FakeListener("habitat_three")
 listener_four = FakeListener("habitat_four")
-raw_data = {"string": "dGVzdCBtZXNzYWdl", "should_ignore_metadata": True}
-parsed_data = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": True}
-parsed_data_two = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": "two"}
-parsed_data_three = {"_raw": "dGVzdCBtZXNzYWdl", "newly_parsed": True}
+raw_data = {"string": "dGVzdCBtZXNzYWdl"}
+raw_data_two = {"string": "dGVzdCBtZXNzYWdl", "foo": 2}
+parsed_data = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": True,
+               "_listener_metadata": {}}
+parsed_data_two = {"_raw": "dGVzdCBtZXNzYWdl", "parsed_data": "two",
+                   "_listener_metadata": {}}
+parsed_data_three = {"_raw": "dGVzdCBtZXNzYWdl", "newly_parsed": True,
+                     "_listener_metadata": {}}
+parsed_data_four = {"_raw": "dGVzdCBtZXNzYWdl", "infor": "mation",
+                    "_listener_metadata": {"foo": "bar"}}
+
 doc_id = "03bde3390e8a8e803c4cebdc24c73ea6e1fed09d5bb3ab15f3dc364d82cfccc0"
 
 raw_type = Message.RECEIVED_TELEM
@@ -141,6 +154,10 @@ message_new_parsed_from_one = FakeMessage(parsed_type, parsed_data_three,
         listener_one)
 message_new_parsed_from_two = FakeMessage(parsed_type, parsed_data_three,
         listener_two)
+
+message_parsed_metadata = FakeMessage(parsed_type, parsed_data_four,
+        listener_one)
+message_raw_metadata = FakeMessage(raw_type, raw_data_two, listener_one)
 
 message_raw_from_one.time_created = 1
 message_raw_from_one.time_received = 2
@@ -644,6 +661,40 @@ class TestArchiveSink(object):
                     "latest_info": None
                 }
             }
+        }
+        assert doc_id in self.server.db
+        assert self.server.db[doc_id] == expected_doc
+
+    def test_stores_raw_metadata(self):
+        self.sink.push_message(message_raw_metadata)
+        expected_doc = {
+            "type": "payload_telemetry",
+            "estimated_received_time": 12345,
+            "data": {"_raw": raw_data["string"]},
+            "receivers": {"habitat_one": {
+                "received_time": 12345,
+                "uploaded_time": 54321,
+                "latest_telem": None,
+                "latest_info": None,
+                "foo": 2
+            }}
+        }
+        assert doc_id in self.server.db
+        assert self.server.db[doc_id] == expected_doc
+
+    def test_stores_parsed_metadata(self):
+        self.sink.push_message(message_parsed_metadata)
+        expected_doc = {
+            "type": "payload_telemetry",
+            "estimated_received_time": 12345,
+            "data": {"_raw": raw_data["string"], "infor": "mation"},
+            "receivers": {"habitat_one": {
+                "received_time": 12345,
+                "uploaded_time": 54321,
+                "latest_telem": None,
+                "latest_info": None,
+                "foo": "bar"
+            }}
         }
         assert doc_id in self.server.db
         assert self.server.db[doc_id] == expected_doc
