@@ -40,7 +40,7 @@ class FakeListener(object):
 
 class FakeMessage(object):
     def __init__(self, mtype, data, source=None, time_created=12345,
-            time_received=54321):
+            time_uploaded=54321):
         if source:
             self.source = source
         else:
@@ -48,7 +48,7 @@ class FakeMessage(object):
         self.type = mtype
         self.data = data
         self.time_created = time_created
-        self.time_received = time_received
+        self.time_uploaded = time_uploaded
 
 class ConflictingDatabase(fake_couchdb.Database):
     def __init__(self, docs=None):
@@ -79,8 +79,8 @@ listener_telem_data = {
 listener_telem_doc = {"type": "listener_telem"}
 listener_telem_doc["data"] = deepcopy(listener_telem_data)
 listener_telem_doc["data"]["callsign"] = "habitat"
-listener_telem_doc["received_time"] = 12345
-listener_telem_doc["uploaded_time"] = 54321
+listener_telem_doc["time_created"] = 12345
+listener_telem_doc["time_uploaded"] = 54321
 
 ###########################################################
 # Listener Info docs
@@ -93,8 +93,8 @@ listener_info_data = {
 listener_info_doc = {"type": "listener_info"}
 listener_info_doc["data"] = deepcopy(listener_info_data)
 listener_info_doc["data"]["callsign"] = "habitat"
-listener_info_doc["received_time"] = 12345
-listener_info_doc["uploaded_time"] = 54321
+listener_info_doc["time_created"] = 12345
+listener_info_doc["time_uploaded"] = 54321
 
 listener_info_doc_wrong = deepcopy(listener_info_doc)
 listener_info_doc_wrong["data"]["callsign"] = "wrong"
@@ -105,8 +105,8 @@ listener_info_data_two["rating"] = "xtreme"
 listener_info_doc_two = {"type": "listener_info"}
 listener_info_doc_two["data"] = deepcopy(listener_info_data_two)
 listener_info_doc_two["data"]["callsign"] = "habitat"
-listener_info_doc_two["received_time"] = 12345
-listener_info_doc_two["uploaded_time"] = 54321
+listener_info_doc_two["time_created"] = 12345
+listener_info_doc_two["time_uploaded"] = 54321
 
 view_results_none = fake_couchdb.ViewResults()
 
@@ -160,21 +160,21 @@ message_parsed_metadata = FakeMessage(parsed_type, parsed_data_four,
 message_raw_metadata = FakeMessage(raw_type, raw_data_two, listener_one)
 
 message_raw_from_one.time_created = 1
-message_raw_from_one.time_received = 2
+message_raw_from_one.time_uploaded = 2
 message_parsed_from_one.time_created = 1
-message_parsed_from_one.time_received = 4
+message_parsed_from_one.time_uploaded = 4
 message_different_parsed_from_one.time_created = 1
-message_different_parsed_from_one.time_received = 6
+message_different_parsed_from_one.time_uploaded = 6
 message_new_parsed_from_one.time_created = 1
-message_new_parsed_from_one.time_received = 8
+message_new_parsed_from_one.time_uploaded = 8
 message_raw_from_two.time_created = 1
-message_raw_from_two.time_received = 10
+message_raw_from_two.time_uploaded = 10
 message_parsed_from_two.time_created = 1
-message_parsed_from_two.time_received = 12
+message_parsed_from_two.time_uploaded = 12
 message_different_parsed_from_two.time_created = 1
-message_different_parsed_from_two.time_received = 14
+message_different_parsed_from_two.time_uploaded = 14
 message_new_parsed_from_two.time_created = 1
-message_new_parsed_from_two.time_received = 16
+message_new_parsed_from_two.time_uploaded = 16
 
 listener_vr = fake_couchdb.ViewResults({"key": ["habitat_one", 123],
     "id": "abcdef"})
@@ -236,11 +236,11 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
-                "received_time": 1,
-                "uploaded_time": 2,
+                "time_created": 1,
+                "time_uploaded": 2,
                 "latest_telem": None,
                 "latest_info": None
             }}
@@ -254,11 +254,11 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
-                "received_time": 1,
-                "uploaded_time": 2,
+                "time_created": 1,
+                "time_uploaded": 2,
                 "latest_telem": None,
                 "latest_info": None
             }}
@@ -272,17 +272,17 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_two)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"]},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 2,
+                    "time_created": 1,
+                    "time_uploaded": 2,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 1,
-                    "uploaded_time": 10,
+                    "time_created": 1,
+                    "time_uploaded": 10,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -297,12 +297,12 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 2,
+                    "time_created": 1,
+                    "time_uploaded": 2,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -317,17 +317,17 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_two)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 4,
+                    "time_created": 1,
+                    "time_uploaded": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 1,
-                    "uploaded_time": 10,
+                    "time_created": 1,
+                    "time_uploaded": 10,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -341,12 +341,12 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 4,
+                    "time_created": 1,
+                    "time_uploaded": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -361,12 +361,12 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 4,
+                    "time_created": 1,
+                    "time_uploaded": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -381,17 +381,17 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_two)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 2,
+                    "time_created": 1,
+                    "time_uploaded": 2,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 1,
-                    "uploaded_time": 12,
+                    "time_created": 1,
+                    "time_uploaded": 12,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -406,12 +406,12 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 4,
+                    "time_created": 1,
+                    "time_uploaded": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -426,17 +426,17 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_two)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 4,
+                    "time_created": 1,
+                    "time_uploaded": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 1,
-                    "uploaded_time": 12,
+                    "time_created": 1,
+                    "time_uploaded": 12,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -451,12 +451,12 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 4,
+                    "time_created": 1,
+                    "time_uploaded": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -471,17 +471,17 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_from_two)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 6,
+                    "time_created": 1,
+                    "time_uploaded": 6,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 1,
-                    "uploaded_time": 12,
+                    "time_created": 1,
+                    "time_uploaded": 12,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -496,13 +496,13 @@ class TestArchiveSink(object):
         self.sink.push_message(message_new_parsed_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True,
                 "newly_parsed": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 8,
+                    "time_created": 1,
+                    "time_uploaded": 8,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -517,18 +517,18 @@ class TestArchiveSink(object):
         self.sink.push_message(message_new_parsed_from_two)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True,
                 "newly_parsed": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 4,
+                    "time_created": 1,
+                    "time_uploaded": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 1,
-                    "uploaded_time": 16,
+                    "time_created": 1,
+                    "time_uploaded": 16,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -542,11 +542,11 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
-                "received_time": 1,
-                "uploaded_time": 2,
+                "time_created": 1,
+                "time_uploaded": 2,
                 "latest_telem": "abcdef",
                 "latest_info": None
             }}
@@ -559,11 +559,11 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
-                "received_time": 1,
-                "uploaded_time": 2,
+                "time_created": 1,
+                "time_uploaded": 2,
                 "latest_telem": None,
                 "latest_info": "abcdef"
             }}
@@ -576,11 +576,11 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
-                "received_time": 1,
-                "uploaded_time": 2,
+                "time_created": 1,
+                "time_uploaded": 2,
                 "latest_telem": None,
                 "latest_info": None
             }}
@@ -593,11 +593,11 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_one)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
-                "received_time": 1,
-                "uploaded_time": 2,
+                "time_created": 1,
+                "time_uploaded": 2,
                 "latest_telem": None,
                 "latest_info": None
             }}
@@ -619,7 +619,7 @@ class TestArchiveSink(object):
         self.sink.push_message(m3)
         self.sink.push_message(m4)
         assert doc_id in self.server.db
-        assert self.server.db[doc_id]["estimated_received_time"] == 3
+        assert self.server.db[doc_id]["estimated_time_created"] == 3
 
     def test_finds_time_mean(self):
         m1 = FakeMessage(raw_type, raw_data, listener_one)
@@ -632,7 +632,7 @@ class TestArchiveSink(object):
         self.sink.push_message(m2)
         self.sink.push_message(m3)
         assert doc_id in self.server.db
-        assert self.server.db[doc_id]["estimated_received_time"] == 4
+        assert self.server.db[doc_id]["estimated_time_created"] == 4
 
     def test_merges_after_resource_conflict(self):
         # The database will raise `n` ResourceConflict exceptions
@@ -646,17 +646,17 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_from_two)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 1,
+            "estimated_time_created": 1,
             "data": {"_raw": raw_data["string"], "parsed_data": True},
             "receivers": {
                 "habitat_one": {
-                    "received_time": 1,
-                    "uploaded_time": 4,
+                    "time_created": 1,
+                    "time_uploaded": 4,
                     "latest_telem": None,
                     "latest_info": None
                 }, "habitat_two": {
-                    "received_time": 1,
-                    "uploaded_time": 10,
+                    "time_created": 1,
+                    "time_uploaded": 10,
                     "latest_telem": None,
                     "latest_info": None
                 }
@@ -669,11 +669,11 @@ class TestArchiveSink(object):
         self.sink.push_message(message_raw_metadata)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 12345,
+            "estimated_time_created": 12345,
             "data": {"_raw": raw_data["string"]},
             "receivers": {"habitat_one": {
-                "received_time": 12345,
-                "uploaded_time": 54321,
+                "time_created": 12345,
+                "time_uploaded": 54321,
                 "latest_telem": None,
                 "latest_info": None,
                 "foo": 2
@@ -686,11 +686,11 @@ class TestArchiveSink(object):
         self.sink.push_message(message_parsed_metadata)
         expected_doc = {
             "type": "payload_telemetry",
-            "estimated_received_time": 12345,
+            "estimated_time_created": 12345,
             "data": {"_raw": raw_data["string"], "infor": "mation"},
             "receivers": {"habitat_one": {
-                "received_time": 12345,
-                "uploaded_time": 54321,
+                "time_created": 12345,
+                "time_uploaded": 54321,
                 "latest_telem": None,
                 "latest_info": None,
                 "foo": "bar"

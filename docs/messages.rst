@@ -78,9 +78,9 @@ the UTC time on the local clock when the HTTP request was sent.
 When the message is received by habitat, it takes the difference between
 **time_uploaded** and UTC on the server running habitat, and adds that
 difference to **time_created** to get the time that the message was created,
-with clock-difference compensated, to with a few seconds (which is accurate
-enough for our purposes). This "calculated" time, and the real local time
-when habitat received the message (**time_received**), are stored.
+with any clock-difference compensated, to within a few seconds (which is
+accurate enough for our purposes). This "calculated" time is stored;
+**time_uploaded** is discarded and replaced with the current server time.
 
 The type and contents of **data** are entirely specific to the message type.
 **data** is passed as-is to the Message initialiser, but this intialiser will

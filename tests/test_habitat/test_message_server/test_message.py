@@ -93,7 +93,7 @@ class TestMessage:
         assert message.source == self.source
         assert message.type == Message.RECEIVED_TELEM
         assert message.time_created == 18297895
-        assert message.time_received == 1238702
+        assert message.time_uploaded == 1238702
         assert message.data == received_telem_truev
 
     @raises(TypeError)
@@ -122,7 +122,7 @@ class TestMessage:
                 received_telem_valid)
 
     @raises(ValueError)
-    def test_initialiser_rejects_garbage_time_received(self):
+    def test_initialiser_rejects_garbage_time_uploaded(self):
         Message(self.source, Message.RECEIVED_TELEM, 1235123, "lolol",
                 received_telem_valid)
 

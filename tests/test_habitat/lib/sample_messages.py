@@ -19,7 +19,7 @@ from habitat.message_server import Message, Listener
 
 class SMessage(Message):
     def __init__(self, source=False, type=Message.RECEIVED_TELEM,
-                 time_created=12345, time_received=54321, data=False,
+                 time_created=12345, time_uploaded=54321, data=False,
                  testid=0):
 
         if not source:
@@ -43,5 +43,5 @@ class SMessage(Message):
                         "sentence": "But what is the question?",
                         "lock_status": "I have no clue where I am"}
 
-        Message.__init__(self, source, type, time_created, time_received, data)
+        Message.__init__(self, source, type, time_created, time_uploaded, data)
         self.testid = testid

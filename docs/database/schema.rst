@@ -271,11 +271,11 @@ The ``type`` field is set to ``payload_telemetry``:
 
 As the listener clocks may be inaccurate, we attempt to calculate the
 time each piece of telemetry was received. This estimated value is stored
-in ``estimated_received_time``:
+in ``estimated_time_created``:
 
 .. code-block:: javascript
 
-    "estimated_received_time": 1292772125,
+    "estimated_time_created": 1292772125,
 
 The information parsed out of the message string is stored in the ``data``
 dictionary, directly as returned by the parser:
@@ -316,14 +316,14 @@ information document:
 
     "receivers": {
         "M0RND": {
-            "received_time": 1292772125,
-            "uploaded_time": 1292772130,
+            "time_created": 1292772125,
+            "time_uploaded": 1292772130,
             "latest_telemetry": "10bedc8832fe563c901596c900001906",
             "latest_info": "10bedc8832fe563c901596c900038917"
         },
         "M0ZDR": {
-            "received_time": 1292772126,
-            "uploaded_time": 1292772122,
+            "time_created": 1292772126,
+            "time_uploaded": 1292772122,
             "latest_telemetry": "10bedc8832fe563c901596c9000031dd"
             "latest_info": "10bedc8832fe563c901596c9000079fe"
         }
@@ -341,7 +341,8 @@ typically a callsign, time and GPS position:
 
     "10bedc8832fe563c901596c900001906": {
         "type": "listener_telemetry",
-        "uploaded_time": 1292772140,
+        "time_created": 1292772138,
+        "time_uploaded": 1292772140,
         "data": {
             "callsign": "M0RND",
             "time": {
@@ -370,7 +371,8 @@ follows:
 
     "10bedc8832fe563c901596c9000026d3": {
         "type": "listener_info",
-        "uploaded_time": 1292772135,
+        "time_created": 1292772133,
+        "time_uploaded": 1292772135,
         "data": {
             "callsign": "M0RND",
             "name": "Adam Greig",

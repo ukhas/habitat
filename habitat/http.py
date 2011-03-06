@@ -111,14 +111,14 @@ class InsertApplication(object):
 
         time_created = int(args["time_created"])
         time_uploaded = int(args["time_uploaded"])
-        time_received = int(time.time())
+        time_now = int(time.time())
 
-        clock_difference = time_received - time_uploaded
+        clock_difference = time_now - time_uploaded
         time_created += clock_difference
 
         data = args["data"]
 
-        message = Message(source, type, time_created, time_received, data)
+        message = Message(source, type, time_created, time_now, data)
 
         self.server.push_message(message)
 

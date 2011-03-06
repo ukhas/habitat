@@ -159,7 +159,7 @@ class ParserSink(SimpleSink):
             del data["_listener_metadata"]["string"]
 
             new_message = Message(message.source, Message.TELEM,
-                                  message.time_created, message.time_received,
+                                  message.time_created, message.time_uploaded,
                                   data)
             self.server.push_message(new_message)
         else:

@@ -103,8 +103,8 @@ class ArchiveSink(SimpleSink):
     def _simple_doc_from_message(self, message, doc_type):
         doc = {"type": doc_type, "data": message.data}
         doc["data"]["callsign"] = message.source.callsign
-        doc["received_time"] = message.time_created
-        doc["uploaded_time"] = message.time_received
+        doc["time_created"] = message.time_created
+        doc["time_uploaded"] = message.time_uploaded
         return doc
 
     def _handle_telem(self, message, attempts=0):
@@ -138,7 +138,7 @@ class ArchiveSink(SimpleSink):
 
         doc["data"].update(telem_data)
         self._add_telem_metadata(doc, message, listener_metadata)
-        self._update_estimated_received_time(doc)
+        self._update_estimated_time_created(doc)
 
         try:
             self.server.db[doc_id] = doc
@@ -159,18 +159,18 @@ class ArchiveSink(SimpleSink):
 
         receiver_info = {}
         receiver_info.update(listener_metadata)
-        receiver_info["received_time"] = message.time_created
-        receiver_info["uploaded_time"] = message.time_received
+        receiver_info["time_created"] = message.time_created
+        receiver_info["time_uploaded"] = message.time_uploaded
         receiver_info["latest_telem"] = self._get_listener_telem_docid(callsign)
         receiver_info["latest_info"] = self._get_listener_info_docid(callsign)
 
         doc["receivers"][callsign] = receiver_info
 
-    def _update_estimated_received_time(self, doc):
+    def _update_estimated_time_created(self, doc):
         times = []
         for receiver in doc["receivers"]:
-            times.append(float(doc["receivers"][receiver]["received_time"]))
-        doc["estimated_received_time"] = self._estimate_received_time(times)
+            times.append(float(doc["receivers"][receiver]["time_created"]))
+        doc["estimated_time_created"] = self._estimate_time_created(times)
 
     def _get_listener_info_doc(self, callsign):
         """
@@ -217,7 +217,7 @@ class ArchiveSink(SimpleSink):
             return None
         return result["id"]
 
-    def _estimate_received_time(self, times):
+    def _estimate_time_created(self, times):
         """
         Estimate the correct received time based on all the available times,
         by calculating the standard deviation, removing outliers > SD, then

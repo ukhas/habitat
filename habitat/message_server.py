@@ -564,7 +564,7 @@ class Message(object):
      - **message.source**
      - **message.type**
      - **message.time_created**
-     - **message.time_received**
+     - **message.time_uploaded**
      - **message.data**
 
     The following message types are available:
@@ -584,7 +584,7 @@ class Message(object):
         locals()[type_name] = type
     del type, type_name
 
-    def __init__(self, source, type, time_created, time_received, data):
+    def __init__(self, source, type, time_created, time_uploaded, data):
         """
         *source*: a Listener object
 
@@ -595,7 +595,7 @@ class Message(object):
         the time that the telemetry string was received over the radio.
         (UNIX Timestamp format)
 
-        *time_received*: the time that habitat received the message.
+        *time_uploaded*: the time that habitat received the message.
         (UNIX Timestamp)
 
         *data*: a type-specific data object, which will be validated
@@ -608,12 +608,12 @@ class Message(object):
         dynamicloader.expecthasattr(source, "ip")
 
         time_created = int(time_created)
-        time_received = int(time_received)
+        time_uploaded = int(time_uploaded)
 
         self.source = source
         self.type = type
         self.time_created = time_created
-        self.time_received = time_received
+        self.time_uploaded = time_uploaded
         self.data = data
 
     _repr_format = "<habitat.message_server.Message ({type}) from {source}>"
