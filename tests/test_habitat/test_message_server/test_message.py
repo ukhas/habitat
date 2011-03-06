@@ -65,9 +65,14 @@ listener_telem_badkv = {u"time": {u"hour": "noint", u"minute": 90,
                         u"latitude": u"100", u"longitude": 180.100,
                         u"altitude": "maybe not."}
 
-telem_data = {"_protocol": "UKHAS", "_raw": "asdf", "time": {"a": 6},
-              "z": 1, "asdf": u"There probably won't be any unicode data",
-              u"key": "But the test is that Message doesn't touch the dict."}
+telem_valid = {"_protocol": "UKHAS", "_raw": b64_valid, "time": {"a": 6},
+               "z": 1, "asdf": u"There probably won't be any unicode data",
+               u"key": "But the test is that Message doesn't touch the dict.",
+               "_listener_metadata": {}}
+telem_invalid_one = copy.deepcopy(telem_valid)
+telem_invalid_one["_raw"] = b64_invalid
+telem_invalid_two = copy.deepcopy(telem_valid)
+del telem_invalid_two["_listener_metadata"]
 
 class TestMessage:
     def setup(self):
@@ -88,7 +93,7 @@ class TestMessage:
         assert message.source == self.source
         assert message.type == Message.RECEIVED_TELEM
         assert message.time_created == 18297895
-        assert message.time_received == 1238702
+        assert message.time_uploaded == 1238702
         assert message.data == received_telem_truev
 
     @raises(TypeError)
@@ -117,7 +122,7 @@ class TestMessage:
                 received_telem_valid)
 
     @raises(ValueError)
-    def test_initialiser_rejects_garbage_time_received(self):
+    def test_initialiser_rejects_garbage_time_uploaded(self):
         Message(self.source, Message.RECEIVED_TELEM, 1235123, "lolol",
                 received_telem_valid)
 
@@ -138,7 +143,7 @@ class TestMessage:
         valid_data = [ (Message.RECEIVED_TELEM, received_telem_valid),
                        (Message.LISTENER_INFO, listener_info_valid),
                        (Message.LISTENER_TELEM, listener_telem_valid),
-                       (Message.TELEM, {}) ]
+                       (Message.TELEM, telem_valid) ]
 
         for type, data in valid_data:
             assert repr(Message(self.source, type, 123345, 123435, data)) == \
@@ -231,18 +236,21 @@ class TestMessage:
         self.wrongtype_message_data(Message.LISTENER_TELEM, None)
         self.wrongtype_message_data(Message.LISTENER_TELEM, 123)
 
-    def test_message_leaves_telem_untouched(self):
-        m = self.good_message_data(Message.TELEM, telem_data)
-        for key in telem_data.keys():
-            assert telem_data[key] == m.data[key]
+    def test_message_coerces_telem(self):
+        m = self.good_message_data(Message.TELEM, telem_valid)
+        for key in telem_valid.keys():
+            assert telem_valid[key] == m.data[key]
 
-        str_keys = [k for k in telem_data.keys() if isinstance(k, str)]
+        str_keys = [k for k in telem_valid.keys() if isinstance(k, str)]
         str_keys2 = [k for k in m.data.keys() if isinstance(k, str)]
-        uni_keys = [k for k in telem_data.keys() if isinstance(k, unicode)]
+        uni_keys = [k for k in telem_valid.keys() if isinstance(k, unicode)]
         uni_keys2 = [k for k in m.data.keys() if isinstance(k, unicode)]
 
         assert set(str_keys) == set(str_keys2)
         assert set(uni_keys) == set(uni_keys2)
+
+        self.bad_message_data(Message.TELEM, telem_invalid_one)
+        self.bad_message_data(Message.TELEM, telem_invalid_two)
 
         self.wrongtype_message_data(Message.TELEM, None)
         self.wrongtype_message_data(Message.TELEM, 123)

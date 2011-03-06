@@ -14,7 +14,7 @@
         of individual listeners, who may have inaccurately synchronised clocks
         or be very far out indeed.
     */
-    "estimated_received_time": 1292772125,
+    "estimated_time_created": 1292772125,
 
     /*
         Data is the dict returned by the parser module, containing all the
@@ -79,14 +79,14 @@
     */
     "receivers": {
         "M0RND": {
-            "received_time": 1292772125,
-            "uploaded_time": 1292772130,
+            "time_created": 1292772125,
+            "time_uploaded": 1292772130,
             "latest_telemetry": "10bedc8832fe563c901596c900001906",
             "latest_info": "10bedc8832fe563c901596c900038917"
         },
         "M0ZDR": {
-            "received_time": 1292772126,
-            "uploaded_time": 1292772122,
+            "time_created": 1292772126,
+            "time_uploaded": 1292772122,
             "latest_telemetry": "10bedc8832fe563c901596c9000031dd"
             "latest_info": "10bedc8832fe563c901596c9000079fe"
         }
@@ -98,7 +98,8 @@
 */
 "10bedc8832fe563c901596c900001906": {
     "type": "listener_telemetry",
-    "uploaded_time": 1292772140,
+    "time_created": 1292772138,
+    "time_uploaded": 1292772140,
     "data": {
         "callsign": "M0RND",
         "time": {

@@ -47,7 +47,7 @@ class TestInsertApplication:
         self.app = InsertApplication(server, None)
         self.args = {"callsign": "M0ZDR",
                      "type": "RECEIVED_TELEM",
-                     "time_created": fake_time_created,
+                     "time_created": fake_time_created - fake_time_lag,
                      "time_uploaded": fake_time_now - fake_time_lag,
                      "data": { "string": "SSBrbm93IHdoZXJlIHlvdSBsaXZlLgo=" } }
         self.app.message("2.7.5.8", self.args)
@@ -69,15 +69,12 @@ class TestInsertApplication:
         assert self.messages[0].type == Message.RECEIVED_TELEM
 
     def test_message_pushes_times_correctly(self):
-        # time_received should be fake_time_now
+        # time_uploaded should be fake_time_now
         # time_uploaded is 100 seconds 'behind' FakeTime.time(), that is,
         # server time, so habitat should assume that all the times submitted
-        # by this client are 100 seconds too low.
-        # Therefore, time_created should become
-        # fake_time_created + fake_time_lag
-        assert self.messages[0].time_created == fake_time_created + \
-                                               fake_time_lag
-        assert self.messages[0].time_received == fake_time_now
+        # by this client are 100 seconds too slow.
+        assert self.messages[0].time_created == fake_time_created
+        assert self.messages[0].time_uploaded == fake_time_now
 
     def test_message_pushes_data_correctly(self):
         assert self.messages[0].data == \
