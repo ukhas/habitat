@@ -133,8 +133,7 @@ class TestCrashmat:
         t.start()
         t.join()
 
-        assert crashmat.logger.message == \
-            "uncaught exception, killing process brutally"
+        assert crashmat.logger.message == "Thread left uncaught exception"
         assert crashmat.logger.exc[0] == ValueError
         assert new_panic.called
 

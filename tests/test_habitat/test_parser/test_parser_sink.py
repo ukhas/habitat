@@ -270,27 +270,27 @@ class TestParserSink(object):
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].config == default_config
 
-    @raises(ValueError)
-    def test_errors_when_no_config_or_default_config_found(self):
+    def test_doesnt_parse_when_no_config_or_default_config_found(self):
         self.server.db.default_view_results = empty_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
+        assert self.server.message == None
 
-    @raises(ValueError)
-    def test_errors_when_no_config_or_default_config_found(self):
+    def test_doesnt_parse_when_wrong_config_and_no_default_config_found(self):
         self.server.db.default_view_results = wrong_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
+        assert self.server.message == None
 
-    @raises(ValueError)
-    def test_errors_when_config_has_wrong_protocol(self):
+    def test_doesnt_parse_when_config_has_wrong_protocol(self):
         self.server.db.default_view_results = wrong_protocol_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
+        assert self.server.message == None
 
-    @raises(ValueError)
-    def test_errors_when_no_callsign_found(self):
+    def test_doesnt_parse_when_no_callsign_found(self):
         self.sink.message(WrongMessage())
+        assert self.server.message == None
 
     def test_pushes_message(self):
         self.sink.message(FakeMessage())

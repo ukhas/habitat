@@ -30,6 +30,7 @@ import logging
 
 __all__ = ["Thread", "set_shutdown_function", "panic"]
 
+logger = logging.getLogger("habitat.utils.crashmat")
 shutdown_function = None
 
 def set_shutdown_function(f):
@@ -51,9 +52,12 @@ def panic():
     immediate death.
     """
 
+    logger.critical("panic called: killing the process in a brutal fashion")
+
     if shutdown_function == None:
         os.kill(os.getpid(), signal.SIGKILL)
     else:
+        logger.info("Attempting graceful shutdown; alarm in 60 seconds")
         signal.alarm(60)
         shutdown_function()
 
@@ -62,8 +66,6 @@ def panic():
 # Overriding threading.__bootstrap would be vulnerable to breaking if
 # the internal workings of Thread changed.
 # Admittedly this is a bit hacky, but perhaps more resilient
-
-logger = logging.getLogger("crashmat")
 
 class Thread(threading.Thread):
     """
@@ -98,5 +100,5 @@ class Thread(threading.Thread):
         :py:func:`panic`
         """
 
-        logger.exception("uncaught exception, killing process brutally")
+        logger.exception("Thread left uncaught exception")
         panic()

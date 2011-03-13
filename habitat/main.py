@@ -43,6 +43,8 @@ from habitat.utils import crashmat
 
 __all__ = ["get_options", "setup_logging", "Program", "SignalListener"]
 
+logger = logging.getLogger("habitat.main")
+
 usage = "%prog [options]"
 version = "{0} {1}".format(habitat.__name__, habitat.__version__)
 header = "{0} is {1}".format(habitat.__name__, habitat.__copyright__)
@@ -185,7 +187,6 @@ def get_options_parse_log_level(level):
     else:
         parser.error("invalid value for \"{0}\"".format(levelarg))
 
-# TODO: add logging calls to habitat
 def setup_logging(log_stderr_level, log_file_name, log_file_level):
     """
     **setup_logging** initalises the :py:mod:`Python logging module <logging>`.
@@ -225,6 +226,8 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
         # If we're meant to be totally silent...
         root_logger.addHandler(logging.NullHandler())
 
+    logger.info("Log initalised")
+
 def couch_connect(couch_uri, couch_db):
     couch = couchdbkit.Server(couch_uri)
     db = couch[couch_db]
@@ -247,6 +250,7 @@ class Program(object):
 
     def __init__(self):
         self.queue = Queue.Queue()
+        self.completed_logging_setup = False
 
     def main(self):
         """
@@ -271,31 +275,36 @@ class Program(object):
         # is the only thread - and therefore kill the program.
         try:
             self.main_setup()
+            logger.debug("setup completed: habitat ready")
         except SystemExit:
             raise
         except:
-            if len(logging.getLogger().handlers) == 0:
-                raise
-            else:
-                logger = logging.getLogger("habitat.main")
-                logger.exception("Exception in Program.main_setup() exiting")
+            if self.completed_logging_setup:
+                logger.exception("uncaught exception in main_setup, exiting")
                 return
+            else:
+                raise
 
         # After this point, threads are created and catching & killing
         # the program is harder: crashmat.panic must be used.
         # SystemExit should not be raised by the MainThread.
         try:
+            logger.debug("habitat: starting up")
             self.main_execution()
+            logger.debug("main_execution finished gracefully")
         except:
+            logger.exception("uncaught exception in main_execution, panic!")
             crashmat.panic()
 
         self.thread.join()
+        logger.info("habitat: main() returning gracefully")
 
     def main_setup(self):
         self.options = get_options()
         setup_logging(self.options["log_stderr_level"],
                       self.options["log_file"],
                       self.options["log_file_level"])
+        self.completed_logging_setup = True
         self.db = couch_connect(self.options['couch_uri'],
                                 self.options['couch_db'])
         self.server = Server(self)
@@ -347,6 +356,8 @@ class Program(object):
             item = self.queue.get()
 
             if item == Program.SHUTDOWN:
+                logger.info("Graceful shutdown initiated")
+
                 self.signallistener.exit()
                 self.scgiapp.shutdown()
                 self.server.shutdown()
@@ -380,6 +391,15 @@ class SignalListener(object):
     (see :py:meth:`SignalListener.exit`)
     """
 
+    signals = []
+    signal_names = {}
+
+    for signame in ["SIGTERM", "SIGINT", "SIGHUP", "SIGUSR1"]:
+        signum = getattr(signal, signame)
+        signals.append(signum)
+        signal_names[signum] = signame
+    del signame, signum
+
     def __init__(self, program):
         self.program = program
         self.shutdown_event = threading.Event()
@@ -396,8 +416,7 @@ class SignalListener(object):
 
         self.check_thread()
 
-        for signum in [signal.SIGTERM, signal.SIGINT,
-                       signal.SIGHUP, signal.SIGUSR1]:
+        for signum in self.signals:
             signal.signal(signum, self.handle)
 
     def listen(self):
@@ -434,6 +453,9 @@ class SignalListener(object):
 
     def handle(self, signum, stack):
         """handles a received signal"""
+
+        logger.info("Handling signal #{num} ({name}("
+            .format(num=signum, name=self.signal_names[signum]))
 
         if signum == signal.SIGTERM or signum == signal.SIGINT:
             self.program.shutdown()

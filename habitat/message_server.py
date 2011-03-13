@@ -24,6 +24,7 @@ import sys
 import string
 import inspect
 import threading
+import logging
 import Queue
 import ipaddr
 import base64
@@ -34,6 +35,8 @@ from habitat.utils import dynamicloader, crashmat
 
 __all__ = ["Server", "Sink", "SimpleSink",
            "ThreadedSink", "Message", "Listener"]
+
+logger = logging.getLogger("habitat.message_server")
 
 class Server(object):
     """
@@ -70,10 +73,14 @@ class Server(object):
         Starts up the server.
         """
 
-        self.thread.start()
+        with self.lock:
+            self.thread.start()
 
-        for sink in self.config['sinks']:
-            self.load(sink)
+            for sink in self.config['sinks']:
+                self.load(sink)
+
+            logger.info("Started Server with {num} sinks" \
+                .format(num=len(self.sinks)))
 
     def load(self, new_sink):
         """
@@ -209,6 +216,8 @@ class Server(object):
                 sink.shutdown()
 
             self.sinks = []
+
+        logger.debug("Server shutdown complete")
 
     _repr_general_format = "<habitat.message_server.Server: {status}>"
     _repr_locked = _repr_general_format.format(status="locked")
@@ -682,7 +691,11 @@ class Message(object):
         data = cls._coerce_data_dict(data)
 
         clean_data = {}
-        clean_data["string"] = cls._coerce_data_base64(data["string"])
+
+        try:
+            clean_data["string"] = cls._coerce_data_base64(data["string"])
+        except KeyError:
+            raise ValueError("A required key couldn't be found in data")
 
         try:
             clean_data["frequency"] = float(data["frequency"])

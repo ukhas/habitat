@@ -65,6 +65,7 @@ import collections
 import functools
 import inspect
 import imp
+import logging
 
 all_tests = ["isclass", "isfunction", "isgeneratorfunction",
              "isstandardfunction", "iscallable", "issubclass",
@@ -73,6 +74,8 @@ expect_tests = ["expect" + test for test in all_tests]
 
 __all__ = ["load", "fullname"] + all_tests + expect_tests
 del all_tests, expect_tests
+
+logger = logging.getLogger("habitat.utils.dynamicloader")
 
 def load(loadable, force_reload=False):
     """
@@ -102,6 +105,8 @@ def load(loadable, force_reload=False):
         if "" in components or len(components) == 0:
             raise ValueError("loadable(str) contains empty components")
 
+        name_loaded = loadable
+
         if len(components) == 1:
             __import__(loadable)
             loadable = sys.modules[loadable]
@@ -111,6 +116,12 @@ def load(loadable, force_reload=False):
 
             __import__(module_name)
             loadable = getattr(sys.modules[module_name], target_name)
+
+        name_real = fullname(loadable)
+        if name_real != name_loaded:
+            logger.debug("loaded {0} => {1}".format(name_loaded, name_real))
+        else:
+            logger.debug("loaded {0}".format(name_real))
 
     # If force_reload is set, but it's the first time we've loaded this
     # loadable anyway, there's no point calling reload().
@@ -126,6 +137,8 @@ def load(loadable, force_reload=False):
         already_loaded = loadable.__module__ in old_modules
 
         if force_reload and already_loaded:
+            logger.debug("reloading {0}".format(fullname(loadable)))
+
             # Reload the module and then find the new version of loadable
             module = sys.modules[loadable.__module__]
             reload(module)
@@ -134,6 +147,8 @@ def load(loadable, force_reload=False):
         already_loaded = loadable.__name__ in old_modules
 
         if force_reload and already_loaded:
+            logger.debug("reloading {0}".format(fullname(loadable)))
+
             # Module objects are updated in place.
             reload(loadable)
     else:

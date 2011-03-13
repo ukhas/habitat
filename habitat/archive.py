@@ -21,6 +21,7 @@ ArchiveSink stores messages in a CouchDB datastore.
 
 import hashlib
 import math
+import logging
 from copy import copy, deepcopy
 
 from couchdbkit.exceptions import ResourceConflict
@@ -29,6 +30,7 @@ from habitat.message_server import SimpleSink, Message
 from habitat.utils import dynamicloader
 
 __all__ = ["ArchiveSink"]
+logger = logging.getLogger("habitat.archive")
 
 class ArchiveSink(SimpleSink):
     """
@@ -87,6 +89,9 @@ class ArchiveSink(SimpleSink):
         this callsign's latest document and a new one is only created if the
         new message is different from the current data in the database.
         """
+
+        logger.debug("Saving {message}".format(message=repr(message)))
+
         if message.type == Message.RECEIVED_TELEM:
             self._handle_telem(message)
         elif message.type == Message.TELEM:
