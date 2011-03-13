@@ -21,12 +21,15 @@ The parser interprets incoming telemetry strings into useful telemetry data.
 
 import time
 import base64
+import logging
 from copy import deepcopy
 
 from habitat.message_server import SimpleSink, Message
 from habitat.utils import dynamicloader
 
 __all__ = ["ParserSink", "ParserModule"]
+
+logger = logging.getLogger("habitat.parser")
 
 class ParserSink(SimpleSink):
     """
@@ -162,8 +165,11 @@ class ParserSink(SimpleSink):
                                   message.time_created, message.time_uploaded,
                                   data)
             self.server.push_message(new_message)
+
+            logger.debug("{module} parsed data from {callsign} succesfully" \
+                .format(module=module["name"], callsign=callsign))
         else:
-            raise ValueError("No data could be parsed.")
+            logger.debug("Unable to parse any data")
 
     def _find_config_doc(self, callsign):
         """
@@ -182,6 +188,8 @@ class ParserSink(SimpleSink):
                                      include_docs=True,
                                      startkey=startkey).first()
         if not result or callsign not in result["doc"]["payloads"]:
+            logger.warning("No configuration document for "
+                           "callsign '{callsign}'".format(callsign=callsign))
             raise ValueError("No configuration document found for callsign.")
         return result["doc"]["payloads"][callsign]["sentence"]
 

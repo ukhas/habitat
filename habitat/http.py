@@ -30,11 +30,14 @@ import functools
 import threading
 import SocketServer
 import json
+import logging
 
 from habitat.message_server import Message, Listener
 from habitat.utils import crashmat
 
 __all__ = ["InsertApplication", "SCGIApplication", "SCGIHandler"]
+
+logger = logging.getLogger("habitat.http")
 
 info_message = """
 "habitat" is a web application for tracking the flight path of high altitude
@@ -119,6 +122,10 @@ class InsertApplication(object):
         data = args["data"]
 
         message = Message(source, type, time_created, time_now, data)
+
+        logger.debug("Pushing {type} message from {callsign} at {ip}" \
+            .format(type=Message.type_names[type],
+                    callsign=source.callsign, ip=source.ip))
 
         self.server.push_message(message)
 
@@ -216,12 +223,12 @@ class SCGIApplication(InsertApplication,
         self.threads.add(t)
         t.start()
 
-    # TODO: def handle_error(self)
-    # We probably want to rewrite process_request_thread instead such that
-    # errors are raised (and therefore crashmat.panic()) is called.
-    # No errors should be uncaught, therefore panic is justified.
-    # Support for catching dodgy SCGI requests causing IOErrors, etc.
-    # should be added. Perhaps logger.warn() and ignore.
+    def handle_error(self):
+        logger.exception("handle_error -- uncaught exception")
+        crashmat.panic()
+
+class BadSCGIRequestError(StandardError):
+    pass
 
 class SCGIHandler(SocketServer.BaseRequestHandler):
     """
@@ -237,24 +244,33 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
     """
 
     def setup(self):
-        """
-        prepares the SCGIHandler object for use, and calls
-        :py:meth:`read_scgi_req`
-        """
+        """prepares the SCGIHandler object for use"""
 
         self.environ = {}
         self.post_data = ""
         self.buf = ""
-        self.read_scgi_req()
 
-    def read_more(self):
-        new_data = self.request.recv(4096)
-        if len(new_data) == 0:
-            raise IOError("Invalid request")
-        self.buf += new_data
+    def handle(self):
+        """reads the request and performs the action"""
+
+        try:
+            self.read_scgi_req()
+            self.check_scgi_environ()
+            self.perform_req()
+        except IOError:
+            logger.exception("IOError while handling SCGI request")
+            return
+        except BadSCGIRequestError:
+            logger.exception("BadSCGIRequestError while handling SCGI request")
+
+            try:
+                self.request.sendall("Status: 500 Internal Server Error\r\n")
+            except IOError:
+                logger.warning("IOError while trying to send Status: 500",
+                               exc_info=1)
 
     def read_scgi_req(self):
-        """called by :py:meth:`setup`: parses the whole SCGI request"""
+        """parses the whole SCGI request"""
 
         while self.buf.find(":") == -1:
             self.read_more()
@@ -265,14 +281,15 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
         while (envlen + 1) > len(self.buf):
             self.read_more()
 
-        assert self.buf[envlen - 1] == "\0"
-        assert self.buf[envlen] == ","
+        if self.buf[envlen - 1] != "\0" or self.buf[envlen] != ",":
+            raise BadSCGIRequestError
 
         envdata = self.buf[:envlen - 1]
         self.buf = self.buf[envlen + 1:]
 
         envdata = envdata.split("\0")
-        assert len(envdata) % 2 == 0
+        if len(envdata) % 2 != 0:
+            raise BadSCGIRequestError
 
         for i in xrange(0, len(envdata), 2):
             self.environ[envdata[i]] = envdata[i + 1]
@@ -286,28 +303,34 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
             self.post_data = self.buf[:post_len]
             self.buf = self.buf[post_len:]
 
-        assert self.buf == ""
+        if self.buf != "":
+            raise BadSCGIRequestError
 
-    def handle(self):
-        """
-        Perform the action requested by the user and return a response
+    def read_more(self):
+        new_data = self.request.recv(4096)
+        if len(new_data) == 0:
+            raise BadSCGIRequestError
+        self.buf += new_data
 
-        This is called after :py:meth:`setup` (and therefore
-        :py:meth:`read_scgi_req`) have been called.
-        """
+    def check_scgi_environ(self):
+        """sanity-check the environment provided"""
 
-        try:
-            keys = set(self.environ.keys())
-            assert keys >= set(["REMOTE_ADDR", "REQUEST_METHOD", "PATH_INFO"])
+        keys = set(self.environ.keys())
+        required_keys = set(["REMOTE_ADDR", "REQUEST_METHOD", "PATH_INFO"])
 
-            url = self.environ["PATH_INFO"]
-            assert url[0] == "/"
+        if not keys.issuperset(required_keys):
+            raise BadSCGIRequestError
 
-        except AssertionError:
-            self.request.sendall("Status: 500 Internal Server Error\r\n")
-            return
+        url = self.environ["PATH_INFO"]
+        if not url[0] == "/":
+            raise BadSCGIRequestError
 
+    def perform_req(self):
+        """perform the action requested by the user and return a response"""
+
+        url = self.environ["PATH_INFO"]
         action = url[1:]
+        ip = self.environ["REMOTE_ADDR"]
 
         if action == "":
             response = "Status: 200 OK\r\n"
@@ -318,10 +341,15 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
             return
 
         if self.environ["REQUEST_METHOD"] != "POST":
+            logger.warning("request method in request from {ip} was not POST" \
+                .format(ip=ip))
             self.request.sendall("Status: 405 Method Not Allowed\r\n\r\n")
             return
 
         if action not in self.server.actions:
+            logger.warning("Action {action} requested by {ip} not found" \
+                .format(action=repr(action), ip=ip))
+
             response = "Status: 404 Not Found\r\n"
             response += "Content-Type: text/plain\r\n"
             response += "\r\n"
@@ -334,8 +362,9 @@ class SCGIHandler(SocketServer.BaseRequestHandler):
         try:
             args = json.loads(self.post_data)
             action_function = getattr(self.server, action)
-            action_function(self.environ["REMOTE_ADDR"], args)
+            action_function(ip, args)
         except (TypeError, ValueError):
+            logger.warning("Bad request from {ip}".format(ip=ip), exc_info=1)
             self.request.sendall("Status: 400 Bad Request\r\n\r\n")
             return
 

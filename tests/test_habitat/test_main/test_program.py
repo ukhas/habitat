@@ -205,6 +205,10 @@ class FakeLogging:
             self.handlers = []
         def exception(self, msg):
             self.exceptions.append( (msg, sys.exc_info()[0]) )
+        def debug(self, msg):
+            pass
+        def info(self, msg):
+            pass
 
 class TestProgram:
     def setup(self):
@@ -230,7 +234,9 @@ class TestProgram:
         crashmat.set_shutdown_function = new_set_shutdown_function
         crashmat.panic = new_panic
         self.new_logging = FakeLogging()
+        self.old_logger = program_module.logger
         program_module.logging = self.new_logging
+        program_module.logger = self.new_logging.getLogger("habitat.main")
 
         # Clear the list, reset the counter, reset the functions
         new_get_options.hits = 0
@@ -264,6 +270,7 @@ class TestProgram:
         assert crashmat.set_shutdown_function == new_set_shutdown_function
         assert crashmat.panic == new_panic
         assert program_module.logging == self.new_logging
+        assert program_module.logger == self.new_logging.hbt
         program_module.default_configuration_file = default_configuration_file
         program_module.get_options = get_options
         program_module.setup_logging = setup_logging
@@ -273,6 +280,7 @@ class TestProgram:
         crashmat.set_shutdown_function = set_shutdown_function
         crashmat.panic = panic
         program_module.logging = logging
+        program_module.logger = self.old_logger
 
         threading_checks.restore()
 
@@ -305,7 +313,10 @@ class TestProgram:
     def test_main_reraises_setup_sysexit_despite_logging(self):
         new_main_setup.action = action_sysexit
         self.new_logging.rt.handlers.append(None)
-        self.create_main_tester().main()
+        p = self.create_main_tester()
+        assert p.completed_logging_setup == False
+        p.completed_logging_setup = True
+        p.main()
 
     @raises(Exception)
     def test_main_without_logging_reraises_setup_errors(self):
@@ -313,10 +324,12 @@ class TestProgram:
         self.create_main_tester().main()
 
     def test_main_with_logging_calls_exception_on_setup_errors(self):
-        expect_message = "Exception in Program.main_setup() exiting"
+        expect_message = "uncaught exception in main_setup, exiting"
         new_main_setup.action = action_raise
-        self.new_logging.rt.handlers.append(None)
-        self.create_main_tester().main()
+        p = self.create_main_tester()
+        assert p.completed_logging_setup == False
+        p.completed_logging_setup = True
+        p.main()
         assert len(self.new_logging.hbt.exceptions) == 1
         assert self.new_logging.hbt.exceptions[0] == \
             (expect_message, Exception)
