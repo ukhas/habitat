@@ -454,8 +454,11 @@ class SignalListener(object):
     def handle(self, signum, stack):
         """handles a received signal"""
 
-        logger.info("Handling signal #{num} ({name}("
-            .format(num=signum, name=self.signal_names[signum]))
+        if signum != signal.SIGUSR1:
+            logger.info("Handling signal #{num} ({name})"
+                .format(num=signum, name=self.signal_names[signum]))
+        else:
+            logger.debug("Handling signal listener exit signal, SIGUSR1")
 
         if signum == signal.SIGTERM or signum == signal.SIGINT:
             self.program.shutdown()
