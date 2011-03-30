@@ -27,6 +27,7 @@ from habitat.message_server import Message
 from habitat.parser import ParserSink
 
 flight_doc = {
+    "_id": "1234567890",
     "start": int(time.time()) - 86400,
     "end": int(time.time()) + 86400,
     "payloads": {
@@ -40,6 +41,7 @@ flight_doc = {
 }
 
 wrong_flight_doc = {
+    "_id": "abcdef",
     "start": int(time.time()) - 86400,
     "end": int(time.time()) + 86400,
     "payloads": {
@@ -53,6 +55,7 @@ wrong_flight_doc = {
 }
 
 wrong_p_flight_doc = {
+    "_id": "fedbca",
     "start": int(time.time()) - 86400,
     "end": int(time.time()) + 86400,
     "payloads": {
@@ -246,8 +249,7 @@ class TestParserSink(object):
         assert self.server.db.view_params["limit"] == 1
         assert self.server.db.view_params["include_docs"] == True
         assert self.server.db.view_params["startkey"][0] == "habitat"
-        assert abs(int(self.server.db.view_params["startkey"][1]) -
-            int(time.time())) < 2
+        assert self.server.db.view_params["startkey"][1] == 1234
 
     def test_calls_parser_with_config(self):
         self.sink.message(FakeMessage())
@@ -302,4 +304,5 @@ class TestParserSink(object):
         assert self.server.message.type == Message.TELEM
         assert self.server.message.data == {"data": True,
             "_protocol": "Fake", "_raw": "dGVzdCBtZXNzYWdl",
+            "_flight": "1234567890",
             '_listener_metadata': {'metametadata': 'asdf'}}

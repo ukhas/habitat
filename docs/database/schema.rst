@@ -287,6 +287,7 @@ dictionary, directly as returned by the parser:
 
     "data": {
         "_protocol": "UKHAS",
+        "_flight": "c89860d6f68b1f31ac9480ff9f95bb62",
         "_raw": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ=="
         "_sentence": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681"
         "payload": "habitat",

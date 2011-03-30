@@ -29,6 +29,12 @@
         "_protocol": "UKHAS",
 
         /*
+            The flight document that was used to determine configuration
+            when the message was parsed is here if available
+        */
+        "_flight": "c89860d6f68b1f31ac9480ff9f95bb62",
+
+        /*
             _raw is the original message string as transmitted by the payload,
             in base64. If the payload used an ascii protocol, and there were no
             errors, and the whole message could be represented as ascii,

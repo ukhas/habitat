@@ -133,10 +133,13 @@ class ParserSink(SimpleSink):
         for module in self.modules:
             try:
                 callsign = module["module"].pre_parse(raw_data)
-                config = self._find_config_doc(callsign)
+                config_doc = self._find_config_doc(callsign,
+                    message.time_created)
+                config = config_doc["payloads"][callsign]["sentence"]
                 if config["protocol"] == module["name"]:
                     data = module["module"].parse(raw_data, config)
                     data["_protocol"] = module["name"]
+                    data["_flight"] = config_doc["_id"]
                     break
             except ValueError:
                 continue
@@ -150,6 +153,7 @@ class ParserSink(SimpleSink):
                     data = module["module"].parse(raw_data, config)
                     data["_protocol"] = module["name"]
                     data["_used_default_config"] = True
+                    logger.info("Using a default configuration document")
                     break
                 except (ValueError, KeyError):
                     continue
@@ -171,7 +175,7 @@ class ParserSink(SimpleSink):
         else:
             logger.debug("Unable to parse any data")
 
-    def _find_config_doc(self, callsign):
+    def _find_config_doc(self, callsign, time_created):
         """
         Check Couch for a configuration document we can use for this payload.
         The Couch view first tries to find any Flight documents with this
@@ -183,7 +187,7 @@ class ParserSink(SimpleSink):
         :py:exc:`ValueError <exceptions.ValueError>`, otherwise returns
         the sentence dictionary out of the payload config dictionary.
         """
-        startkey = [callsign, int(time.time())]
+        startkey = [callsign, time_created]
         result = self.server.db.view("habitat/payload_config", limit=1,
                                      include_docs=True,
                                      startkey=startkey).first()
@@ -191,7 +195,7 @@ class ParserSink(SimpleSink):
             logger.warning("No configuration document for "
                            "callsign '{callsign}'".format(callsign=callsign))
             raise ValueError("No configuration document found for callsign.")
-        return result["doc"]["payloads"][callsign]["sentence"]
+        return result["doc"]
 
 
 class ParserModule(object):
