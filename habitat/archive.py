@@ -98,7 +98,8 @@ class ArchiveSink(SimpleSink):
             self._handle_telem(message)
         elif message.type == Message.LISTENER_INFO:
             doc = self._simple_doc_from_message(message, "listener_info")
-            lastdoc = self._get_listener_info_doc(message.source.callsign)
+            lastdoc = self._get_listener_info_doc(message.source.callsign,
+                message.time_created)
             if not lastdoc or doc["data"] != lastdoc["data"]:
                 self.server.db.save_doc(doc)
         elif message.type == Message.LISTENER_TELEM:
@@ -148,6 +149,10 @@ class ArchiveSink(SimpleSink):
         try:
             self.server.db[doc_id] = doc
         except ResourceConflict:
+            # This will retry the read-and-merge procedure, which should clear
+            # a conflict if some other thread had just written the same telem
+            # from another receiver, but in the event of an error we'll stop
+            # trying after 30 goes.
             attempts += 1
             if attempts >= 30:
                 raise RuntimeError('Unable to save telem after many conflicts')
@@ -166,8 +171,10 @@ class ArchiveSink(SimpleSink):
         receiver_info.update(listener_metadata)
         receiver_info["time_created"] = message.time_created
         receiver_info["time_uploaded"] = message.time_uploaded
-        receiver_info["latest_telem"] = self._get_listener_telem_docid(callsign)
-        receiver_info["latest_info"] = self._get_listener_info_docid(callsign)
+        receiver_info["latest_telem"] = self._get_listener_telem_docid(
+            callsign, message.time_created)
+        receiver_info["latest_info"] = self._get_listener_info_docid(
+            callsign, message.time_created)
 
         doc["receivers"][callsign] = receiver_info
 
@@ -177,12 +184,12 @@ class ArchiveSink(SimpleSink):
             times.append(float(doc["receivers"][receiver]["time_created"]))
         doc["estimated_time_created"] = self._estimate_time_created(times)
 
-    def _get_listener_info_doc(self, callsign):
+    def _get_listener_info_doc(self, callsign, time_created=[]):
         """
         Try to get the latest LISTENER_INFO document from the database
         for the given callsign, returning None if none could be found.
         """
-        startkey = [callsign, []]
+        startkey = [callsign, time_created]
         result = self.server.db.view("habitat/listener_info", limit=1,
             include_docs=True, descending=True, startkey=startkey).first()
         try:
@@ -192,14 +199,14 @@ class ArchiveSink(SimpleSink):
             return None
         return result["doc"]
 
-    def _get_listener_info_docid(self, callsign):
+    def _get_listener_docid(self, callsign, view, time_created):
         """
-        Try to get the document ID for the latest listener info document
-        for this callsign, returning None if not found.
+        Try to get the document ID for the latest listener info or telem
+        document for this callsign, returning None if not found.
         """
-        startkey = [callsign, []]
-        result = self.server.db.view("habitat/listener_info", limit=1,
-            descending=True, startkey=startkey).first()
+        startkey = [callsign, time_created]
+        result = self.server.db.view(view, limit=1, descending=True,
+                startkey=startkey).first()
         try:
             if not result or result["key"][0] != callsign:
                 return None
@@ -207,20 +214,19 @@ class ArchiveSink(SimpleSink):
             return None
         return result["id"]
 
-    def _get_listener_telem_docid(self, callsign):
+    def _get_listener_info_docid(self, callsign, time_created=[]):
         """
-        Try to get the document ID for the latest listener telem document
-        for this callsign, returning None if not found.
+        Get the latest listener info doc ID
         """
-        startkey = [callsign, []]
-        result = self.server.db.view("habitat/listener_telem", limit=1,
-            descending=True, startkey=startkey).first()
-        try:
-            if not result or result["key"][0] != callsign:
-                return None
-        except (KeyError, IndexError):
-            return None
-        return result["id"]
+        return self._get_listener_docid(callsign, "habitat/listener_info",
+            time_created)
+
+    def _get_listener_telem_docid(self, callsign, time_created=[]):
+        """
+        Get the latest listener telem doc ID
+        """
+        return self._get_listener_docid(callsign, "habitat/listener_telem",
+            time_created)
 
     def _estimate_time_created(self, times):
         """
