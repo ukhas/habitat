@@ -249,8 +249,7 @@ class TestParserSink(object):
         assert self.server.db.view_params["limit"] == 1
         assert self.server.db.view_params["include_docs"] == True
         assert self.server.db.view_params["startkey"][0] == "habitat"
-        assert abs(int(self.server.db.view_params["startkey"][1]) -
-            int(time.time())) < 2
+        assert self.server.db.view_params["startkey"][1] == 1234
 
     def test_calls_parser_with_config(self):
         self.sink.message(FakeMessage())
