@@ -277,6 +277,12 @@ in ``estimated_time_created``:
 
     "estimated_time_created": 1292772125,
 
+The flight that this telemetry came from is also stored if it was available:
+
+.. code-block:: javascript
+    
+    "flight": "c89860d6f68b1f31ac9480ff9f95bb62",
+
 The information parsed out of the message string is stored in the ``data``
 dictionary, directly as returned by the parser:
 
