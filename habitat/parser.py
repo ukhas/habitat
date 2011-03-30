@@ -133,10 +133,12 @@ class ParserSink(SimpleSink):
         for module in self.modules:
             try:
                 callsign = module["module"].pre_parse(raw_data)
-                config = self._find_config_doc(callsign)
+                config_doc = self._find_config_doc(callsign)
+                config = config_doc["payloads"][callsign]["sentence"]
                 if config["protocol"] == module["name"]:
                     data = module["module"].parse(raw_data, config)
                     data["_protocol"] = module["name"]
+                    data["_flight"] = config_doc["_id"]
                     break
             except ValueError:
                 continue
@@ -150,6 +152,7 @@ class ParserSink(SimpleSink):
                     data = module["module"].parse(raw_data, config)
                     data["_protocol"] = module["name"]
                     data["_used_default_config"] = True
+                    logger.info("Using a default configuration document")
                     break
                 except (ValueError, KeyError):
                     continue
@@ -191,7 +194,7 @@ class ParserSink(SimpleSink):
             logger.warning("No configuration document for "
                            "callsign '{callsign}'".format(callsign=callsign))
             raise ValueError("No configuration document found for callsign.")
-        return result["doc"]["payloads"][callsign]["sentence"]
+        return result["doc"]
 
 
 class ParserModule(object):

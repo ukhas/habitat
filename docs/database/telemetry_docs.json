@@ -17,12 +17,6 @@
     "estimated_time_created": 1292772125,
 
     /*
-        The flight that this telemetry document came from is stored if
-        available.
-    */
-    "flight": "c89860d6f68b1f31ac9480ff9f95bb62",
-
-    /*
         Data is the dict returned by the parser module, containing all the
         useful data from this string, hopefully including a latitude and
         longitude.
@@ -33,6 +27,12 @@
             that parsed this telemetry
         */
         "_protocol": "UKHAS",
+
+        /*
+            The flight document that was used to determine configuration
+            when the message was parsed is here if available
+        */
+        "_flight": "c89860d6f68b1f31ac9480ff9f95bb62",
 
         /*
             _raw is the original message string as transmitted by the payload,
