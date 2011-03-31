@@ -22,6 +22,10 @@ Test the UKHAS protocol parser.
 from nose.tools import assert_raises
 from copy import deepcopy
 
+# It would require a disproportionate amount of work to create a
+# FakeSensorManager
+from habitat.sensor_manager import SensorManager
+
 from habitat.parser_modules.ukhas_parser import UKHASParser
 
 # A 'standard' config. Other configs can copy this and change parts.
@@ -31,27 +35,27 @@ base_config = {
     "fields": [
         {
             "name": "message_count",
-            "type": "int"
+            "type": "base.ascii_int"
         }, {
             "name": "time",
-            "type": "time"
+            "type": "stdtelem.time"
         }, {
             "name": "latitude",
-            "type": "coordinate",
+            "type": "stdtelem.coordinate",
             "format": "dd.dddd"
         }, {
             "name": "longitude",
-            "type": "coordinate",
+            "type": "stdtelem.coordinate",
             "format": "dd.dddd"
         }, {
             "name": "altitude",
-            "type": "int"
+            "type": "base.ascii_int"
         }, {
             "name": "speed",
-            "type": "float"
+            "type": "base.ascii_float"
         }, {
             "name": "custom_string",
-            "type": "string"
+            "type": "base.string"
         }
     ]
 }
@@ -218,10 +222,35 @@ sentence_long = "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab,123" \
 output_long = deepcopy(output_good)
 output_long["_extra_data"] = ["123", "4.56", "seven"]
 
+# Provide the sensor functions to the parser
+class FakeProgram:
+    def __init__(self, db):
+        self.db = db
+    def set_sensor_manager(self, sensor_manager):
+        self.sensor_manager = sensor_manager
+
+class FakeServer:
+    def __init__(self, program):
+        self.program = program
+
+class FakeParser:
+    def __init__(self, server):
+        self.server = server
+
+fake_sensors_db = {
+    "sensor_manager_config": {
+        "libraries": { "stdtelem": "habitat.sensors.stdtelem" }
+    }
+}
+
 class TestUKHASParser:
     """UKHAS Parser"""
     def setUp(self):
-        self.p = UKHASParser(None)
+        fake_program = FakeProgram(fake_sensors_db)
+        sensor_manager = SensorManager(fake_program)
+        fake_program.set_sensor_manager(sensor_manager)
+        fake_parser = FakeParser(FakeServer(fake_program))
+        self.p = UKHASParser(fake_parser)
 
     def test_pre_parse_rejects_bad_sentences(self):
         for sentence in bad_sentences:
