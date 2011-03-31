@@ -107,15 +107,23 @@ def load(loadable, force_reload=False):
 
         name_loaded = loadable
 
-        if len(components) == 1:
+        try:
+            # This will work if it is a module
             __import__(loadable)
             loadable = sys.modules[loadable]
-        else:
+        except ImportError:
+            # This will work if it is a class or a function
             module_name = ".".join(components[:-1])
             target_name = components[-1]
 
             __import__(module_name)
-            loadable = getattr(sys.modules[module_name], target_name)
+
+            try:
+                loadable = getattr(sys.modules[module_name], target_name)
+            except KeyError:
+                raise ImportError("Couldn't import " + loadable)
+
+        # If neither worked; an error will have been raised.
 
         name_real = fullname(loadable)
         if name_real != name_loaded:

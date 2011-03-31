@@ -345,7 +345,7 @@ class Sink(object):
         Called by the server in order to pass a message to the **Sink**.
 
         This method is typically implemented by :py:class:`SimpleSink`
-        or :py:meth:`ThreadedSink`. Filtering based on **Sink.types** is
+        or :py:class:`ThreadedSink`. Filtering based on **Sink.types** is
         done by this method.
         """
 

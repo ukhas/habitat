@@ -34,6 +34,7 @@ from test_habitat.test_utils.garbage import dynamicloadme
 from test_habitat.test_utils.garbage.dynamicloadme import AClass
 
 unimp_name = "test_habitat.test_utils.garbage.dynamicloadunimp"
+unimp_b_name = "test_habitat.test_utils.garbage.dynamicloadunimp_b"
 
 class TestLoad:
     """dynamicloader.load():"""
@@ -89,6 +90,9 @@ class TestLoad:
 
         assert dynamicloader.load("whichdb", force_reload=True).whichdb
         assert new_reload.hits == 1  # no change; no longer wrapped
+
+    def test_can_load_module_not_imported_by_parent_module(self):
+        dynamicloader.load(unimp_b_name)
 
     def test_can_load_notyetimported_function(self):
         """can load an object from a module that has not been imported yet"""
