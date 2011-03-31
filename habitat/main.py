@@ -97,8 +97,8 @@ def get_options():
     configuration file (which must be in the :py:mod:`ConfigParser`
     format).
 
-    It will read :py:data:`default_configuration_file` and will ignore
-    any errors that occur while doing so, unless a different config
+    It will read default_configuration_file and will ignore any
+    errors that occur while doing so, unless a different config
     file is specified at the command line (failures on an explicitly
     stated config file will raise an execption).
 

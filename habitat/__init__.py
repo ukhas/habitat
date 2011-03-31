@@ -34,3 +34,4 @@ from . import http
 from . import main
 from . import archive
 from . import parser
+from . import sensors

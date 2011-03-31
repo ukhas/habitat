@@ -41,6 +41,8 @@ base_functions = {
 }
 
 class SensorManager:
+    """The main Sensor Manager class"""
+
     def __init__(self, program):
         """
         Initalises the sensor manager
