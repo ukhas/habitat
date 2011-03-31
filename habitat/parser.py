@@ -41,23 +41,12 @@ class ParserSink(SimpleSink):
     telemetry data, and then sending that back to the message server.
     """
 
-    BEFORE_FILTER, DURING_FILTER, AFTER_FILTER = locations = range(3)
-
     def setup(self):
         """
         Initialises the sink, adding the types of telemetry we care about
-        to our types list and setting up lists of filters and modules
+        to our types list and setting up lists of modules
         """
         self.add_type(Message.RECEIVED_TELEM)
-
-        self.before_filters = []
-        self.during_filters = []
-        self.after_filters = []
-        self.filters = {
-            self.BEFORE_FILTER: self.before_filters,
-            self.DURING_FILTER: self.during_filters,
-            self.AFTER_FILTER: self.after_filters
-        }
 
         self.modules = []
 
@@ -132,12 +121,15 @@ class ParserSink(SimpleSink):
         # Try using real configs
         for module in self.modules:
             try:
-                callsign = module["module"].pre_parse(raw_data)
+                data = self._pre_filter(raw_data, module)
+                callsign = module["module"].pre_parse(data)
                 config_doc = self._find_config_doc(callsign,
                     message.time_created)
-                config = config_doc["payloads"][callsign]["sentence"]
-                if config["protocol"] == module["name"]:
-                    data = module["module"].parse(raw_data, config)
+                config = config_doc["payloads"][callsign]
+                if config["sentence"]["protocol"] == module["name"]:
+                    data = self._intermediate_filter(data, config)
+                    data = module["module"].parse(data, config["sentence"])
+                    data = self._post_filter(data, config)
                     data["_protocol"] = module["name"]
                     data["_flight"] = config_doc["_id"]
                     break
@@ -145,12 +137,15 @@ class ParserSink(SimpleSink):
                 continue
 
         # If that didn't work, try using default configurations
-        if not data:
+        if type(data) is not dict:
             for module in self.modules:
                 try:
                     config = module["default_config"]
-                    callsign = module["module"].pre_parse(raw_data)
-                    data = module["module"].parse(raw_data, config)
+                    data = self._pre_filter(raw_data, module)
+                    callsign = module["module"].pre_parse(data)
+                    data = self._intermediate_filter(data, config)
+                    data = module["module"].parse(data, config["sentence"])
+                    data = self._post_filter(data, config)
                     data["_protocol"] = module["name"]
                     data["_used_default_config"] = True
                     logger.info("Using a default configuration document")
@@ -158,7 +153,7 @@ class ParserSink(SimpleSink):
                 except (ValueError, KeyError):
                     continue
 
-        if data:
+        if type(data) is dict:
             data["_raw"] = message.data["string"]
 
             # Every key apart from string contains RECEIVED_TELEM metadata
@@ -173,7 +168,7 @@ class ParserSink(SimpleSink):
             logger.debug("{module} parsed data from {callsign} succesfully" \
                 .format(module=module["name"], callsign=callsign))
         else:
-            logger.debug("Unable to parse any data")
+            logger.debug("Unable to parse any data from '" + str(data) + "'")
 
     def _find_config_doc(self, callsign, time_created):
         """
@@ -196,6 +191,96 @@ class ParserSink(SimpleSink):
                            "callsign '{callsign}'".format(callsign=callsign))
             raise ValueError("No configuration document found for callsign.")
         return result["doc"]
+
+    def _pre_filter(self, data, module):
+        """
+        Apply all the module's pre filters, in order, to the data and
+        return the resulting filtered data.
+        """
+        if "pre-filters" in module:
+            for f in module["pre-filters"]:
+                data = self._filter(data, f)
+        return data
+    
+    def _intermediate_filter(self, data, config):
+        """
+        Apply all the intermediate (between getting the callsign and parsing)
+        filters specified in the payload's configuration document and return
+        the resulting filtered data.
+        """
+        if "filters" in config:
+            if "intermediate" in config["filters"]:
+                for f in config["filters"]["intermediate"]:
+                    data = self._filter(data, f)
+        return data
+
+    def _post_filter(self, data, config):
+        """
+        Apply all the post (after parsing) filters specified in the payload's
+        configuration document and return the resulting filtered data.
+        """
+        if "filters" in config:
+            if "post" in config["filters"]:
+                for f in config["filters"]["post"]:
+                    data = self._filter(data, f)
+        return data
+
+    def _filter(self, data, f):
+        """
+        Load and run a filter from a dictionary specifying type, the
+        relevant callable/code and maybe a config.
+        Returns the filtered data, or leaves the data untouched
+        if the filter could not be run.
+        """
+        if "type" not in f:
+            logger.warning("A filter didn't have a type: " + repr(f))
+            return data
+        if f["type"] == "normal":
+            # Normal-type filters have a callable which we can load
+            # using the dynamicloader, inspect and use
+            config = None
+            if "config" in f:
+                config = f["config"]
+
+            fil = dynamicloader.load(f["callable"])
+            if not dynamicloader.iscallable(fil):
+                logger.warning("A loaded filter wasn't callable: " + repr(f))
+                return data
+            if dynamicloader.hasnumargs(fil, 1):
+                return fil(data)
+            elif dynamicloader.hasnumargs(fil, 2):
+                return fil(data, config)
+            else:
+                logger.warning("A loaded filter had wrong number of args: " +
+                        repr(f))
+                return data
+        elif f["type"] == "hotfix":
+            # Hotfix-type filters provide some code which goes in the body
+            # of a function, and return a modified version of the body.
+            if "code" not in f:
+                logger.warning("A hotfix didn't have any code: " + repr(f))
+                return data
+            logger.info("Compiling a hotfix")
+            body = "def f(data):\n"
+            for line in f["code"].split("\n"):
+                body += "    " + line + "\n"
+            env = {}
+            try:
+                code = compile(body, "<filter>", "exec")
+                exec code in env
+            except (SyntaxError, TypeError):
+                logger.warning("Hotfix code didn't compile: " + repr(f))
+                return data
+            logger.info("Hotfix compiled, executing")
+            try:
+                return env["f"](data)
+            except:
+                # this is a pretty hardcore except! it'l catch anything.
+                # but that's desirable as who knows what this crazy code
+                # might do.
+                logger.warning("An exception occured when trying to run a " +
+                        "hotfix: " + repr(f))
+                return data
 
 
 class ParserModule(object):

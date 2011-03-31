@@ -20,11 +20,17 @@ Unit tests for the Parser's Sink class.
 """
 
 import time
+from copy import deepcopy
 from nose.tools import raises
 from test_habitat.lib import fake_couchdb
 from habitat.message_server import Message
 
 from habitat.parser import ParserSink
+
+def upper_case_filter(data):
+    return data.upper()
+def config_filter(data, config):
+    return {"result": "config was like " + str(config)}
 
 flight_doc = {
     "_id": "1234567890",
@@ -38,6 +44,27 @@ flight_doc = {
             }
         }
     }
+}
+
+intermediate_filters_doc = deepcopy(flight_doc)
+intermediate_filters_doc["payloads"]["habitat"]["filters"] = {
+    "intermediate": [
+        {
+            "type": "hotfix",
+            "code": "return 'hotfix'"
+        }
+    ]
+}
+
+post_filters_doc = deepcopy(flight_doc)
+post_filters_doc["payloads"]["habitat"]["filters"] = {
+    "post": [
+        {
+            "type": "normal",
+            "callable": config_filter,
+            "config": "rad!"
+        }
+    ]
 }
 
 wrong_flight_doc = {
@@ -69,8 +96,10 @@ wrong_p_flight_doc = {
 }
 
 default_config = {
-    "protocol": "Fake",
-    "default": True
+    "sentence": {
+        "protocol": "Fake",
+        "default": True
+    }
 }
 
 class FakeModule(object):
@@ -148,6 +177,13 @@ class NoParseModule(object):
 
 fake_view_results = fake_couchdb.ViewResults({"value": None,
     "key": ["habitat", flight_doc["end"]], "doc": flight_doc})
+
+intermediate_filter_view_results = fake_couchdb.ViewResults({"value": None,
+    "key": ["habitat", intermediate_filters_doc["end"]],
+    "doc": intermediate_filters_doc})
+
+post_filter_view_results = fake_couchdb.ViewResults({"value": None,
+    "key": ["habitat", post_filters_doc["end"]], "doc": post_filters_doc})
 
 empty_view_results = fake_couchdb.ViewResults()
 
@@ -262,7 +298,7 @@ class TestParserSink(object):
             default_config
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
-        assert sink.modules[0]["module"].config == default_config
+        assert sink.modules[0]["module"].config == default_config["sentence"]
 
     def test_uses_default_config_with_wrong_results(self):
         self.server.db.default_view_results = wrong_view_results
@@ -270,7 +306,7 @@ class TestParserSink(object):
             default_config
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
-        assert sink.modules[0]["module"].config == default_config
+        assert sink.modules[0]["module"].config == default_config["sentence"]
 
     def test_doesnt_parse_when_no_config_or_default_config_found(self):
         self.server.db.default_view_results = empty_view_results
@@ -293,6 +329,26 @@ class TestParserSink(object):
     def test_doesnt_parse_when_no_callsign_found(self):
         self.sink.message(WrongMessage())
         assert self.server.message == None
+
+    def test_applies_pre_parse_filter(self):
+        self.server.db["parser_config"]["modules"][0]["pre-filters"] = [
+            {"type": "normal", "callable": upper_case_filter}
+        ]
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].pre_parse_string == "TEST MESSAGE"
+
+    def test_applies_intermediate_filter(self):
+        self.server.db.default_view_results = intermediate_filter_view_results
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].string == "hotfix"
+
+    def test_applies_post_filter(self):
+        self.server.db.default_view_results = post_filter_view_results
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert self.server.message.data["result"] == "config was like rad!"
 
     def test_pushes_message(self):
         self.sink.message(FakeMessage())

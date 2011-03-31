@@ -64,6 +64,15 @@ For example, a configuration for the above typical sentence might be:
                     "type": "int"
                 }
             ]
+        },
+        "filters": {
+            "intermediate": [
+                {
+                    "type": "normal",
+                    "callable": "habitat.filters.upper_case"
+                }
+            ], "post": [
+            ]
         }
     }
 
@@ -136,3 +145,7 @@ is used to define how the coordinate should be parsed. Options are:
 
 In both cases, the number can be prefixed by a space or + or - sign.
 
+Filters
+-------
+
+See :doc:`filters`

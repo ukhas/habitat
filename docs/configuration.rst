@@ -104,3 +104,4 @@ will be applied to all incoming data regardless of origin. Individual payloads
 can configure intermediate and post-parse filters for manipulating their data
 server-side and should be used in preference to pre-filters.
 
+See :doc:`filters` for more information on filters.
