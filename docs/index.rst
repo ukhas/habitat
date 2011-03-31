@@ -12,6 +12,7 @@ Contents:
    configuration
    database/index
    messages
+   filters
    ukhas_parser
    reference/index
 
