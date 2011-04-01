@@ -133,7 +133,10 @@ class ParserSink(SimpleSink):
                     data["_protocol"] = module["name"]
                     data["_flight"] = config_doc["_id"]
                     break
-            except ValueError:
+            except ValueError as e:
+                logger.debug(
+                    "ValueError from {0}: '{1}'".format(module["name"], e))
+                raise RuntimeError()
                 continue
 
         # If that didn't work, try using default configurations
@@ -150,7 +153,9 @@ class ParserSink(SimpleSink):
                     data["_used_default_config"] = True
                     logger.info("Using a default configuration document")
                     break
-                except (ValueError, KeyError):
+                except (ValueError, KeyError) as e:
+                    errstr = "Error from {0} with default config: '{1}'"
+                    logger.debug(errstr.format(module["name"], e))
                     continue
 
         if type(data) is dict:
@@ -187,9 +192,10 @@ class ParserSink(SimpleSink):
                                      include_docs=True,
                                      startkey=startkey).first()
         if not result or callsign not in result["doc"]["payloads"]:
-            logger.warning("No configuration document for "
-                           "callsign '{callsign}'".format(callsign=callsign))
-            raise ValueError("No configuration document found for callsign.")
+            err = "No configuration document for callsign '{0}' found."
+            err = err.format(callsign)
+            logger.warning(err)
+            raise ValueError(err)
         return result["doc"]
 
     def _pre_filter(self, data, module):
