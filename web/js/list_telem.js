@@ -5,6 +5,7 @@ function list_telem() {
             for(var i = 0; i < data.rows.length; i++) {
                 $("#telems").append(data.rows[i].id);
                 $("#telems").append("<br />");
+            }
         }});
 };
 
