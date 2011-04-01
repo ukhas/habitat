@@ -60,7 +60,7 @@ config_section = "habitat"
 # other in that order.
 default_options = {"couch_uri": None, "couch_db": None, "socket_file": None,
                    "log_stderr_level": "WARN", "log_file": None,
-                   "log_file_level": None}
+                   "log_file_level": None, "secret": None}
 
 parser = optparse.OptionParser(usage=usage, version=version,
                                description=header)
@@ -77,6 +77,8 @@ parser.add_option("-d", "--couch-db", metavar="COUCH_DATABASE",
 parser.add_option("-s", "--socket", metavar="SCGI_SOCKET",
                   dest="socket_file",
                   help="scgi socket file to serve on")
+parser.add_option("--secret", metavar="SECRET", dest="secret",
+              help="secret used for signing hotfixes, best set in config file")
 parser.add_option("-v", "--verbosity", metavar="LOG_STDERR_LEVEL",
                   dest="log_stderr_level",
                   help="minimum loglevel to print on stderr, options: " +\
@@ -159,7 +161,7 @@ def get_options_config(config_file):
         return dict(config.items(config_section))
 
 def get_options_check_required(options):
-    required_options = ["couch_uri", "couch_db", "socket_file"]
+    required_options = ["couch_uri", "couch_db", "socket_file", "secret"]
 
     if options["log_file"] != None or options["log_file_level"] != None:
         required_options += ["log_file", "log_file_level"]
