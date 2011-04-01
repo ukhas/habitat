@@ -22,6 +22,7 @@ The parser interprets incoming telemetry strings into useful telemetry data.
 import time
 import base64
 import logging
+import hashlib
 from copy import deepcopy
 
 from habitat.message_server import SimpleSink, Message
@@ -260,7 +261,25 @@ class ParserSink(SimpleSink):
             if "code" not in f:
                 logger.warning("A hotfix didn't have any code: " + repr(f))
                 return data
-            logger.info("Compiling a hotfix")
+
+            try:
+                secret = self.server.program.options["secret"]
+            except KeyError:
+                logger.error("No secret has been set in configuration")
+                return data
+            
+            try:
+                signature = f["signature"]
+            except KeyError:
+                logger.error("No signature on hotfix code")
+                return data
+
+            correct_hash = hashlib.sha512(f["code"] + secret).hexdigest()
+            if correct_hash != signature:
+                logger.error("Invalid signature on hotfix code: " + repr(f))
+                return data
+
+            logger.debug("Compiling a hotfix")
             body = "def f(data):\n"
             for line in f["code"].split("\n"):
                 body += "    " + line + "\n"
@@ -271,7 +290,8 @@ class ParserSink(SimpleSink):
             except (SyntaxError, TypeError):
                 logger.warning("Hotfix code didn't compile: " + repr(f))
                 return data
-            logger.info("Hotfix compiled, executing")
+
+            logger.debug("Hotfix compiled, executing")
             try:
                 return env["f"](data)
             except:

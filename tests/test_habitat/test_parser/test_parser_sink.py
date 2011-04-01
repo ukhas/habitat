@@ -51,7 +51,10 @@ intermediate_filters_doc["payloads"]["habitat"]["filters"] = {
     "intermediate": [
         {
             "type": "hotfix",
-            "code": "return 'hotfix'"
+            "code": "return 'hotfix'",
+            "signature": "cbe83e892c1fd80954dc44bf94abeb9fa3a99e66ab1f" + \
+                         "f07eb5d225e8b60b782bab8b1581abdced33e01de2ec" + \
+                         "9e8e11dd3d1f8347a3fb29be9152d42030ecdcf4"
         }
     ]
 }
@@ -193,9 +196,15 @@ wrong_view_results = fake_couchdb.ViewResults({"value": None,
 wrong_protocol_view_results = fake_couchdb.ViewResults({"value": None,
     "key": ["habitat", wrong_p_flight_doc["end"]], "doc": wrong_p_flight_doc})
 
+class FakeProgram(object):
+    """A mocked up Program object with fake options"""
+    def __init__(self):
+        self.options = {'secret': 'secret'}
+
 class FakeServer(object):
     """A mocked up server which has a fake CouchDB"""
     def __init__(self, docs=None):
+        self.program = FakeProgram()
         self.db = fake_couchdb.Database(docs)
         self.message = None
     def push_message(self, message):
@@ -343,6 +352,30 @@ class TestParserSink(object):
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "hotfix"
+
+    def test_doesnt_apply_hotfix_without_signature(self):
+        no_signature = deepcopy(intermediate_filters_doc)
+        del no_signature["payloads"]["habitat"]["filters"] \
+            ["intermediate"][0]["signature"]
+        no_signature_view_results = fake_couchdb.ViewResults({"value": None,
+            "key": ["habitat", no_signature["end"]],
+            "doc": no_signature})
+        self.server.db.default_view_results = no_signature_view_results
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].string == "test message"
+
+    def test_doesnt_apply_hotfix_with_invalid_signature(self):
+        bad_signature = deepcopy(intermediate_filters_doc)
+        bad_signature["payloads"]["habitat"]["filters"] \
+            ["intermediate"][0]["signature"] = "bad"
+        bad_signature_view_results = fake_couchdb.ViewResults({"value": None,
+            "key": ["habitat", bad_signature["end"]],
+            "doc": bad_signature})
+        self.server.db.default_view_results = bad_signature_view_results
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].string == "test message"
 
     def test_applies_post_filter(self):
         self.server.db.default_view_results = post_filter_view_results
