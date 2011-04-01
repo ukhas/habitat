@@ -19,7 +19,7 @@
 
 import checksums
 
-class UKHASChecksumFixer:
+class UKHASChecksumFixer(object):
     """
     A context manager which helps filters modify data that has been
     checksummed. Tell it what the original protocol was and pass a dict
