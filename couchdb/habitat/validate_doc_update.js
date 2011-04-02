@@ -21,10 +21,10 @@ function(newDoc, oldDoc, userCtx) {
     if(newDoc._deleted)
         throw({forbidden: "Documents may not be deleted."});
 
-    // Forbid changing/creating documents such as telemetry
-    // or listener information unless you are the habitat user
-    // (all such documents should go through the habitat backend)
-    if(newDoc.type != "flight" && userCtx.name != "habitat")
+    // Changing or creating documents is totally forbidden, unless:
+    //   you are the habitat user
+    //   you are an admin
+    if (userCtx.name != "habitat" && userCtx.roles.indexOf('_admin') === -1)
         throw({forbidden:
                 "Only the habitat user may create non-flight documents"});
 }
