@@ -144,6 +144,10 @@ class ParserSink(SimpleSink):
             for module in self.modules:
                 try:
                     config = module["default_config"]
+                except KeyError:
+                    continue
+
+                try:
                     data = self._pre_filter(raw_data, module)
                     callsign = module["module"].pre_parse(data)
                     data = self._intermediate_filter(data, config)
@@ -153,7 +157,7 @@ class ParserSink(SimpleSink):
                     data["_used_default_config"] = True
                     logger.info("Using a default configuration document")
                     break
-                except (ValueError, KeyError) as e:
+                except ValueError as e:
                     errstr = "Error from {0} with default config: '{1}'"
                     logger.debug(errstr.format(module["name"], e))
                     continue
