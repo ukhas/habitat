@@ -116,8 +116,8 @@ class ParserSink(SimpleSink):
         """
 
         data = None
-
-        raw_data = base64.b64decode(message.data["string"])
+        original_data = message.data["string"]
+        raw_data = base64.b64decode(original_data)
 
         # Try using real configs
         for module in self.modules:
@@ -159,7 +159,7 @@ class ParserSink(SimpleSink):
                     continue
 
         if type(data) is dict:
-            data["_raw"] = message.data["string"]
+            data["_raw"] = original_data
 
             # Every key apart from string contains RECEIVED_TELEM metadata
             data["_listener_metadata"] = deepcopy(message.data)
@@ -173,7 +173,8 @@ class ParserSink(SimpleSink):
             logger.debug("{module} parsed data from {callsign} succesfully" \
                 .format(module=module["name"], callsign=callsign))
         else:
-            logger.debug("Unable to parse any data from '" + str(data) + "'")
+            logger.debug("Unable to parse any data from '{d}'" \
+                .format(d=original_data))
 
     def _find_config_doc(self, callsign, time_created):
         """
