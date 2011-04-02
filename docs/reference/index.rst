@@ -8,5 +8,6 @@ habitat python reference
    :glob:
 
    *
+   sensors/index
    parser_modules/index
    utils/index

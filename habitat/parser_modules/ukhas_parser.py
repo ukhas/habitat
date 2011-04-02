@@ -24,16 +24,11 @@ The typical minimum telemetry string is:
 ``$$<payload>,<message number>,<time>,<latitude>,<longitude>,<altitude>,\
 <data>,...,<last data>*<checksum>``
 
-Data fields are typically human readable (or at the least ASCII) readings
-of sensors or other system information. See the sensors module for more
-information on supported formats.
-
-# TODO TODO XXX move this documentation (!)
-
-Time is in ``HH:MM:SS``.
-
-Latitude and longitude are in ``ddmm.mm`` or ``dd.dddd``.
 The number of custom data fields and their types are configurable.
+
+Data fields are typically human readable (or at the least ASCII) readings
+of sensors or other system information. See the :py:mod:`sensors` module
+for more information on supported formats.
 
 Checksums work on the message content between the ``$$`` and the ``*``,
 non-inclusive, and are given as hexadecimal (upper or lower case) after
@@ -95,16 +90,6 @@ Typical configuration (part of a payload dictionary in a flight document):
             ]
         }
     }
-
-# XXX And this (!)
-
-Supported types include:
-
-* string
-* float
-* int
-* time
-* coordinate
 
 """
 

@@ -16,7 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Sensor functions for dealing with telemetry
+Sensor functions for dealing with telemetry.
 """
 
 import math
@@ -25,6 +25,8 @@ from time import strptime
 __all__ = ["time", "coordinate"]
 
 def time(config, data):
+    """Parses time in ``HH:MM:SS`` format"""
+
     if len(data) == 8:
         t = strptime(data, "%H:%M:%S")
     elif len(data) == 5:
@@ -40,6 +42,13 @@ def time(config, data):
     return parsed_data
 
 def coordinate(config, data):
+    """
+    Parses ascii latitude or longitude into a decimal-degrees float
+
+    ``config["format"]`` dictates what format the input is in.
+    Latitude and longitude can be either ``ddmm.mm`` or ``dd.dddd``.
+    """
+
     if "format" not in config:
         raise ValueError("Coordinate format missing")
     coordinate_format = config["format"]

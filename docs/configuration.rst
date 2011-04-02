@@ -35,6 +35,23 @@ Command line flags override options specified in a configuration file.
 Once this information is obtained, habitat can load itself up and the remaining
 configuration is obtained from Couch documents.
 
+Startup Configuration Options
+=============================
+
+``(short option, long option [, config file option])``
+
+ * ``-f`` / ``--config-file``: Configuration file to load
+ * ``-c`` / ``--couch-uri`` / ``couch_uri``: The couch URI to connect to in
+   ``http://username:password@host:port/`` form.
+ * ``-d`` / ``--couch-db`` / ``couch_db``: The couch database to use.
+ * ``-s`` / ``--socket`` / ``socket_file``: UNIX path; where the SCGI Socket
+   should be created.
+ * ``-v`` / ``--verbosity`` / ``log_stderr_level``: How verbose output to
+   the console should be. Options: NONE, DEBUG, INFO, WARN, ERROR, CRITICAL.
+ * ``-l`` / ``--log-file`` / ``log_file``: Log file path.
+ * ``-e`` / ``--log-level`` / ``log_file_level``: Log file verbosity
+   (same options as verbosity/log_stderr_level)
+
 Runtime Configuration
 =====================
 
@@ -42,8 +59,8 @@ Configuration for actual habitat functionality is stored in the Couch database
 and can be dynamically reloaded at runtime to allow for configuration updates
 without restarting the main server.
 
-Currently two documents are checked for configuration data:
-``message_server_config`` and ``parser_config``.
+Currently three documents are checked for configuration data:
+``message_server_config``, ``parser_config`` and ``sensor_manager_config``.
 
 Message Server Configuration
 ----------------------------
@@ -105,3 +122,24 @@ can configure intermediate and post-parse filters for manipulating their data
 server-side and should be used in preference to pre-filters.
 
 See :doc:`filters` for more information on filters.
+
+Sensor Manager Config
+---------------------
+
+The sensor manager loads a selection of sensor function libaries at startup
+(in addition to the built-in *base* library). Each library loaded is assigned
+a shortcut.
+
+The example below loads the module habitat.sensors.stdtelem and assigns it
+the shortcut "stdtelem". This means that the function
+``habitat.sensors.stdtelem.time`` can be used simply as ``stdtelem.time``.
+
+
+.. code-block:: javascript
+
+    "sensor_manager_config": {
+        "_id": "sensor_manager_config",
+        "type": "config",
+        "libraries": {"stdtelem": "habitat.sensors.stdtelem"}
+    }
+

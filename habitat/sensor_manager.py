@@ -29,6 +29,26 @@ functions in ``habitat.sensors.stdtelem`` are available simply as
 
 These all libraries listed in the Sensor Manager's configuration are loaded
 upon initialisation.
+
+Sensor Functions
+================
+
+The sensor_manager provides the *base* library built in; it includes
+
+ * ascii_int
+ * ascii_float
+ * string
+
+Other libraries are available with habitat. See :py:mod:`sensors`
+
+A sensor function takes two arguments, *config* and *data*. It
+can return a string, list, dict, int, float, or any other python
+object that can be stored in a couchdb database.
+
+*config* is a dict of options. It is passed to the function from
+:py:meth:`SensorManager.parse`
+
+*data* is the string to parse.
 """
 
 from habitat.utils import dynamicloader
@@ -53,7 +73,7 @@ class SensorManager:
 
     def __init__(self, program):
         """
-        Initalises the sensor manager
+        *program*: a :py:class:`habitat.main.Program` object
 
         All modules listed in the config document for the sensor manager
         will be loaded using :py:meth:`load`.
@@ -66,20 +86,20 @@ class SensorManager:
             self.load(module, shorthand)
 
     def load(self, module, shorthand):
-        """loads all functions in the __all__ list of module **module**"""
+        """loads *module* as a library and assigns it to *shorthand*"""
 
         module = dynamicloader.load(module)
         self.libraries[shorthand] = module
 
     def parse(self, name, config, data):
         """
-        parses the **data** provided
+        parses the *data* provided
 
-        **name**: The sensor function to use.
+        *name*: The sensor function to use.
 
-        **config**: The config dict to provide to the sensor function
+        *config*: The config dict to provide to the sensor function
 
-        **data**: The data to parse.
+        *data*: The data to parse.
         """
 
         name_parts = name.split('.')

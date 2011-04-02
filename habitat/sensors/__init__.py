@@ -16,7 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Sensor functions
+Sensor function libraries.
 """
 
 __all__ = ["stdtelem"]
