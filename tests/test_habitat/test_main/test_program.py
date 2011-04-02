@@ -39,6 +39,7 @@ from habitat.message_server import Server
 from habitat.http import SCGIApplication
 from habitat.main import Program, SignalListener, get_options, setup_logging, \
                          default_configuration_file
+from habitat.sensor_manager import SensorManager
 import habitat.main as program_module
 
 # Replace get_options
@@ -55,6 +56,13 @@ missing_file = os.path.join(scratch_dir, "habitat_missing.cfg")
 def new_setup_logging(*args):
     new_setup_logging.calls.append(args)
 new_setup_logging.calls = []
+
+# Some classes must be initalised after the Program has connected to
+# couch. Calling this function will check that couch is initalised
+# when the object is created.
+def check_couch(p):
+    assert p.db.server_uri == "couchserver"
+    assert p.db.database_name == "database"
 
 # A fake CouchDB database
 class FakeCouchDatabase:
@@ -85,12 +93,19 @@ class DumbServer:
         self.program = program
         self.start_hits = 0
         self.shutdown_hits = 0
+        check_couch(program)
 
     def start(self):
         self.start_hits += 1
 
     def shutdown(self):
         self.shutdown_hits += 1
+
+# Replace the Sensor Manager class
+class DumbSensorManager:
+    def __init__(self, program):
+        self.program = program
+        check_couch(program)
 
 # Replace SCGIApplication with something that does nothing
 class DumbSCGIApplication:
@@ -220,6 +235,7 @@ class TestProgram:
         assert program_module.get_options == get_options
         assert program_module.setup_logging == setup_logging
         assert program_module.Server == Server
+        assert program_module.SensorManager == SensorManager
         assert program_module.SCGIApplication == SCGIApplication
         assert program_module.SignalListener == SignalListener
         assert crashmat.set_shutdown_function == set_shutdown_function
@@ -229,6 +245,7 @@ class TestProgram:
         program_module.get_options = new_get_options
         program_module.setup_logging = new_setup_logging
         program_module.Server = DumbServer
+        program_module.SensorManager = DumbSensorManager
         program_module.SCGIApplication = DumbSCGIApplication
         program_module.SignalListener = DumbSignalListener
         crashmat.set_shutdown_function = new_set_shutdown_function
@@ -265,6 +282,7 @@ class TestProgram:
         assert program_module.get_options == new_get_options
         assert program_module.setup_logging == new_setup_logging
         assert program_module.Server == DumbServer
+        assert program_module.SensorManager == DumbSensorManager
         assert program_module.SCGIApplication == DumbSCGIApplication
         assert program_module.SignalListener == DumbSignalListener
         assert crashmat.set_shutdown_function == new_set_shutdown_function
@@ -275,6 +293,7 @@ class TestProgram:
         program_module.get_options = get_options
         program_module.setup_logging = setup_logging
         program_module.Server = Server
+        program_module.SensorManager = SensorManager
         program_module.SCGIApplication = SCGIApplication
         program_module.SignalListener = SignalListener
         crashmat.set_shutdown_function = set_shutdown_function
@@ -363,12 +382,14 @@ class TestProgram:
             (logging.WARN, "debugfile", logging.DEBUG)
 
         # connects to couch
-        assert p.db.server_uri == "couchserver"
-        assert p.db.database_name == "database"
+        check_couch(p)
 
         # creates a server
         assert p.server.program == p
         assert p.server.start_hits == 0
+
+        # creates a sensor manager
+        assert p.sensor_manager.program == p
 
         # creates a scgiapp
         assert p.scgiapp.program == p
