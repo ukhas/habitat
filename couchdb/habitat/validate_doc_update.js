@@ -25,7 +25,6 @@ function(newDoc, oldDoc, userCtx) {
     //   you are the habitat user
     //   you are an admin
     if (userCtx.name != "habitat" && userCtx.roles.indexOf('_admin') === -1)
-        throw({forbidden:
-                "Only the habitat user may create non-flight documents"});
+        throw({forbidden: "You do not have permission to edit documents"});
 }
 
