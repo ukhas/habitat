@@ -135,9 +135,8 @@ class ParserSink(SimpleSink):
                     data["_flight"] = config_doc["_id"]
                     break
             except ValueError as e:
-                logger.debug(
-                    "ValueError from {0}: '{1}'".format(module["name"], e))
-                raise RuntimeError()
+                err = "ValueError from {0}: '{1}'"
+                logger.debug(err.format(module["name"], e))
                 continue
 
         # If that didn't work, try using default configurations
