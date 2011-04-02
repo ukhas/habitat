@@ -170,10 +170,10 @@ class ParserSink(SimpleSink):
                                   data)
             self.server.push_message(new_message)
 
-            logger.debug("{module} parsed data from {callsign} succesfully" \
+            logger.info("{module} parsed data from {callsign} succesfully" \
                 .format(module=module["name"], callsign=callsign))
         else:
-            logger.debug("Unable to parse any data from '{d}'" \
+            logger.info("Unable to parse any data from '{d}'" \
                 .format(d=original_data))
 
     def _find_config_doc(self, callsign, time_created):

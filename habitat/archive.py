@@ -101,11 +101,11 @@ class ArchiveSink(SimpleSink):
             lastdoc = self._get_listener_info_doc(message.source.callsign,
                 message.time_created)
             if not lastdoc or doc["data"] != lastdoc["data"]:
-                logger.info("Saving a new listener info doc")
+                logger.debug("Saving a new listener info doc")
                 self.server.db.save_doc(doc)
         elif message.type == Message.LISTENER_TELEM:
             doc = self._simple_doc_from_message(message, "listener_telem")
-            logger.info("Saving a new listener telem doc")
+            logger.debug("Saving a new listener telem doc")
             self.server.db.save_doc(doc)
 
     def _simple_doc_from_message(self, message, doc_type):
@@ -149,7 +149,7 @@ class ArchiveSink(SimpleSink):
         self._update_estimated_time_created(doc)
 
         try:
-            logger.info("Attempting to save a new/updated telem doc")
+            logger.debug("Attempting to save a new/updated telem doc")
             self.server.db[doc_id] = doc
         except ResourceConflict:
             # This will retry the read-and-merge procedure, which should clear

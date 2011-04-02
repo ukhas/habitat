@@ -123,7 +123,7 @@ class InsertApplication(object):
 
         message = Message(source, type, time_created, time_now, data)
 
-        logger.debug("Pushing {type} message from {callsign} at {ip}" \
+        logger.info("Pushing {type} message from {callsign} at {ip}" \
             .format(type=Message.type_names[type],
                     callsign=source.callsign, ip=source.ip))
 
