@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 (C) Adam Greig
+ * Copyright 2011 (C) Daniel Richman, Adam Greig
  *
  * This file is part of habitat.
  *
@@ -17,14 +17,35 @@
  * along with habitat.  If not, see <http://www.gnu.org/licenses/>.
  */
 function(newDoc, oldDoc, userCtx) {
-    // Forbid deleting documents
-    if(newDoc._deleted)
-        throw({forbidden: "Documents may not be deleted."});
+    if (userCtx.roles.indexOf('_admin') !== -1)
+    {
+        // Admins may do what they like
+        return;
+    }
+    else if (userCtx.name == "habitat")
+    {
+        // The habitat user can do what it likes to everything except
+        // config and flight documents, except delete them
 
-    // Changing or creating documents is totally forbidden, unless:
-    //   you are the habitat user
-    //   you are an admin
-    if (userCtx.name != "habitat" && userCtx.roles.indexOf('_admin') === -1)
+        if (newDoc._deleted)
+            throw({forbidden: "Documents may not be deleted."});
+
+        if (newDoc.type == "config" || (oldDoc && oldDoc.type == "config"))
+            throw({forbidden: "Only administrators may edit config docs"});
+
+        if (newDoc.type == "flight" || (oldDoc && oldDoc.type == "flight"))
+            throw({forbidden: "Only administrators may edit flight docs"});
+
+        // If nothing's been thrown; it's fine.
+        return;
+    }
+    // To be added:
+    // else if (oldDoc && oldDoc.type == "flight" && oldDoc.editors &&
+    //          oldDoc.editors.indexOf(userCtx.name) !== -1)
+    //   -- Test to make sure they haven't modified the editors list.
+    //   -- Only let them modify certain things, like sentence, not callsign.
+    else
+    {
         throw({forbidden: "You do not have permission to edit documents"});
+    }
 }
-
