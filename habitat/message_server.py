@@ -810,11 +810,12 @@ class Listener(object):
             raise TypeError("callsign must derive from basestring")
 
         if len(callsign) == 0:
-            raise ValueError("callsign must have atleast one letter")
+            raise ValueError("callsign cannot be empty")
 
         for letter in callsign:
             if letter not in self.allowed_callsign_characters:
-                raise ValueError("callsign must be alphanumeric")
+                raise ValueError("callsign may only include " + 
+                    self.allowed_callsign_characters)
 
         self.ip = ipaddr.IPAddress(ip)
         self.callsign = callsign.upper()
