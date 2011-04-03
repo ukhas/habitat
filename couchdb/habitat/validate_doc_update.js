@@ -39,11 +39,27 @@ function(newDoc, oldDoc, userCtx) {
         // If nothing's been thrown; it's fine.
         return;
     }
-    // To be added:
-    // else if (oldDoc && oldDoc.type == "flight" && oldDoc.editors &&
-    //          oldDoc.editors.indexOf(userCtx.name) !== -1)
-    //   -- Test to make sure they haven't modified the editors list.
-    //   -- Only let them modify certain things, like sentence, not callsign.
+    else if (oldDoc && oldDoc.type == "flight" && oldDoc.editors &&
+             oldDoc.editors.indexOf(userCtx.name) !== -1)
+    {
+        // Named editors may modify a flight document in certain (limited)
+        // ways.
+
+        var oldEditors = oldDoc.editors.sort();
+        var newEditors = newDoc.editors.sort();
+
+        if (oldEditors.length !== newEditors.length)
+            throw({forbidden: "Only administrators may edit editors"});
+
+        for (var i = 0; i < oldEditors.length; i++)
+            if (oldEditors[i] !== newEditors[i])
+                throw({forbidden: "Only administrators may edit editors"});
+
+       // TODO: Only let them modify certain things,
+       // like sentence, not callsign or project name or whatever.
+       //
+       // TODO: Maybe require some basic checks on their data?
+    }
     else
     {
         throw({forbidden: "You do not have permission to edit documents"});
