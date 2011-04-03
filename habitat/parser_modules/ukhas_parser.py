@@ -24,13 +24,11 @@ The typical minimum telemetry string is:
 ``$$<payload>,<message number>,<time>,<latitude>,<longitude>,<altitude>,\
 <data>,...,<last data>*<checksum>``
 
-Data fields are typically human readable (or at the least ASCII) readings
-of sensors or other system information.
-
-Time is in ``HH:MM:SS``.
-
-Latitude and longitude are in ``ddmm.mm`` or ``dd.dddd``.
 The number of custom data fields and their types are configurable.
+
+Data fields are typically human readable (or at the least ASCII) readings
+of sensors or other system information. See the :py:mod:`sensors` module
+for more information on supported formats.
 
 Checksums work on the message content between the ``$$`` and the ``*``,
 non-inclusive, and are given as hexadecimal (upper or lower case) after
@@ -67,39 +65,31 @@ Typical configuration (part of a payload dictionary in a flight document):
             "fields": [
                 {
                     "name": "message_count",
-                    "type": "int"
+                    "type": "base.ascii_int"
                 }, {
                     "name": "time",
-                    "type": "time"
+                    "type": "stdtelem.time"
                 }, {
                     "name": "latitude",
-                    "type": "coordinate",
+                    "type": "stdtelem.coordinate",
                     "format": "dd.dddd"
                 }, {
                     "name": "longitude",
-                    "type": "coordinate",
+                    "type": "stdtelem.coordinate",
                     "format": "dd.dddd"
                 }, {
                     "name": "altitude",
-                    "type": "int"
+                    "type": "base.ascii_int"
                 }, {
                     "name": "speed",
-                    "type": "float"
+                    "type": "base.ascii_float"
                 }, {
                     "name": "internal_temperature",
-                    "type": "float"
+                    "type": "base.ascii_float"
                 }
             ]
         }
     }
-
-Supported types include:
-
-* string
-* float
-* int
-* time
-* coordinate
 
 """
 
@@ -115,10 +105,6 @@ __all__ = ["UKHASParser"]
 
 checksum_algorithms = [
     "crc16-ccitt", "xor", "fletcher-16", "fletcher-16-256", "none"]
-field_types = [
-    "string", "float", "int", "time", "coordinate"]
-coordinate_formats = [
-    "dd.dddd", "ddmm.mm"]
 
 class UKHASParser(ParserModule):
     """The UKHAS Parser Module"""
@@ -200,14 +186,9 @@ class UKHASParser(ParserModule):
                 raise ValueError("Less than one fields are defined.")
             for field in config["fields"]:
                 field["name"]
+                field["type"]
                 if field["name"][0] == "_":
                     raise ValueError("Field name starts with an underscore.")
-                if field["type"] not in field_types:
-                    raise ValueError("Invalid field type specified.")
-                if field["type"] == "coordinate":
-                    if field["format"] not in coordinate_formats:
-                        raise ValueError(
-                            "Invalid coordinate format specified.")
         except (KeyError, TypeError):
             raise ValueError("Invalid configuration document.")
 
@@ -252,37 +233,7 @@ class UKHASParser(ParserModule):
 
         field_name = field_config["name"]
         field_type = field_config["type"]
-        if field_type == "string":
-            field_data = field
-        elif field_type == "float":
-            field_data = float(field)
-        elif field_type == "int":
-            field_data = int(field)
-        elif field_type == "time":
-            if len(field) == 8:
-                t = time.strptime(field, "%H:%M:%S")
-            elif len(field) == 5:
-                t = time.strptime(field, "%H:%M")
-            else:
-                raise ValueError("Invalid time field.")
-            field_data = {}
-            field_data["hour"] = t.tm_hour
-            field_data["minute"] = t.tm_min
-            if len(field) == 8:
-                field_data["second"] = t.tm_sec
-        elif field_type == "coordinate":
-            field_format = field_config["format"]
-            if field_format == "dd.dddd":
-                field_data = float(field)
-            elif field_format == "ddmm.mm":
-                first, second = field.split(".")
-                degrees = float(first[:-2])
-                minutes = float(first[-2:] + "." + second)
-                if minutes > 60.0:
-                    raise ValueError("Minutes component > 60.")
-                m_to_d = minutes / 60.0
-                degrees += math.copysign(m_to_d, degrees)
-                field_data = degrees
+        field_data = self.sensors.parse(field_type, field_config, field)
         return [field_name, field_data]
 
     def pre_parse(self, string):

@@ -2,7 +2,7 @@
 Message Data and HTTP Post Format
 =================================
 
-Every :py:class:`Message <habtiat.message_server.Message>` object has three
+Every :py:class:`Message <habitat.message_server.Message>` object has three
 important attributes:
 
 * ``message.source``: a :py:class:`Listener <habitat.message_server.Listener>`

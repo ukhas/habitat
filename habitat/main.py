@@ -38,6 +38,7 @@ import restkit.errors
 
 import habitat
 from habitat.message_server import Server
+from habitat.sensor_manager import SensorManager
 from habitat.http import SCGIApplication
 from habitat.utils import crashmat
 
@@ -99,8 +100,8 @@ def get_options():
     configuration file (which must be in the :py:mod:`ConfigParser`
     format).
 
-    It will read :py:data:`default_configuration_file` and will ignore
-    any errors that occur while doing so, unless a different config
+    It will read default_configuration_file and will ignore any
+    errors that occur while doing so, unless a different config
     file is specified at the command line (failures on an explicitly
     stated config file will raise an execption).
 
@@ -309,6 +310,7 @@ class Program(object):
         self.completed_logging_setup = True
         self.db = couch_connect(self.options['couch_uri'],
                                 self.options['couch_db'])
+        self.sensor_manager = SensorManager(self)
         self.server = Server(self)
         self.scgiapp = SCGIApplication(self.server, self,
                                        self.options["socket_file"])

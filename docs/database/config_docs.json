@@ -35,3 +35,14 @@
     ]
 }
 
+/*
+    sensor_manager_config lists the libraries that the sensor manager
+    should load at startup and the shorthand they should be assigned.
+
+    The example below loads the module habitat.sensors.stdtelem
+    and assigns it the shortcut "stdtelem".
+*/
+"sensor_manager_config": {
+   "type": "config",
+   "libraries": {"stdtelem": "habitat.sensors.stdtelem"}
+}

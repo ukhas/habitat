@@ -326,6 +326,7 @@ class ParserModule(object):
     def __init__(self, parser):
         """Store the parser reference for later use."""
         self.parser = parser
+        self.sensors = parser.server.program.sensor_manager
 
     def pre_parse(self, string):
         """

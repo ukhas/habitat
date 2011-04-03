@@ -1,4 +1,4 @@
-habitat.archive: storage of messages into CouchDB
-==================================================
+habitat.archive: Storing messages in CouchDB
+============================================
 
 .. automodule:: habitat.archive
