@@ -59,6 +59,8 @@ function(newDoc, oldDoc, userCtx) {
        // like sentence, not callsign or project name or whatever.
        //
        // TODO: Maybe require some basic checks on their data?
+
+       throw({forbidden: "Not yet implemented"});
     }
     else
     {
