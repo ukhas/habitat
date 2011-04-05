@@ -45,8 +45,6 @@ from habitat.utils import crashmat
 __all__ = ["get_options", "setup_logging", "Program", "SignalListener"]
 
 logger = logging.getLogger("habitat.main")
-restkit_logger = logging.getLogger("restkit")
-logger_warning = logging.WARNING
 
 usage = "%prog [options]"
 version = "{0} {1}".format(habitat.__name__, habitat.__version__)
@@ -215,7 +213,7 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
     #     are both nabbed at the top of this script and put into the global
     #     namespace. nose appears to overwrite logging with a FakeLogging
     #     module which lacks logging.WARNING and logging.getLogger(name)
-    restkit_logger.setLevel(logger_warning)
+    logging.getLogger("restkit").setLevel(logging.WARNING)
 
     have_handlers = False
 
