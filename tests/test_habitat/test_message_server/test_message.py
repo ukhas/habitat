@@ -305,7 +305,7 @@ class TestListener:
 
     def test_allows_good_callsigns(self):
         for call in ["M0ZDR", "M0RND", "G4QQQ", "M0ZDR/MM", "MORND_CHASE",
-                     "M0RND_Chase", "_", "/", "/LOLWHATGRR"]:
+                     "M0RND_Chase", "_", "/", "/LOLWHATGRR", "-"]:
             self.check_allows_good_callsign(call)
 
     def check_allows_good_callsign(self, call):
@@ -313,7 +313,7 @@ class TestListener:
 
     def test_rejects_bad_callsigns(self):
         for call in ["M0ZDR'; DELETE TABLE BALLOONS; --", "",
-                     "#", "M0'", "M-", "-", "+", "~", "M0@ND"]:
+                     "#", "M0'", "M\\", "!", "+", "~", "M0@ND"]:
             self.check_rejects_bad_callsign(call)
 
     @raises(ValueError)

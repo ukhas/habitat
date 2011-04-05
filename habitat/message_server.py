@@ -795,12 +795,12 @@ class Listener(object):
     only *callsign* is considered.
     """
 
-    allowed_callsign_characters = string.letters + string.digits + "/_"
+    allowed_callsign_characters = string.letters + string.digits + "/_-"
 
     def __init__(self, callsign, ip):
         """
-        *callsign*: string, must be composed of alphanumeric and /_ only
-        (a-zA-Z0-9/_)
+        *callsign*: string, must be composed of alphanumeric and /_-
+        characters only (a-zA-Z0-9/_-)
 
         *ip*: string, which will be validated and converted to an
         **IPAddress** object (the ``ipaddr`` module)
