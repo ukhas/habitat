@@ -208,6 +208,13 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
     # handler.
     root_logger.setLevel(logging.DEBUG)
 
+    # Bug pivotal:11844615, set restkit's level to WARNING to lower spam
+    # Due to nosetests being very odd, restkit_logger and logger_warning
+    #     are both nabbed at the top of this script and put into the global
+    #     namespace. nose appears to overwrite logging with a FakeLogging
+    #     module which lacks logging.WARNING and logging.getLogger(name)
+    logging.getLogger("restkit").setLevel(logging.WARNING)
+
     have_handlers = False
 
     if log_stderr_level != None:

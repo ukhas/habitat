@@ -27,12 +27,19 @@ from habitat import main
 
 class FakeLogging:
     DEBUG = logging.DEBUG
+    WARNING = logging.WARNING
 
     def __init__(self):
         self.rt = self.Logger()
+        self.restkitlogger = self.Logger()
 
-    def getLogger(self):
-        return self.rt
+    def getLogger(self, name=None):
+        if name == None:
+            return self.rt
+        elif name == "restkit":
+            return self.restkitlogger
+        else:
+            raise ValueError("Requested an unexpected logger")
 
     class Logger:
         def __init__(self):
