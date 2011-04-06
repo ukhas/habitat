@@ -56,6 +56,8 @@ from habitat.utils import dynamicloader
 __all__ = ["SensorManager"]
 
 class BaseFunctions:
+    __all__ = ["ascii_int", "ascii_float", "string"]
+
     @classmethod
     def ascii_int(cls, config, data):
         return int(data)
@@ -107,6 +109,10 @@ class SensorManager:
             raise ValueError("Invalid sensor name")
 
         library = self.libraries[name_parts[0]]
+
+        if name_parts[1] not in library.__all__:
+            raise ValueError("Invalid sensor name")
+
         func = getattr(library, name_parts[1])
 
         return func(config, data)

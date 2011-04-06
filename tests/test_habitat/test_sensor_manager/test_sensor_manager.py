@@ -70,7 +70,13 @@ class TestSensorManager:
         SensorManager(FakeProgram(fake_db)).parse("libb.format_d", {}, "hmm")
 
     def test_parse_passes_config_dict(self):
-        SensorManager(FakeProgram(fake_db)).parse("libb.format_c", cfg_c, "data")
+        SensorManager(FakeProgram(fake_db)).parse("libb.format_c", cfg_c,
+                                                  "data")
+
+    @raises(ValueError)
+    def test_cannot_use_sensor_not_in_all(self):
+        SensorManager(FakeProgram(fake_db)).parse("libb.somethingelse", {},
+                                                  "hah!")
 
     def test_repr_describes_manager(self):
         mgr = SensorManager(FakeProgram())

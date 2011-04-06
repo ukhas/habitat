@@ -6,3 +6,6 @@ def format_c(config, data):
 
 def format_d(config, data):
     raise ValueError("You made me sad")
+
+def something_else(config, data):
+    return "Watch your security"
