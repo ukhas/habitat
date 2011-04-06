@@ -52,23 +52,9 @@ object that can be stored in a couchdb database.
 """
 
 from habitat.utils import dynamicloader
+from habitat.sensors import base
 
 __all__ = ["SensorManager"]
-
-class BaseFunctions:
-    __all__ = ["ascii_int", "ascii_float", "string"]
-
-    @classmethod
-    def ascii_int(cls, config, data):
-        return int(data)
-
-    @classmethod
-    def ascii_float(cls, config, data):
-        return float(data)
-
-    @classmethod
-    def string(cls, config, data):
-        return str(data)
 
 class SensorManager:
     """The main Sensor Manager class"""
@@ -81,7 +67,7 @@ class SensorManager:
         will be loaded using :py:meth:`load`.
         """
 
-        self.libraries = {"base": BaseFunctions}
+        self.libraries = {"base": base}
 
         loadlist = program.db["sensor_manager_config"]["libraries"].items()
         for (shorthand, module) in loadlist:

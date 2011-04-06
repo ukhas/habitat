@@ -16,10 +16,12 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Sensor function libraries.
+Basic sensor functions
 """
 
-__all__ = ["base", "stdtelem"]
+__all__ = ["ascii_int", "ascii_float", "string"]
 
-from . import base
-from . import stdtelem
+
+ascii_int = lambda config, data: int(data)
+ascii_float = lambda config, data: float(data)
+string = lambda config, data: str(data)
