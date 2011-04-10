@@ -110,7 +110,7 @@ class UKHASParser(ParserModule):
     """The UKHAS Parser Module"""
 
     string_exp = re.compile("^[\\x20-\\x7E]+$")
-    callsign_exp = re.compile("^[a-zA-Z0-9]+$")
+    callsign_exp = re.compile("^[a-zA-Z0-9/_\\-]+$")
 
     def _split_checksum(self, string):
         """
