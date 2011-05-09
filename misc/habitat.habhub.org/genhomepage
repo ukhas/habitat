@@ -22,13 +22,7 @@ cat <<-EOF
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
   <head>
     <title>habitat</title>
-    <style type="text/css">
-      body { font-family: sans-serif; }
-      #title { font-size: 3em; padding-top: 1em; padding-bottom: 0.8em; text-align: center; color: #000088; }
-      #page { width: 80%; margin: 0 auto; }
-      #updated { color: #888; }
-      .small, #updated { font-size: 80%; }
-    </style>
+    <link href="http://habhub.org/simple.css" rel="stylesheet" type="text/css" />
   </head>
   <body>
 
@@ -67,7 +61,7 @@ cat <<-EOF
     <a href='http://habhub.org/'>habhub.org</a>
   </p>
 
-  <pre id="updated">
+  <pre id="footnote">
 EOF
 
 echo -n "habitat.habhub.org last updated: "
