@@ -31,6 +31,12 @@ class TestUKHASChecksumFixer:
             c["data"] = "$$habitat,other*4918"
         assert c["data"] == "$$habitat,other*2E0C"
 
+    def test_updates_xor_checksum(self):
+        data = {"data": "$$habitat,good*4c"}
+        with filtertools.UKHASChecksumFixer("xor", data) as c:
+            c["data"] = "$$habitat,other*4c"
+        assert c["data"] == "$$habitat,other*2B"
+
     def test_leaves_when_protocol_is_none(self):
         data = {"data": "$$habitat,boring"}
         with filtertools.UKHASChecksumFixer("none", data) as c:
