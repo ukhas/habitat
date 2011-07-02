@@ -43,7 +43,6 @@ class UKHASChecksumFixer(object):
     def __exit__(self, type, value, traceback):
         """Verify the checksum, update if appropriate"""
         if self.protocol != "none":
-            checksum_len = self._sum_length()
             checksum_data = self._split_str(self.original_data)
             if checksum_data[1].upper() == self._sum(checksum_data[0]):
                 new_string = self._split_str(self.data["data"])[0]
