@@ -43,13 +43,15 @@ class UKHASChecksumFixer(object):
     def __exit__(self, type, value, traceback):
         """Verify the checksum, update if appropriate"""
         if self.protocol != "none":
-            checksum_data = self.original_data[2:-5]
-            if self.original_data[-4:].upper() == self._sum(checksum_data):
-                new_sum = self._sum(self.data["data"][2:-5])
-                self.data["data"] = self.data["data"][:-4] + new_sum
+            checksum_len = self._sum_length()
+            checksum_data = self._split_str(self.original_data)
+            if checksum_data[1].upper() == self._sum(checksum_data[0]):
+                new_string = self._split_str(self.data["data"])[0]
+                new_sum = self._sum(new_string)
+                self.data["data"] = '$$' + new_string + '*' + new_sum
             else:
                 self.data["data"] = self.original_data
-                
+
     def _sum(self, data):
         if self.protocol == "crc16-ccitt":
             return checksums.crc16_ccitt(data)
@@ -61,3 +63,14 @@ class UKHASChecksumFixer(object):
             return checksums.fletcher_16_256(data)
         else:
             return ""
+
+    def _sum_length(self):
+        if self.protocol == "xor":
+            return 2
+        elif self.protocol in ["crc16-ccitt", "fletcher-16",
+                               "fletcher-16-256"]:
+            return 4
+
+    def _split_str(self, data):
+        l = self._sum_length()
+        return (data[2:-(l + 1)], data[-l:])
