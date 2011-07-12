@@ -21,7 +21,6 @@ Basic sensor functions
 
 __all__ = ["ascii_int", "ascii_float", "string"]
 
-
-ascii_int = lambda config, data: int(data)
-ascii_float = lambda config, data: float(data)
+ascii_int = lambda config, data: None if data == '' else int(data)
+ascii_float = lambda config, data: None if data == '' else float(data)
 string = lambda config, data: str(data)
