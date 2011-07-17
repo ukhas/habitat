@@ -64,10 +64,6 @@ class FakeLogging:
         # Expect no arguments to initialiser.
         pass
 
-    class NullHandler:
-        # Don't let it call setLevel or anything
-        pass
-
     class Formatter:
         def __init__(self, formatstring, dateformatstring=None):
             self.formatstring = formatstring
@@ -129,4 +125,4 @@ class TestSetupLogging:
         main.setup_logging(None, None, None)
         assert len(main.logging.rt.handlers) == 1
         assert isinstance(main.logging.rt.handlers[0],
-                          main.logging.NullHandler)
+                          main.null_logger)
