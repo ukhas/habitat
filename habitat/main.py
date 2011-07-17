@@ -234,7 +234,7 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
     if not have_handlers:
         # logging gets annoyed if there isn't atleast one handler.
         # If we're meant to be totally silent...
-        root_logger.addHandler(logging.NullHandler())
+        root_logger.addHandler(null_logger())
 
     logger.info("Log initalised")
 
@@ -477,3 +477,8 @@ class SignalListener(object):
             self.program.reload()
         elif signum == signal.SIGUSR1:
             sys.exit()
+
+class null_logger(logging.Handler):
+    def emit(self, record):
+        pass
+
