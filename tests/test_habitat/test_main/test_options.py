@@ -246,6 +246,12 @@ class TestOptions:
 
         self.check_get_options_fails(argv)
 
+    def test_invalid_level_names(self):
+        # Fixes #61
+        self.check_get_options_fails(
+            ["-c", "c", "-d", "d", "-s", "s", "--secret", "secret",
+             "-v", "INVALIDLEVEL", "-l", "/tmp/test", "-e", "ERROR"])
+
     def test_log_levels(self):
         levels = [("CRITICAL", logging.CRITICAL),
                   ("ERROR", logging.ERROR),
