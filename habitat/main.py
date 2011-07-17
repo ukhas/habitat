@@ -188,7 +188,7 @@ def get_options_parse_log_level(level):
     elif level in LOG_LEVELS:
         return getattr(logging, level)
     else:
-        parser.error("invalid value for \"{0}\"".format(levelarg))
+        parser.error("Invalid log level \"{0}\"".format(level))
 
 def setup_logging(log_stderr_level, log_file_name, log_file_level):
     """
