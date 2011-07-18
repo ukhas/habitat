@@ -48,12 +48,11 @@ class TestSCGIStartupShutdown:
     """SCGI Startup & Shutdown"""
     def setup(self):
         threading_checks.patch()
-
-        self.threads_before = threading.enumerate()
         self.scgiapp = SCGIApplication(ServerStub(), None, socket_file, 0.001)
 
     def teardown(self):
         self.scgiapp.shutdown()
+        threading_checks.check_threads(live=0)
 
         # Git won't clean, touch, or acknowledge the existance of the socket
         # We may as well clean up after ourselves. This should not fail,
@@ -79,19 +78,13 @@ class TestSCGIStartupShutdown:
         # The SocketServer library creates one thread that calls accept()
         # and starts a new thread to handle each connection it receives.
 
-        threads_prestart = threading.enumerate()
         self.scgiapp.start()
-        threads_poststart = threading.enumerate()
-
-        assert threads_prestart == self.threads_before
-        assert len(threads_prestart) == 1
-        assert len(threads_poststart) == 2
+        threading_checks.check_threads(live=1)
 
     def test_shutdown_stops_all_threads(self):
         self.scgiapp.start()
-        assert len(threading.enumerate()) == 2
         self.scgiapp.shutdown()
-        assert len(threading.enumerate()) == 1
+        threading_checks.check_threads(live=0)
 
     def test_shutdown_is_quick(self):
         self.scgiapp.start()
@@ -123,7 +116,7 @@ class TestSCGIStartupShutdown:
         self.scgiapp.process_request_thread = new_process_request_thread
 
         self.scgiapp.start()
-        assert len(threading.enumerate()) == 2
+        threading_checks.check_threads(live=1)
 
         assert not new_process_request_thread.event.is_set()
         assert new_process_request_thread.hits == 0
@@ -132,14 +125,14 @@ class TestSCGIStartupShutdown:
 
         new_process_request_thread.event.wait()
         assert new_process_request_thread.hits == 1
-        assert len(threading.enumerate()) == 3
+        threading_checks.check_threads(live=2)
         new_process_request_thread.cont.set()
 
         t1 = time.time()
         self.scgiapp.shutdown()
         t2 = time.time()
 
-        assert len(threading.enumerate()) == 1
+        threading_checks.check_threads(live=0)
         assert t2 - t1 < 5
 
         client.close()

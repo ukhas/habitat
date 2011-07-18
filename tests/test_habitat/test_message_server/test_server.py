@@ -423,6 +423,12 @@ class TestServer:
         lt.release()
 
 class TestServerStartup:
+    def setup(self):
+        threading_checks.patch()
+
+    def teardown(self):
+        threading_checks.restore()
+
     def test_uses_config(self):
         tserver = Server(FakeProgram([FakeSink]))
         tserver.start()
@@ -431,7 +437,7 @@ class TestServerStartup:
 
     def test_init_starts_no_threads(self):
         tserver = Server(FakeProgram([dynamicloader.fullname(TestSinkC)]))
-        assert len(threading.enumerate()) == 1
+        threading_checks.check_threads(created=1, live=0)
         tserver.start()
-        assert len(threading.enumerate()) == 3
+        threading_checks.check_threads(live=2)
         tserver.shutdown()
