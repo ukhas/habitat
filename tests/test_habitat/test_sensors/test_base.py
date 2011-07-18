@@ -16,13 +16,13 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tests the stdtelem base functions
+Tests the base sensor functions
 """
 
 from nose.tools import raises
 from habitat.sensors import base
 
-class TestStdtelem:
+class TestBaseSensors:
     def test_ascii_ints(self):
         assert base.ascii_int(None, "12") == 12
         assert base.ascii_int(None, "012") == 12
