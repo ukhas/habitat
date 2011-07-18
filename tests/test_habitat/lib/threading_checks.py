@@ -24,11 +24,23 @@ import re
 import threading
 from habitat.utils import crashmat
 
-__all__ = ["patch", "restore"]
+__all__ = ["patch", "restore", "threads_created", "check_threads"]
+
+def check_threads(created=None, live=None, dead=None):
+    a = threads_created
+
+    if created != None:
+        assert len(a) == created
+    if live != None:
+        assert len(filter(lambda x: x.isAlive(), a)) == live
+    if dead != None:
+        assert len(filter(lambda x: not x.isAlive(), a)) == dead
 
 def new_init(self, *args, **kwargs):
     assert isinstance(self, crashmat.Thread)
-    return new_init.old(self, *args, **kwargs)
+    r = new_init.old(self, *args, **kwargs)
+    threads_created.append(self)
+    return r
 new_init.old = threading.Thread.__init__
 
 default_threadname = re.compile("^Thread-\d+$")
@@ -40,11 +52,15 @@ new_start.old = threading.Thread.start
 
 magic = 157346
 
+threads_created = []
+
 def patch():
     assert threading.Thread.__init__ == new_init.old
     assert threading.Thread.start == new_start.old
     threading.Thread.__init__ = new_init
     threading.Thread.start = new_start
+
+    threads_created[:] = []
 
     # When restoring, it's worth being sure that something else hasn't
     # put a patch on top of the patch, so save a copy of what
