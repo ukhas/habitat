@@ -268,8 +268,8 @@ class TestProgram:
         # Replace argv
         self.old_argv = sys.argv
         self.new_argv = ["habitat", "-c", "couchserver", "-d", "database",
-                         "-s", "socketfile", "--secret", "secret",
-                         "-v", "WARN", "-l", "debugfile", "-e", "DEBUG"]
+                         "-s", "socketfile", "-v", "WARN", "-l", "debugfile",
+                         "-e", "DEBUG"]
         sys.argv = self.new_argv
 
     def teardown(self):

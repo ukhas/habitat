@@ -23,6 +23,9 @@ import time
 import base64
 import logging
 import hashlib
+import M2Crypto
+import os
+import os.path
 from copy import deepcopy
 
 from habitat.message_server import SimpleSink, Message
@@ -46,6 +49,8 @@ class ParserSink(SimpleSink):
         """
         Initialises the sink, adding the types of telemetry we care about
         to our types list and setting up lists of modules
+
+        Scans the certs/ca directory to find CA certificates and loads them.
         """
         self.add_type(Message.RECEIVED_TELEM)
 
@@ -59,6 +64,17 @@ class ParserSink(SimpleSink):
             dynamicloader.expecthasnumargs(m.parse, 2)
             module["module"] = m(self)
             self.modules.append(module)
+
+        script_path = os.path.dirname(os.path.realpath(__file__))
+        self.cert_path = os.path.join(script_path, "..", "certs")
+        self.certificate_authorities = []
+
+        ca_path = os.path.join(self.cert_path, 'ca')
+        for f in os.listdir(ca_path):
+            ca = M2Crypto.X509.load_cert(os.path.join(ca_path, f))
+            self.certificate_authorities.append(ca)
+
+        self.loaded_certs = {}
 
     def message(self, message):
         """
@@ -247,71 +263,113 @@ class ParserSink(SimpleSink):
             logger.warning("A filter didn't have a type: " + repr(f))
             return data
         if f["type"] == "normal":
-            # Normal-type filters have a callable which we can load
-            # using the dynamicloader, inspect and use
-            config = None
-            if "config" in f:
-                config = f["config"]
-
-            fil = dynamicloader.load(f["callable"])
-            if not dynamicloader.iscallable(fil):
-                logger.warning("A loaded filter wasn't callable: " + repr(f))
-                return data
-            if dynamicloader.hasnumargs(fil, 1):
-                return fil(data)
-            elif dynamicloader.hasnumargs(fil, 2):
-                return fil(data, config)
-            else:
-                logger.warning("A loaded filter had wrong number of args: " +
-                        repr(f))
-                return data
+            return self._normal_filter(data, f)
         elif f["type"] == "hotfix":
-            # Hotfix-type filters provide some code which goes in the body
-            # of a function, and return a modified version of the body.
-            if "code" not in f:
-                logger.warning("A hotfix didn't have any code: " + repr(f))
-                return data
+            return self._hotfix_filter(data, f)
+        else:
+            return data
 
+    def _normal_filter(self, data, f):
+        """Load and run a filter specified by a callable."""
+        config = None
+        if "config" in f:
+            config = f["config"]
+
+        fil = dynamicloader.load(f["callable"])
+        if not dynamicloader.iscallable(fil):
+            logger.warning("A loaded filter wasn't callable: " + repr(f))
+            return data
+        if dynamicloader.hasnumargs(fil, 1):
+            return fil(data)
+        elif dynamicloader.hasnumargs(fil, 2):
+            return fil(data, config)
+        else:
+            logger.warning("A loaded filter had wrong number of args: " +
+                    repr(f))
+            return data
+
+    def _hotfix_filter(self, data, f):
+        """Load a filter specified by some code in the database. Check its
+        authenticity by verifying its certificate, then run if OK."""
+        if "code" not in f:
+            logger.warning("A hotfix didn't have any code: " + repr(f))
+            return data
+        if "signature" not in f:
+            logger.warning("A hotfix didn't have a signature: " + repr(f))
+            return data
+        if "certificate" not in f:
+            logger.warning("A hotfix didn't specify a certificate: " + repr(f))
+            return data
+        
+        # Load requested certificate
+        try:
+            cert = self._get_certificate(f["certificate"])
+        except RuntimeError:
+            logger.error("Could not load certificate '" +
+                f["certname"] + "'.")
+            return data
+
+        # Check the certificate is valid
+        valid = False
+        for ca_cert in self.certificate_authorities:
+            if cert.verify(ca_cert.get_pubkey()):
+                valid = True
+                break
+        if not valid:
+            logger.error("Certificate is not signed by a recognised CA.")
+            return data
+
+        # Check the signature is valid
+        digest = hashlib.sha256(f["code"]).hexdigest()
+        sig = base64.b64decode(f["signature"])
+        try:
+            ok = cert.get_pubkey().get_rsa().verify(digest, sig, 'sha256')
+        except M2Crypto.RSA.RSAError:
+            logger.error("Signature is invalid.")
+            return data
+
+        if not ok:
+            logger.error("Hotfix signature is not valid")
+            return data
+
+        logger.debug("Compiling a hotfix")
+        body = "def f(data):\n"
+        for line in f["code"].split("\n"):
+            body += "    " + line + "\n"
+        env = {}
+        try:
+            code = compile(body, "<filter>", "exec")
+            exec code in env
+        except (SyntaxError, TypeError):
+            logger.warning("Hotfix code didn't compile: " + repr(f))
+            return data
+
+        logger.debug("Hotfix compiled, executing")
+        try:
+            return env["f"](data)
+        except:
+            # this is a pretty hardcore except! it'l catch anything.
+            # but that's desirable as who knows what this crazy code
+            # might do.
+            logger.warning("An exception occured when trying to run a " +
+                    "hotfix: " + repr(f))
+            return data
+    
+    def _get_certificate(self, certname):
+        """Fetch the specified certificate, returning the X509 object.
+        Uses an instance cache to prevent too much filesystem I/O."""
+        if certname in self.loaded_certs:
+            return self.loaded_certs[certname]
+        cert_path = os.path.join(self.cert_path, "certs", certname)
+        if os.path.exists(cert_path):
             try:
-                secret = self.server.program.options["secret"]
-            except KeyError:
-                logger.error("No secret has been set in configuration")
-                return data
-            
-            try:
-                signature = f["signature"]
-            except KeyError:
-                logger.error("No signature on hotfix code")
-                return data
-
-            correct_hash = hashlib.sha512(f["code"] + secret).hexdigest()
-            if correct_hash != signature:
-                logger.error("Invalid signature on hotfix code: " + repr(f))
-                return data
-
-            logger.debug("Compiling a hotfix")
-            body = "def f(data):\n"
-            for line in f["code"].split("\n"):
-                body += "    " + line + "\n"
-            env = {}
-            try:
-                code = compile(body, "<filter>", "exec")
-                exec code in env
-            except (SyntaxError, TypeError):
-                logger.warning("Hotfix code didn't compile: " + repr(f))
-                return data
-
-            logger.debug("Hotfix compiled, executing")
-            try:
-                return env["f"](data)
-            except:
-                # this is a pretty hardcore except! it'l catch anything.
-                # but that's desirable as who knows what this crazy code
-                # might do.
-                logger.warning("An exception occured when trying to run a " +
-                        "hotfix: " + repr(f))
-                return data
-
+                cert = M2Crypto.X509.load_cert(cert_path)
+            except (IOError, M2Crypto.X509.X509Error):
+                raise RuntimeError("Certificate could not be loaded.")
+            self.loaded_certs[certname] = cert
+            return cert
+        else:
+            raise RuntimeError("Certificate could not be loaded.")
 
 class ParserModule(object):
     """
