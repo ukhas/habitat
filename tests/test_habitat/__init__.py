@@ -19,16 +19,21 @@
 Tests for the python backend of habitat. For use with nosetests.
 """
 
-__all__ = ["scratch_dir", "scratch_path"]
+__all__ = ["scratch_dir", "scratch_path", "habitat_py_dir", "habitat_root"]
 
 import os
 import errno
 
+import habitat
+
 assert __name__ == "test_habitat"
 
-test_habitat_dir = os.path.dirname(os.path.abspath(__file__))
+test_habitat_dir = os.path.dirname(os.path.realpath(__file__))
 scratch_dir = os.path.join(test_habitat_dir, "scratch")
 scratch_path = ["test_habitat", "scratch"]
+
+habitat_py_dir = os.path.dirname(os.path.realpath(habitat.__file__))
+habitat_root = os.path.dirname(habitat_py_dir)
 
 # Create scratch dir
 try:

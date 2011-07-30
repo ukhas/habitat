@@ -19,13 +19,17 @@
 Unit tests for the Parser's Sink class.
 """
 
+import os
 import time
 from copy import deepcopy
 from nose.tools import raises
 from test_habitat.lib import fake_couchdb
+import test_habitat
 from habitat.message_server import Message
 
 from habitat.parser import ParserSink
+
+test_certs_dir = os.path.join(test_habitat.habitat_root, "certs")
 
 def upper_case_filter(data):
     return data.upper()
@@ -51,10 +55,9 @@ intermediate_filters_doc["payloads"]["habitat"]["filters"] = {
     "intermediate": [
         {
             "type": "hotfix",
-            "code": "return 'hotfix'",
-            "signature": "cbe83e892c1fd80954dc44bf94abeb9fa3a99e66ab1f" + \
-                         "f07eb5d225e8b60b782bab8b1581abdced33e01de2ec" + \
-                         "9e8e11dd3d1f8347a3fb29be9152d42030ecdcf4"
+            "code": "return \"hotfix\"",
+            "certificate": "adamgreig.crt",
+            "signature": "e0IAPkfi0hSJ2PI/OfqUQvSMyXRKzxnpRLqrPy6h8xgru4V4PBuMOa7fMe7wgzQWZGN6DGG6z277fzKILM+Q8YKJcoxneEIDmzKvaL6bb76vhIIDJOsG5MEg6wBefPmSwIVzS1YP7Ao9/gtWIkA3ypw5/2Iy+GtVoFRkU9iZnYEf+A0vtmLFT1brF/DXsBE67EEYzt3ulbmwRpthDlQtcMgpy760upbS0u1ATNW4EdT4gyVQ4sO8HG8vDjL2MwChRuFWXEf8k9dVwlIYRZ5ygirgIfKCifb8sEfcUZqVnD4MJyZekGpknxyfC725DIZMRy+6qXuyY5Jd+WKRiaQqqsN1Ay9HdTzEeRXku0vl+BCk4PEhDwhIwiaUesLGW2hJuKXW4IG8+i2FWH1Lp+3dboaIqDO4dnA4xj90CyeUS9Tuaj05oAOY/mwNAWfdGuvCs2Q4q+SacGoZbh3u5dd0orU4OFiO7qkHjfHKXSnK0LSNDKhsPgS1j0pL3/u+V+gS2JHkmQe4GzN2S8IVednVxPjX+IzLGlGXE8h2fBcb2KqQZZPqju+dfIELmEnCoHzQdsDNW4xNPfXbcAbYdCXXmZ9ItrMLYKe/lNs6Ktkm2goNiuSD2I8b77OjUDY1eBitbgUyaOVMMdQjy8Xsm5+ncJGx5KLfARYY/+GrMd3JfUY="
         }
     ]
 }
@@ -198,8 +201,7 @@ wrong_protocol_view_results = fake_couchdb.ViewResults({"value": None,
 
 class FakeProgram(object):
     """A mocked up Program object with fake options"""
-    def __init__(self):
-        self.options = {'secret': 'secret'}
+    options = {"certs_dir": test_certs_dir}
 
 class FakeServer(object):
     """A mocked up server which has a fake CouchDB"""
@@ -365,14 +367,40 @@ class TestParserSink(object):
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "test message"
 
+    def test_doesnt_apply_hotfix_without_certificate(self):
+        no_certificate = deepcopy(intermediate_filters_doc)
+        del no_certificate["payloads"]["habitat"]["filters"] \
+            ["intermediate"][0]["certificate"]
+        no_certificate_view_results = fake_couchdb.ViewResults({"value": None,
+            "key": ["habitat", no_certificate["end"]],
+            "doc": no_certificate})
+        self.server.db.default_view_results = no_certificate_view_results
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].string == "test message"
+
     def test_doesnt_apply_hotfix_with_invalid_signature(self):
         bad_signature = deepcopy(intermediate_filters_doc)
         bad_signature["payloads"]["habitat"]["filters"] \
-            ["intermediate"][0]["signature"] = "bad"
+            ["intermediate"][0]["signature"] = "uuRHEgQmyaEUMHiAUenTHWSUK7Zn6C/VITY+2yH6/AVlOgArHX7LlvuifFO7ZO4EtgaiJJTJ3JwGBrrHvIv4bxD/dO76L6qkPWQWXwC+RAxu5yF0IwulTQK9Iyc902RCe9JPv1kc/hgLojzIVc4scggqtJmERoR5r9EUmya8FDE="
         bad_signature_view_results = fake_couchdb.ViewResults({"value": None,
             "key": ["habitat", bad_signature["end"]],
             "doc": bad_signature})
         self.server.db.default_view_results = bad_signature_view_results
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].string == "test message"
+
+    def test_doesnt_read_certificate_files_with_path_components(self):
+        invalid_certfile = deepcopy(intermediate_filters_doc)
+        f = invalid_certfile["payloads"]["habitat"]["filters"] \
+                ["intermediate"][0]
+        f["certificate"] = "../certs/" + f["certificate"]
+        invalid_certfile_view_results = \
+            fake_couchdb.ViewResults({"value": None,
+                "key": ["habitat", invalid_certfile["end"]],
+                "doc": invalid_certfile})
+        self.server.db.default_view_results = invalid_certfile_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "test message"
