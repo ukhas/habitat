@@ -55,6 +55,7 @@ class TestOptions:
                           ("-c", "--couch-uri"),
                           ("-d", "--couch-db"),
                           ("-s", "--socket"),
+                          ("-r", "--certs-dir"),
                           ("-v", "--verbosity"),
                           ("-l", "--log-file"),
                           ("-e", "--log-level")]
@@ -67,7 +68,7 @@ class TestOptions:
             {"couch_uri": "http://habitat:password@localhost:5984",
              "couch_db": "habitat",
              "socket_file": "/tmp/habitat.sock",
-             "secret": "file_secret",
+             "certs_dir": "/etc/habitat/my_certs",
              "log_stderr_level": "QUIET",
              "log_file": "/var/log/habitat",
              "log_file_level": "INFO"})
@@ -75,7 +76,7 @@ class TestOptions:
         self.create_config_file(alternate_file,
             {"couch_uri": "http://user:pass@example.com:1234",
              "couch_db": "rehab",
-             "secret": "altfile_secret",
+             "certs_dir": "/etc/alternate/certs",
              "socket_file": "/var/run/habitat/sck"})
 
         # Test loading default config file
@@ -83,7 +84,7 @@ class TestOptions:
             {"couch_uri": "http://habitat:password@localhost:5984",
              "couch_db": "habitat",
              "socket_file": "/tmp/habitat.sock",
-             "secret": "file_secret",
+             "certs_dir": "/etc/habitat/my_certs",
              "log_stderr_level": None,
              "log_file": "/var/log/habitat",
              "log_file_level": logging.INFO})
@@ -93,7 +94,7 @@ class TestOptions:
             {"couch_uri": "http://user:pass@example.com:1234",
              "couch_db": "rehab",
              "socket_file": "/var/run/habitat/sck",
-             "secret": "altfile_secret",
+             "certs_dir": "/etc/alternate/certs",
              "log_stderr_level": logging.WARN,
              "log_file": None,
              "log_file_level": None})
@@ -101,12 +102,12 @@ class TestOptions:
         # Test config by command line options only
         self.check_get_options(
             ["-c", "cmdline_c", "-d", "cmdline_d", "-s", "cmdline_s",
-              "--secret", "cmdline_secret", "-v", "DEBUG", "-l", "~/test",
+              "-v", "DEBUG", "-l", "~/test", "-r", "somewhere_else",
               "-e", "ERROR"],
             {"couch_uri": "cmdline_c",
              "couch_db": "cmdline_d",
              "socket_file": "cmdline_s",
-             "secret": "cmdline_secret",
+             "certs_dir": "somewhere_else",
              "log_stderr_level": logging.DEBUG,
              "log_file": "~/test",
              "log_file_level": logging.ERROR})
@@ -115,11 +116,11 @@ class TestOptions:
         # override default options
         self.check_get_options(
             ["-c", "cmdline_c", "-l", "asdf", "-e", "DEBUG",
-             "--secret", "cmdline_override_secret", "-f", alternate_file],
-            {"couch_uri": "cmdline_c",
+             "-f", alternate_file],
+            {"certs_dir": "/etc/alternate/certs",
+             "couch_uri": "cmdline_c",
              "couch_db": "rehab",
              "socket_file": "/var/run/habitat/sck",
-             "secret": "cmdline_override_secret",
              "log_stderr_level": logging.WARN,
              "log_file": "asdf",
              "log_file_level": logging.DEBUG})
@@ -179,24 +180,23 @@ class TestOptions:
         # Test config by command line options only
         self.check_get_options(
             ["-c", "cmdline_c", "-d", "cmdline_d", "-s", "cmdline_s",
-             "--secret", "cmdline_secret",
-             "-v", "DEBUG", "-l", "~/test", "-e", "ERROR"],
+             "-v", "DEBUG", "-l", "~/test", "-e", "ERROR", "-r", "cmdline_r"],
             {"couch_uri": "cmdline_c",
              "couch_db": "cmdline_d",
              "socket_file": "cmdline_s",
-             "secret": "cmdline_secret",
+             "certs_dir": "cmdline_r",
              "log_stderr_level": logging.DEBUG,
              "log_file": "~/test",
              "log_file_level": logging.ERROR})
 
         # Test default options for logging
         self.check_get_options(
-            ["-c", "cmdline_c", "--secret", "cmdline_secret",
+            ["-c", "cmdline_c",
              "-d", "cmdline_d", "-s", "cmdline_s"],
             {"couch_uri": "cmdline_c",
              "couch_db": "cmdline_d",
              "socket_file": "cmdline_s",
-             "secret": "cmdline_secret",
+             "certs_dir": "/etc/habitat/certs",
              "log_stderr_level": logging.WARN,
              "log_file": None,
              "log_file_level": None})
@@ -207,11 +207,11 @@ class TestOptions:
         for (level, expect) in [("NONE", None), ("ERROR", logging.ERROR)]:
             self.check_get_options(
                 ["-c", "cmdline_c", "-d", "cmdline_d", "-s", "cmdline_s",
-                 "--secret", "cmdline_secret", "-v", level],
-                {"couch_uri": "cmdline_c",
+                 "-v", level],
+                {"certs_dir": "/etc/habitat/certs",
+                 "couch_uri": "cmdline_c",
                  "couch_db": "cmdline_d",
                  "socket_file": "cmdline_s",
-                 "secret": "cmdline_secret",
                  "log_stderr_level": expect,
                  "log_file": None,
                  "log_file_level": None})
@@ -228,7 +228,7 @@ class TestOptions:
             self.check_missing_option_fails(flags, i)
 
     def test_log_file_without_level_fails(self):
-        flags = {"-c": "couch", "-s": "socket", "--secret": "cmdline_secret",
+        flags = {"-c": "couch", "-s": "socket", 
                  "-l": "tmp", "-e": "DEBUG"}
         self.remove_default()
 
@@ -265,7 +265,7 @@ class TestOptions:
 
     def check_log_level(self, level, expect):
         options = {"couch_uri": "c", "couch_db": "d", "socket_file": "s",
-                   "secret": "cmdline_secret"}
+                   "certs_dir": "/etc/habitat/certs"}
 
         test = options.copy()
         test["log_stderr_level"] = level
@@ -293,7 +293,6 @@ class TestOptions:
 
         flags = ["-c", "c",
                  "-d", "d",
-                 "--secret", "cmdline_secret",
                  "-s", "s"]
 
         test = options.copy()
