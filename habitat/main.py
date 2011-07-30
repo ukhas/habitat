@@ -26,6 +26,7 @@ The code in this module drives the "main" method
 
 import sys
 import os
+import os.path
 import signal
 import threading
 import Queue
@@ -50,7 +51,8 @@ usage = "%prog [options]"
 version = "{0} {1}".format(habitat.__name__, habitat.__version__)
 header = "{0} is {1}".format(habitat.__name__, habitat.__copyright__)
 
-default_configuration_file = "/etc/habitat/habitat.cfg"
+config_directory = "/etc/habitat"
+default_configuration_file = os.path.join(config_directory, "habitat.cfg")
 """The default location to search for a configuration file"""
 
 config_section = "habitat"
@@ -60,6 +62,7 @@ config_section = "habitat"
 # line options, config file options, and defaults, overriding each
 # other in that order.
 default_options = {"couch_uri": None, "couch_db": None, "socket_file": None,
+                   "certs_dir": os.path.join(config_directory, "certs"),
                    "log_stderr_level": "WARN", "log_file": None,
                    "log_file_level": None}
 
@@ -75,6 +78,10 @@ parser.add_option("-c", "--couch-uri", metavar="COUCH_URI",
 parser.add_option("-d", "--couch-db", metavar="COUCH_DATABASE",
                   dest="couch_db",
                   help="couch database to use")
+parser.add_option("-r", "--certs-dir", metavar="CERTS_DIR",
+                  dest="certs_dir",
+                  help="directory containing certificates for " + \
+                       "signing hotfixes")
 parser.add_option("-s", "--socket", metavar="SCGI_SOCKET",
                   dest="socket_file",
                   help="scgi socket file to serve on")
@@ -160,7 +167,7 @@ def get_options_config(config_file):
         return dict(config.items(config_section))
 
 def get_options_check_required(options):
-    required_options = ["couch_uri", "couch_db", "socket_file"]
+    required_options = ["couch_uri", "couch_db", "socket_file", "certs_dir"]
 
     if options["log_file"] != None or options["log_file_level"] != None:
         required_options += ["log_file", "log_file_level"]

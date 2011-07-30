@@ -19,13 +19,17 @@
 Unit tests for the Parser's Sink class.
 """
 
+import os
 import time
 from copy import deepcopy
 from nose.tools import raises
 from test_habitat.lib import fake_couchdb
+import test_habitat
 from habitat.message_server import Message
 
 from habitat.parser import ParserSink
+
+test_certs_dir = os.path.join(test_habitat.habitat_root, "certs")
 
 def upper_case_filter(data):
     return data.upper()
@@ -197,7 +201,7 @@ wrong_protocol_view_results = fake_couchdb.ViewResults({"value": None,
 
 class FakeProgram(object):
     """A mocked up Program object with fake options"""
-    pass
+    options = {"certs_dir": test_certs_dir}
 
 class FakeServer(object):
     """A mocked up server which has a fake CouchDB"""
@@ -383,6 +387,20 @@ class TestParserSink(object):
             "key": ["habitat", bad_signature["end"]],
             "doc": bad_signature})
         self.server.db.default_view_results = bad_signature_view_results
+        sink = ParserSink(self.server)
+        sink.message(FakeMessage())
+        assert sink.modules[0]["module"].string == "test message"
+
+    def test_doesnt_read_certificate_files_with_path_components(self):
+        invalid_certfile = deepcopy(intermediate_filters_doc)
+        f = invalid_certfile["payloads"]["habitat"]["filters"] \
+                ["intermediate"][0]
+        f["certificate"] = "../certs/" + f["certificate"]
+        invalid_certfile_view_results = \
+            fake_couchdb.ViewResults({"value": None,
+                "key": ["habitat", invalid_certfile["end"]],
+                "doc": invalid_certfile})
+        self.server.db.default_view_results = invalid_certfile_view_results
         sink = ParserSink(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "test message"

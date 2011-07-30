@@ -65,8 +65,7 @@ class ParserSink(SimpleSink):
             module["module"] = m(self)
             self.modules.append(module)
 
-        script_path = os.path.dirname(os.path.realpath(__file__))
-        self.cert_path = os.path.join(script_path, "..", "certs")
+        self.cert_path = self.server.program.options["certs_dir"]
         self.certificate_authorities = []
 
         ca_path = os.path.join(self.cert_path, 'ca')
@@ -300,13 +299,17 @@ class ParserSink(SimpleSink):
         if "certificate" not in f:
             logger.warning("A hotfix didn't specify a certificate: " + repr(f))
             return data
+        if os.path.basename(f["certificate"]) != f["certificate"]:
+            logger.warning("A hotfix's specified certificate was invalid: " + \
+                           repr(f))
+            return data
         
         # Load requested certificate
         try:
             cert = self._get_certificate(f["certificate"])
         except RuntimeError:
             logger.error("Could not load certificate '" +
-                f["certname"] + "'.")
+                f["certificate"] + "'.")
             return data
 
         # Check the certificate is valid
