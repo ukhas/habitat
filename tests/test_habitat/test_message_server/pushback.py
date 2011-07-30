@@ -18,7 +18,7 @@
 from habitat.message_server import SimpleSink, ThreadedSink, Message
 from test_habitat.lib.sample_messages import SMessage
 
-class PushbackSink():
+class PushbackSimpleSink(SimpleSink):
     def setup(self):
         self.add_type(Message.RECEIVED_TELEM)
         self.add_type(Message.TELEM)
@@ -38,7 +38,7 @@ class PushbackSink():
         else:
             raise AssertionError
 
-class PushbackReceiverSink():
+class PushbackReceiverSimpleSink(SimpleSink):
     def setup(self):
         self.add_type(Message.TELEM)
         self.status = 0
@@ -48,11 +48,34 @@ class PushbackReceiverSink():
         assert self.status == 0
         self.status = 2
 
-class PushbackSimpleSink(PushbackSink, SimpleSink):
-    pass
-class PushbackThreadedSink(PushbackSink, ThreadedSink):
-    pass
-class PushbackReceiverSimpleSink(PushbackReceiverSink, SimpleSink):
-    pass
-class PushbackReceiverThreadedSink(PushbackReceiverSink, ThreadedSink):
-    pass
+class PushbackThreadedSink(ThreadedSink):
+    def setup(self):
+        self.add_type(Message.RECEIVED_TELEM)
+        self.add_type(Message.TELEM)
+        self.status = 0
+
+    def message(self, message):
+        assert message.testid == 6293
+
+        if self.manager.status == 0:
+            assert message.type == Message.RECEIVED_TELEM
+            self.manager.pbmsg = SMessage(
+                type=Message.TELEM, testid=message.testid)
+            self.manager.status = 1
+            self.server.push_message(self.manager.pbmsg)
+        elif self.manager.status == 1:
+            assert message == self.manager.pbmsg
+            self.manager.status = 2
+        else:
+            raise AssertionError
+
+class PushbackReceiverThreadedSink(ThreadedSink):
+    def setup(self):
+        self.add_type(Message.TELEM)
+        self.status = 0
+
+    def message(self, message):
+        assert message.testid == 6293
+        assert self.manager.status == 0
+        self.manager.status = 2
+

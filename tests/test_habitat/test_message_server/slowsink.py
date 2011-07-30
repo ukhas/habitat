@@ -36,6 +36,12 @@ class SlowSimpleSink(SlowSink, SimpleSink):
 class SlowThreadedSink(SlowSink, ThreadedSink):
     pass
 
+class ReallySlowThreadedSink(SlowSink, ThreadedSink):
+    def message(self, message):
+        self.in_message.set()
+        time.sleep(5)
+        self.in_message.clear()
+
 class SlowShutdownSink(SimpleSink):
     def setup(self):
         self.add_type(Message.TELEM)

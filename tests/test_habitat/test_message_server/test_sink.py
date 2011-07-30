@@ -16,7 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Tests the Sink class, found in
+Tests the Sink classes
 """
 
 import threading
@@ -33,7 +33,7 @@ from test_habitat.lib.sample_messages import SMessage
 from test_habitat.lib.locktroll import LockTroll
 
 from fakesink import SinkWithoutSetup, SinkWithoutMessage
-from slowsink import SlowSimpleSink, SlowThreadedSink
+from slowsink import SlowSimpleSink, SlowThreadedSink, ReallySlowThreadedSink
 
 from habitat.message_server import SimpleSink, ThreadedSink
 
@@ -86,7 +86,7 @@ class DelayableSink(SimpleSink, DelayableMixIn):
 class DelayableThreadedSink(ThreadedSink, DelayableMixIn):
     pass
 
-class ChangeySink():
+class ChangeySimpleSink(SimpleSink):
     def setup(self):
         self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
         self.status = 0
@@ -108,11 +108,27 @@ class ChangeySink():
         else:
             raise ValueError
 
-class ChangeySimpleSink(SimpleSink, ChangeySink):
-    pass
+class ChangeyThreadedSink(ThreadedSink):
+    def setup(self):
+        self.set_types(set([Message.RECEIVED_TELEM, Message.LISTENER_INFO]))
+        self.status = 0
 
-class ChangeyThreadedSink(ThreadedSink, ChangeySink):
-    pass
+    def message(self, message):
+        # Message 1 will be a LISTENER_INFO
+        # Message 2 will also be a LISTENER_INFO but we shouldn't get it
+        # Message 3 will be a RECEIVED_TELEM
+
+        assert message.testid != 2
+
+        if message.testid == 1:
+            assert self.manager.status == 0
+            self.remove_type(Message.LISTENER_INFO)
+            self.manager.status = 1
+        elif message.testid == 3:
+            assert self.manager.status == 1
+            self.manager.status = 2
+        else:
+            raise ValueError
 
 class FakeThreadedSink(ThreadedSink):
     def setup(self):
@@ -122,13 +138,13 @@ class FakeThreadedSink(ThreadedSink):
         self.test_thread = None
 
     def message(self, message):
-        self.status = self.status + 1
+        self.manager.status += 1
 
-        if self.test_thread != None:
-            if self.test_thread != threading.current_thread():
-                self.failed = 1
+        if self.manager.test_thread != None:
+            if self.manager.test_thread != threading.current_thread():
+                self.manager.failed = 1
         else:
-            self.test_thread = threading.current_thread()
+            self.manager.test_thread = threading.current_thread()
 
 class ThreadedPush(crashmat.Thread):
     def __init__(self, sink, message):
@@ -218,47 +234,6 @@ class TestSink:
         thread_a.join()
         thread_b.join()
         assert repr(sink) == info_format % (4, 0)
-        sink.shutdown()
-
-    def test_repr_threaded(self):
-        sink = DelayableThreadedSink(FakeServer())
-
-        base_format = "<" + fullname(sink.__class__) + " (ThreadedSink): %s>"
-        info_format = base_format % "%s messages so far, roughly %s queued%s"
-        locked_format = base_format % "locked"
-
-        assert repr(sink) == info_format % (0, 0, "")
-
-        troll = LockTroll(sink.stats_lock)
-        troll.start()
-        assert repr(sink) == locked_format
-        troll.release()
-
-        message = SMessage(type=Message.RECEIVED_TELEM)
-
-        sink.push_message(message)
-        sink.push_message(message)
-        sink.flush()
-        assert repr(sink) == info_format % (2, 0, "")
-
-        sink.go.clear()
-
-        sink.push_message(message)
-        sink.push_message(message)
-        sink.waiting.wait()
-
-        assert repr(sink) == info_format % (2, 1, ", currently executing")
-
-        troll = LockTroll(sink.stats_lock)
-        troll.start()
-        assert repr(sink) == locked_format
-        troll.release()
-
-        sink.go.set()
-        sink.flush()
-
-        assert repr(sink) == info_format % (4, 0, "")
-
         sink.shutdown()
 
     def test_types_is_a_set(self):
@@ -404,22 +379,6 @@ class TestSink:
 
         assert sink.status == 2
 
-    def test_threaded_sink_executes_in_one_thread(self):
-        sink = FakeThreadedSink(FakeServer())
-
-        a = ThreadedPush(sink, SMessage(type=Message.LISTENER_INFO, testid=1))
-        b = ThreadedPush(sink, SMessage(type=Message.LISTENER_INFO, testid=2))
-        c = ThreadedPush(sink, SMessage(type=Message.RECEIVED_TELEM, testid=3))
-
-        for t in [a, b, c]:
-            t.start()
-            t.join()
-
-        sink.shutdown()
-
-        assert sink.failed == 0
-        assert sink.status == 3
-
     def test_flush(self):
         yield self.check_flush_race, SlowSimpleSink
         yield self.check_flush_race, SlowThreadedSink
@@ -443,6 +402,22 @@ class TestSink:
         # Does nothing to simple sinks, cleans up a threaded sink's thread
         sink.shutdown()
 
+    def test_threaded_max_workers(self):
+        sink = ReallySlowThreadedSink(FakeServer())
+        message = SMessage()
+
+        sink._max_workers = 1
+        for i in xrange(100):
+            sink.push_message(message)
+        assert len(sink._workers) == 1
+        
+        sink.flush()
+
+        sink._max_workers = 2
+        for i in xrange(100):
+            sink.push_message(message)
+        assert len(sink._workers) > 1
+
     def test_simple_shutdown(self):
         self.check_shutdown(EmptySink(FakeServer()), False)
 
@@ -451,7 +426,7 @@ class TestSink:
 
     def check_shutdown(self, sink, check_thread):
         # For a SimpleSink, shutdown should just call flush
-        # For a ThreadedSink, it should call flush and then kill the thread.
+        # For a ThreadedSink, it should call flush which waits on all threads
 
         def new_flush():
             new_flush.call_count += 1
@@ -459,18 +434,12 @@ class TestSink:
 
         sink.flush = new_flush
 
-        if check_thread:
-            while not sink.is_alive():
-                time.sleep(0.01)
-
         sink.shutdown()
-
-        if check_thread:
-            assert not sink.is_alive()
 
         assert sink.flush.call_count == 1
 
     def test_threadname(self):
         sink = EmptyThreadedSink(FakeServer())
-        assert sink.name.startswith("ThreadedSink runner: EmptyThreadedSink")
+        sink._setup_thread(SMessage(), sink)
+        assert sink.name.startswith("ThreadedSink worker: EmptyThreadedSink")
         sink.shutdown()

@@ -200,6 +200,7 @@ class TestArchiveSink(object):
     def test_stores_new_LISTENER_TELEM_documents(self):
         self.sink.push_message(
             FakeMessage(Message.LISTENER_TELEM, listener_telem_data))
+        self.sink.flush()
         assert len(self.server.db.docs) == 1
         assert self.server.db.saved_docs[0] == listener_telem_doc
 
@@ -209,31 +210,40 @@ class TestArchiveSink(object):
             self.server.db.default_view_results = view_results
             self.sink.push_message(
                 FakeMessage(Message.LISTENER_INFO, listener_info_data))
+            self.sink.flush()
             assert len(self.server.db.docs) == 1
             assert self.server.db.saved_docs[0] == listener_info_doc
 
     def test_doesnt_store_duplicate_LISTENER_INFO_document(self):
         self.sink.push_message(
             FakeMessage(Message.LISTENER_INFO, listener_info_data))
+        self.sink.flush()
         self.server.db.default_view_results = view_results_old
         self.sink.push_message(
             FakeMessage(Message.LISTENER_INFO, listener_info_data))
-        assert len(self.server.db.docs) == 1
+        self.sink.flush()
+        self.sink.push_message(
+            FakeMessage(Message.LISTENER_INFO, listener_info_data))
+        self.sink.flush()
         assert self.server.db.saved_docs[0] == listener_info_doc
+        assert len(self.server.db.docs) == 1
 
     def test_does_store_updated_LISTENER_INFO_document(self):
         self.sink.push_message(
             FakeMessage(Message.LISTENER_INFO, listener_info_data))
+        self.sink.flush()
         self.server.db.default_view_results = view_results_old
         self.sink.push_message(
             FakeMessage(Message.LISTENER_INFO, listener_info_data_two))
-        assert len(self.server.db.docs) == 2
+        self.sink.flush()
         assert self.server.db.saved_docs[0] == listener_info_doc
         assert self.server.db.saved_docs[1] == listener_info_doc_two
+        assert len(self.server.db.docs) == 2
 
     def test_raw__no_existing__no_receiver(self):
         """handles RECEIVED_TELEM with no existing data"""
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -251,7 +261,9 @@ class TestArchiveSink(object):
     def test_raw__raw_existing__same_receiver(self):
         """handles RECEIVED_TELEM w. existing raw data from the same rxer"""
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -269,7 +281,9 @@ class TestArchiveSink(object):
     def test_raw__raw_existing__new_receiver(self):
         """handles RECEIVED_TELEM w. existing raw data from another rxer"""
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         self.sink.push_message(message_raw_from_two)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -294,7 +308,9 @@ class TestArchiveSink(object):
     def test_raw__parsed_existing__same_receiver(self):
         """handles RECEIVED_TELEM w. existing parsed data from the same rxer"""
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -314,7 +330,9 @@ class TestArchiveSink(object):
     def test_raw__parsed_existing__new_receiver(self):
         """handles RECEIVED_TELEM w. existing parsed data from another rxer"""
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         self.sink.push_message(message_raw_from_two)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -339,6 +357,7 @@ class TestArchiveSink(object):
     def test_parsed__no_existing__no_receiver(self):
         """handles TELEM with no existing data"""
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -358,7 +377,9 @@ class TestArchiveSink(object):
     def test_parsed__raw_existing__same_receiver(self):
         """handles TELEM with existing raw data from the same receiver"""
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -378,7 +399,9 @@ class TestArchiveSink(object):
     def test_parsed__raw_existing__new_receiver(self):
         """handles TELEM with existing raw data from another receiver"""
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         self.sink.push_message(message_parsed_from_two)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -403,7 +426,9 @@ class TestArchiveSink(object):
     def test_parsed__parsed_existing__same_receiver(self):
         """handles TELEM with existing parsed data from the same receiver"""
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -423,7 +448,9 @@ class TestArchiveSink(object):
     def test_parsed__parsed_existing__new_receiver(self):
         """handles TELEM with existing parsed data from another receiver"""
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         self.sink.push_message(message_parsed_from_two)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -448,7 +475,9 @@ class TestArchiveSink(object):
     def test_parsed__old_parsed_existing__same_receiver(self):
         """handles TELEM where data != current data (from the same rxer)"""
         self.sink.push_message(message_different_parsed_from_one)
+        self.sink.flush()
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -468,7 +497,9 @@ class TestArchiveSink(object):
     def test_parsed__old_parsed_existing__new_receiver(self):
         """handles TELEM where data != current data (from another rxer)"""
         self.sink.push_message(message_different_parsed_from_one)
+        self.sink.flush()
         self.sink.push_message(message_parsed_from_two)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -493,7 +524,9 @@ class TestArchiveSink(object):
     def test_new_parsed__old_parsed_existing__same_receiver(self):
         """handles TELEM where data has new keys (old data from same rxer)"""
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         self.sink.push_message(message_new_parsed_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -514,7 +547,9 @@ class TestArchiveSink(object):
     def test_new_parsed__old_parsed_existing__new_receiver(self):
         """handles TELEM where data has new keys (old data frm another rxer)"""
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         self.sink.push_message(message_new_parsed_from_two)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -540,6 +575,7 @@ class TestArchiveSink(object):
     def test_locates_latest_listener_info(self):
         self.server.db.view_results["habitat/listener_telem"] = listener_vr
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -557,6 +593,7 @@ class TestArchiveSink(object):
     def test_locates_latest_listener_telem(self):
         self.server.db.view_results["habitat/listener_info"] = listener_vr
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -574,6 +611,7 @@ class TestArchiveSink(object):
     def test_doesnt_use_bad_listener_telem(self):
         self.server.db.view_results["habitat/listener_telem"] = bad_vr
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -591,6 +629,7 @@ class TestArchiveSink(object):
     def test_doesnt_use_bad_listener_info(self):
         self.server.db.view_results["habitat/listener_info"] = bad_vr
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -615,9 +654,13 @@ class TestArchiveSink(object):
         m4 = FakeMessage(raw_type, raw_data, listener_four)
         m4.time_created = 10
         self.sink.push_message(m1)
+        self.sink.flush()
         self.sink.push_message(m2)
+        self.sink.flush()
         self.sink.push_message(m3)
+        self.sink.flush()
         self.sink.push_message(m4)
+        self.sink.flush()
         assert doc_id in self.server.db
         assert self.server.db[doc_id]["estimated_time_created"] == 3
 
@@ -629,8 +672,11 @@ class TestArchiveSink(object):
         m3 = FakeMessage(raw_type, raw_data, listener_three)
         m3.time_created = 5
         self.sink.push_message(m1)
+        self.sink.flush()
         self.sink.push_message(m2)
+        self.sink.flush()
         self.sink.push_message(m3)
+        self.sink.flush()
         assert doc_id in self.server.db
         assert self.server.db[doc_id]["estimated_time_created"] == 4
 
@@ -641,9 +687,12 @@ class TestArchiveSink(object):
         db = ConflictingDatabase()
         self.server.db = db
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         self.sink.push_message(message_parsed_from_one)
+        self.sink.flush()
         db.conflict_count = 1
         self.sink.push_message(message_raw_from_two)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 1,
@@ -667,6 +716,7 @@ class TestArchiveSink(object):
 
     def test_stores_raw_metadata(self):
         self.sink.push_message(message_raw_metadata)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 12345,
@@ -684,6 +734,7 @@ class TestArchiveSink(object):
 
     def test_stores_parsed_metadata(self):
         self.sink.push_message(message_parsed_metadata)
+        self.sink.flush()
         expected_doc = {
             "type": "payload_telemetry",
             "estimated_time_created": 12345,
@@ -703,9 +754,9 @@ class TestArchiveSink(object):
         db = ConflictingDatabase()
         self.server.db = db
         db.conflict_count = 30
-        assert_raises(RuntimeError,
-                      self.sink.push_message, message_raw_from_one)
+        self.sink.flush()
         assert doc_id not in db
         db.conflict_count = 29
         self.sink.push_message(message_raw_from_one)
+        self.sink.flush()
         assert doc_id in db

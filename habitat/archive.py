@@ -26,13 +26,13 @@ from copy import copy, deepcopy
 
 from couchdbkit.exceptions import ResourceConflict
 
-from habitat.message_server import SimpleSink, Message
+from habitat.message_server import ThreadedSink, Message
 from habitat.utils import dynamicloader
 
 __all__ = ["ArchiveSink"]
 logger = logging.getLogger("habitat.archive")
 
-class ArchiveSink(SimpleSink):
+class ArchiveSink(ThreadedSink):
     """
     The ArchiveSink is responsible for storing data in the Couch database.
     It will create and modify documents as required to store incoming messages,
