@@ -29,7 +29,7 @@ import Queue
 import ipaddr
 import base64
 import couchdbkit.exceptions
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from habitat.utils import dynamicloader, crashmat
 
@@ -390,8 +390,8 @@ class SimpleSink(Sink):
       simultaneously
 
     If the sink wishes to place messages "back into" the server the it
-    must tolerate recusrion (i.e., your **message** method will
-    indirectly call itself.
+    must tolerate recursion (i.e., your **message** method will
+    indirectly call itself).
     """
 
     def __init__(self, server):
@@ -458,72 +458,88 @@ class SimpleSink(Sink):
 
 class ThreadedSink(Sink, crashmat.Thread):
     """
-    A class for sinks that need to execute in another thread to inherit
+    A class for sinks that need to execute in another thread to inherit from.
 
-    The parent class of a sink that inherits **ThreadedSink** will execute
-    message() exclusively in a thread for your Sink, and two calls to
-    message will never occur simultaneously. It uses an internal
-    Python :py:class:`Queue.Queue` to achieve this. Therefore, the
-    requirements of a :py:class:`SimpleSink` do not apply.
+    Each call to message will be executed in a new thread, though if too
+    many threads are currently running for this Sink the call will block
+    until a space is available.
+
+    Children can set self._max_workers in setup() to change the maximum
+    number of spawned threads (for instance, set it to 1 to ensure that
+    only one thread is active at once).
+
+    Children also get access to self.manager where they can store data that
+    will persist between calls (anything set in self will vanish when the
+    thread terminates). This is only available after setup() - things set on
+    self will be accessible at self.manager (persistant) or just self
+    (temporary) in message().
+
+    Yes, this is very confusing. Welcome to threading.
     """
 
     def __init__(self, server):
-        crashmat.Thread.__init__(self)
-        self.name = "ThreadedSink runner: " + self.__class__.__name__
-
         Sink.__init__(self, server)
-        self.queue = Queue.Queue()
-
-        self.stats_lock = threading.RLock()
-        self.executing = 0
-
-        self.start()
+        self._max_workers = 10
+        self._is_worker = False
+        self._workers = []
+        self._stats_lock = threading.RLock()
+        self.message_count = 0
 
     def push_message(self, message):
-        # Between get()ting items from the queue, self.types may change.
-        # We should let run() filter for messages we want
-        self.queue.put(message)
+        """Spawn a new thread to deal with the incoming message.
+        If too many threads are active, wait for the oldest one to finish."""
+
+        # See if this is a shutdown message
+        if (hasattr(message, "shutdown_notification") and
+                message.shutdown_notification == True):
+            self.flush()
+            return
+
+        # Check worker count
+        if len(self._workers) >= self._max_workers:
+            self._workers.pop(0).join()
+
+        # Make a copy of self for a new thread
+        new_worker = copy(self)
+        new_worker._setup_thread(message, self)
+        self._workers.append(new_worker)
+
+        # Go!
+        new_worker.start()
+
+    def _setup_thread(self, message, manager):
+        """Turn this instance into a Thread by calling Thread.__init__,
+        then store the message for processing once started."""
+        crashmat.Thread.__init__(self)
+        self.name = "ThreadedSink worker: " + self.__class__.__name__
+        self._is_worker = True
+        self._message = message
+        self.manager = manager
 
     def run(self):
-        running = True
-        while running:
-            message = self.queue.get()
+        """Process the message that this thread was started with."""
+        dynamicloader.expecthasattr(self._message, "type")
+        dynamicloader.expecthasattr(self._message, "source")
+        dynamicloader.expecthasattr(self._message, "data")
 
-            if (hasattr(message, "shutdown_notification") and
-                    message.shutdown_notification == True):
-                running = False
-            else:
-                dynamicloader.expecthasattr(message, "type")
-                dynamicloader.expecthasattr(message, "source")
-                dynamicloader.expecthasattr(message, "data")
-
-                if message.type in self.types:
-                    with self.stats_lock:
-                        self.executing = 1
-
-                    self.message(message)
-
-                    with self.stats_lock:
-                        self.message_count += 1
-                        self.executing = 0
-
-            self.queue.task_done()
+        if self._message.type in self.types:
+            try:
+                self.message(self._message)
+            except Exception as e:
+                estr = "Exception occured in thread {name}: {e}"
+                logger.error(estr.format(name=self.name, e=e))
+            finally:
+                with self.manager._stats_lock:
+                    self.manager.message_count += 1
 
     def flush(self):
-        self.queue.join()
+        """Waits for all running workers to do their stuff."""
+        while self._workers:
+            self._workers.pop(0).join()
 
     def shutdown(self):
-        self.queue.put(ShutdownNotification())
-        self.flush()
-        self.join()
-
-    _repr_info = "{msgs} messages so far, roughly {qsz} queued"
-    _repr_einfo = _repr_info + ", currently executing"
-    _repr_general_format = "<{{fullname}} (ThreadedSink): {status}>"
-    _repr_locked_format = _repr_general_format.format(status="locked")
-    _repr_info_format = _repr_general_format.format(status=_repr_info)
-    _repr_einfo_format = _repr_general_format.format(status=_repr_einfo)
-    del _repr_info, _repr_einfo, _repr_general_format
+        """Wait for all threads to stop before shutting down."""
+        self.push_message(ShutdownNotification())
 
     def __repr__(self):
         """
@@ -531,31 +547,14 @@ class ThreadedSink(Sink, crashmat.Thread):
 
         This is primarily for help debugging from PDB or the python
         console.
-
-        If another thread holds the internal server lock, then a string
-        similar to ``<module.class (ThreadedSink): locked>`` is returned.
-        Otherwise, something like
-        ``<module.class (ThreadedSink): 5 messages so far, roughly 2 queued>``
-        is returned.
         """
+        name = dynamicloader.fullname(self.__class__)
+        if self._is_worker:
+            return "<{name} (Worker thread)>".format(name=name)
+        else:
+            return "<{name} (Manager, with {n} threads)>".format(
+                name=name, n=len(self._workers))
 
-        fullname = dynamicloader.fullname(self.__class__)
-        acquired = self.stats_lock.acquire(blocking=False)
-
-        if not acquired:
-            return self._repr_locked_format.format(fullname=fullname)
-
-        try:
-            if self.executing:
-                info_format = self._repr_einfo_format
-            else:
-                info_format = self._repr_info_format
-
-            return info_format.format(fullname=fullname,
-                                      msgs=self.message_count,
-                                      qsz=self.queue.qsize())
-        finally:
-            self.stats_lock.release()
 
 class ShutdownNotification(object):
     """
