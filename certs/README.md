@@ -38,7 +38,7 @@ Signing Code
 
 ```bash
 $ vi my_hotfix_code.py
-$ habitat/certs/sign.py my_hotfix_code.py ~/my_rsa_key.pem
+$ habitat/bin/sign_hotfix my_hotfix_code.py ~/my_rsa_key.pem
 ```
 
 The printed result is a JSON object which can be placed into the filters list

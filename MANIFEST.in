@@ -1,0 +1,8 @@
+recursive-include docs *
+recursive-include certs *
+recursive-include couchdb *
+recursive-include docs *
+recursive-include tests *
+include *.txt
+include LICENSE
+include README.md
