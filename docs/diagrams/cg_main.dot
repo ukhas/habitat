@@ -1,0 +1,30 @@
+digraph {
+	graph [ranksep=0.25, fontname=Arial, nodesep=0.125];
+	node [fontname=Arial, style="filled,rounded", height=0, width=0, shape=box, fontcolor=white];
+	edge [fontname=Arial];
+	0 [color="#0d0f73", fontcolor="#ffffff", fontsize="10.00", label="threading:230:wait\n0.57%\n(0.00%)\n4"];
+	0 -> 630 [color="#0d0f73", label="0.57%\n8", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0f73", labeldistance="0.50", penwidth="0.50"];
+	2 [color="#0d0f73", fontcolor="#ffffff", fontsize="10.00", label="threading:629:join\n0.57%\n(0.00%)\n1"];
+	2 -> 0 [color="#0d0f73", label="0.57%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0f73", labeldistance="0.50", penwidth="0.50"];
+	26 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="<string>:1:<module>\n100.00%\n(0.00%)\n1"];
+	26 -> 536 [color="#ff0000", label="100.00%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0000", labeldistance="4.00", penwidth="4.00"];
+	152 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="__init__:23:<module>\n0.15%\n(0.00%)\n1"];
+	152 -> 411 [color="#0d0d73", label="0.12%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	184 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="__init__:6:<module>\n0.12%\n(0.00%)\n1"];
+	222 [color="#fe0800", fontcolor="#ffffff", fontsize="10.00", label="~:0:<signal.pause>\n99.27%\n(99.27%)\n2"];
+	277 [color="#fe0800", fontcolor="#ffffff", fontsize="10.00", label="main:438:listen\n99.27%\n(0.00%)\n1"];
+	277 -> 222 [color="#fe0800", label="99.27%\n2", arrowsize="1.00", fontsize="10.00", fontcolor="#fe0800", labeldistance="3.97", penwidth="3.97"];
+	278 [color="#fe0800", fontcolor="#ffffff", fontsize="10.00", label="main:335:main_execution\n99.28%\n(0.00%)\n1"];
+	278 -> 277 [color="#fe0800", label="99.27%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#fe0800", labeldistance="3.97", penwidth="3.97"];
+	411 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="message_server:21:<module>\n0.12%\n(0.00%)\n1"];
+	411 -> 184 [color="#0d0d73", label="0.12%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	535 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="habitat:19:<module>\n100.00%\n(0.00%)\n1"];
+	535 -> 152 [color="#0d0d73", label="0.15%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	535 -> 691 [color="#ff0200", label="99.85%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0200", labeldistance="3.99", penwidth="3.99"];
+	536 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="~:0:<execfile>\n100.00%\n(0.00%)\n1"];
+	536 -> 535 [color="#ff0000", label="100.00%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0000", labeldistance="4.00", penwidth="4.00"];
+	630 [color="#0d0f73", fontcolor="#ffffff", fontsize="10.00", label="~:0:<built-in method acquire>\n0.57%\n(0.57%)\n68"];
+	691 [color="#ff0200", fontcolor="#ffffff", fontsize="10.00", label="main:270:main\n99.85%\n(0.00%)\n1"];
+	691 -> 2 [color="#0d0f73", label="0.57%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0f73", labeldistance="0.50", penwidth="0.50"];
+	691 -> 278 [color="#fe0800", label="99.28%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#fe0800", labeldistance="3.97", penwidth="3.97"];
+}
