@@ -10,13 +10,9 @@ Written by various UKHAS members, see AUTHORS
 
 ## Dependencies
 
-When we release, there will be "proper" packaging; until then, the following
-libraries are required in order to use habitat
-
- - python-ipaddr
- - nosetests
- - couchdbkit
- - crcmod
+```bash
+    pip install -r requirements.txt
+```
 
 ## Project Homepage
 
