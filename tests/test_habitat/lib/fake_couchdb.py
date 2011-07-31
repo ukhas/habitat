@@ -52,6 +52,7 @@ class Database(object):
     def __contains__(self, key):
         return key in self.docs
     def save_doc(self, doc):
+        print "trace: Database.save_doc({doc})".format(doc=doc)
         doc_id = unicode(uuid.uuid4())
         self.docs[doc_id] = doc
         self.saved_docs.append(doc)

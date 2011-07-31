@@ -275,15 +275,16 @@ class TestServer:
         self.server.push_message(
             SMessage(type=Message.RECEIVED_TELEM, testid=6293))
 
-        # Flush twice
-        for r in xrange(0, 2):
-            self.server.flush()
 
+        # Flush twice
+        for r in [0, 1]:
+            self.server.flush()
             for i in self.server.sinks:
                 i.flush()
 
         # Now check the results
         for i in self.server.sinks:
+            print "sink {i}, status {status}".format(i=i, status=i.status)
             assert i.status == 2
 
     def test_unload(self):
@@ -439,5 +440,5 @@ class TestServerStartup:
         tserver = Server(FakeProgram([dynamicloader.fullname(TestSinkC)]))
         threading_checks.check_threads(created=1, live=0)
         tserver.start()
-        threading_checks.check_threads(live=2)
+        threading_checks.check_threads(live=1)
         tserver.shutdown()
