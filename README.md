@@ -11,7 +11,11 @@ Written by various UKHAS members, see AUTHORS
 ## Dependencies
 
 ```bash
-    pip install -r requirements.txt
+    # Normal use
+    $ pip install -r requirements.txt
+
+    # Developers
+    $ pip install -r requirements_devel.txt
 ```
 
 ## Project Homepage

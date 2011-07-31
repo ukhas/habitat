@@ -1,13 +1,7 @@
 M2Crypto==0.21.1
 couchdbkit==0.5.4
 crcmod==1.7
-distribute==0.6.19
 http-parser==0.6.3
 ipaddr==2.1.9
-nose==1.1.2
-python-termstyle==0.1.10
-rednose==0.2.4
 restkit==3.3.0
-virtualenv==1.6.4
-virtualenvwrapper==2.7.1
 wsgiref==0.1.2
