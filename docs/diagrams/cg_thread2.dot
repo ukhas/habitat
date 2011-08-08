@@ -1,0 +1,26 @@
+digraph {
+	graph [ranksep=0.25, fontname=Arial, nodesep=0.125];
+	node [fontname=Arial, style="filled,rounded", height=0, width=0, shape=box, fontcolor=white];
+	edge [fontname=Arial];
+	2 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="threading:230:wait\n0.15%\n(0.00%)\n388"];
+	2 -> 50 [color="#0d0d73", label="0.13%\n776", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	3 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="threading:391:wait\n0.16%\n(0.00%)\n393"];
+	3 -> 2 [color="#0d0d73", label="0.15%\n388", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	9 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="threading:463:start\n0.18%\n(0.00%)\n393"];
+	9 -> 3 [color="#0d0d73", label="0.16%\n393", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	14 [color="#0d0e73", fontcolor="#ffffff", fontsize="10.00", label="SocketServer:270:_handle_request_noblock\n0.27%\n(0.00%)\n393"];
+	14 -> 28 [color="#0d0e73", label="0.20%\n393", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0e73", labeldistance="0.50", penwidth="0.50"];
+	15 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="SocketServer:210:serve_forever\n100.00%\n(0.00%)\n1"];
+	15 -> 25 [color="#ff0300", label="99.73%\n566", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0300", labeldistance="3.99", penwidth="3.99"];
+	15 -> 14 [color="#0d0e73", label="0.27%\n393", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0e73", labeldistance="0.50", penwidth="0.50"];
+	25 [color="#ff0300", fontcolor="#ffffff", fontsize="10.00", label="~:0:<select.select>\n99.73%\n(99.73%)\n566"];
+	28 [color="#0d0e73", fontcolor="#ffffff", fontsize="10.00", label="http:218:process_request\n0.20%\n(0.00%)\n393"];
+	28 -> 9 [color="#0d0d73", label="0.18%\n393", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	32 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="http:202:serve_forever_thread\n100.00%\n(0.00%)\n1"];
+	32 -> 15 [color="#ff0000", label="100.00%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0000", labeldistance="4.00", penwidth="4.00"];
+	33 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="threading:481:run\n100.00%\n(0.00%)\n1"];
+	33 -> 32 [color="#ff0000", label="100.00%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0000", labeldistance="4.00", penwidth="4.00"];
+	35 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="<string>:1:<module>\n100.00%\n(0.00%)\n1"];
+	35 -> 33 [color="#ff0000", label="100.00%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0000", labeldistance="4.00", penwidth="4.00"];
+	50 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="~:0:<built-in method acquire>\n0.17%\n(0.17%)\n2341"];
+}
