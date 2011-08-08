@@ -165,27 +165,27 @@ below:
         "fields": [
             {
                 "name": "message_count",
-                "type": "int"
+                "type": "base.ascii_int"
             }, {
                 "name": "time",
-                "type": "time"
+                "type": "stdtelem.time"
             }, {
                 "name": "latitude",
-                "type": "coordinate",
+                "type": "stdtelem.coordinate",
                 "format": "dd.dddd"
             }, {
                 "name": "longitude",
-                "type": "coordinate",
+                "type": "stdtelem.coordinate",
                 "format": "dd.dddd"
             }, {
                 "name": "altitude",
-                "type": "int"
+                "type": "base.ascii_int"
             }, {
                 "name": "speed",
-                "type": "float"
+                "type": "base.ascii_float"
             }, {
-                "name": "custom_string",
-                "type": "string"
+                "name": "internal_temperature",
+                "type": "base.ascii_float"
             }
         ]
     },
@@ -218,6 +218,8 @@ content of a function which is given ``message`` as its only parameter:
             {
                 "type": "hotfix",
                 "code": "message['longitude'] = -message['longitude']; return message"
+                "signature": "a base64 encoded signature here. see certs/README.md",
+                "certificate": "cert.crt"
             }
         ]
     },
