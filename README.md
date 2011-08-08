@@ -11,11 +11,13 @@ Written by various UKHAS members, see AUTHORS
 ## Dependencies
 
 ```bash
-    # Normal use
     $ pip install -r requirements.txt
 
-    # Developers
-    $ pip install -r requirements_devel.txt
+    # for testing
+    pip install nose
+
+    # pretty testing
+    pip install rednose
 ```
 
 ## Project Homepage
