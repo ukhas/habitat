@@ -27,12 +27,20 @@ import base64
 import hashlib
 import couchdbkit
 
+class Collision(Exception):
+    pass
+
+class Unmergeable(Exception):
+    pass
+
 class Uploader(object):
     def __init__(self, callsign,
                        couch_uri="http://habhub.org/",
-                       couch_db="habitat"):
+                       couch_db="habitat",
+                       max_merge_attempts = 20):
         self._callsign = callsign
         self._latest = {}
+        self._max_merge_attempts = max_merge_attempts
 
         server = couchdbkit.Server(couch_uri)
         self._db = server[couch_db]
@@ -44,48 +52,70 @@ class Uploader(object):
         self._listener_doc(data, "listener_info", time_created)
 
     def _listener_doc(self, data, doc_type, time_created=None):
-        time_uploaded = time.time()
-
         if time_created is None:
-            time_created = time_uploaded
+            time_created = time.time()
 
         doc = {
             "data": copy.deepcopy(data),
-            "type": doc_type,
-            "time_created": time_created,
-            "time_uploaded": time_uploaded
+            "type": doc_type
         }
 
+        self._set_time(doc, time_created)
         self._db.save_doc(doc)
 
         doc_id = doc["_id"]
         self._latest[doc_type] = doc_id
 
+    def _set_time(self, thing, time_created):
+        thing["time_uploaded"] = int(round(time.time()))
+        thing["time_created"] = int(round(time_created))
+
     def payload_telemetry(self, string, metadata, time_created=None):
+        if time_created is None:
+            time_created = time.time()
+
         for key in ["time_created", "time_uploaded", "latest_listener_info",
                     "latest_listener_telemetry"]:
             assert key not in metadata
 
-        time_uploaded = time.time()
-
-        if time_created is None:
-            time_created = time_uploaded
-
         receiver_info = copy.deepcopy(metadata)
-
-        receiver_info["time_created"] = time_created
-        receiver_info["time_uploaded"] = time_uploaded
 
         for doc_type in ["listener_telemetry", "listener_info"]:
             if doc_type in self._latest:
                 receiver_info["latest_" + doc_type] = self._latest[doc_type]
 
+        doc_id = hashlib.sha256(base64.b64encode(string)).hexdigest()
+
+        try:
+            self._set_time(receiver_info, time_created)
+            doc = self._payload_telemetry_new(string, receiver_info)
+            self._db[doc_id] = doc
+        except couchdbkit.exceptions.ResourceConflict:
+            for i in xrange(self._max_merge_attempts):
+                try:
+                    doc = self._db[doc_id]
+                    self._set_time(receiver_info, time_created)
+                    self._payload_telemetry_merge(doc, string, receiver_info)
+                    self._db[doc_id] = doc
+                except couchdbkit.exceptions.ResourceConflict:
+                    continue
+                else:
+                    return
+
+            raise Unmergeable
+
+    def _payload_telemetry_new(self, string, receiver_info):
         doc = {
             "data": {"_raw": base64.b64encode(string)},
             "receivers": {self._callsign: receiver_info},
             "type": "payload_telemetry"
         }
 
-        doc_id = hashlib.sha256(doc["data"]["_raw"]).hexdigest()
+        return doc
 
-        self._db[doc_id] = doc
+    def _payload_telemetry_merge(self, doc, string, receiver_info):
+        if doc["data"]["_raw"] != base64.b64encode(string):
+            raise Collision
+
+        doc["receivers"][self._callsign] = receiver_info
+        return doc
