@@ -24,7 +24,7 @@ import mox
 import time
 import couchdbkit
 
-import uploader
+from ... import uploader
 
 class TestUploaderSetup(object):
     def setup(self):
