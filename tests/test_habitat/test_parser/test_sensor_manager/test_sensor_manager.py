@@ -20,38 +20,33 @@ Tests the Sensor Manager
 """
 
 from nose.tools import raises
-from habitat.sensor_manager import SensorManager
+from habitat.parser.sensor_manager import SensorManager
 
-example_path = "test_habitat.test_sensor_manager.example_sensor_library"
+example_path = "test_habitat.test_parser.test_sensor_manager.example_sensor_library"
 
-empty_db = { "sensor_manager_config": { "libraries": {} } }
+fake_config = {
+    "sensors": [
+        {"name": "liba", "class": example_path + "_a"},
+        {"name": "libb", "class": example_path + "_b"}
+    ]
+}
 
-fake_db = {
-    "sensor_manager_config":
-    {
-        "libraries": {
-            "liba": example_path + "_a",
-            "libb": example_path + "_b"
-        }
-    }
+empty_config = {
+    "sensors": []
 }
 
 cfg_c = {"abracadabra": "15802"}
 
-class FakeProgram:
-    def __init__(self, db=empty_db):
-        self.db = db
-
 class TestSensorManager:
     def test_module_includes_base_functions(self):
-        self.mgr = SensorManager(FakeProgram())
+        self.mgr = SensorManager(empty_config)
         assert len(self.mgr.libraries) == 1
         assert self.mgr.parse("base.ascii_int", None, "1234") == 1234
         assert self.mgr.parse("base.ascii_float", None, "12.32") == 12.32
         assert self.mgr.parse("base.string", None, "1234") == "1234"
 
     def test_init_loads_db_listed_modules_and_works(self):
-        self.mgr = SensorManager(FakeProgram(fake_db))
+        self.mgr = SensorManager(fake_config)
         assert len(self.mgr.libraries) == 3
 
         assert self.mgr.parse("liba.format_a", None, "thedata") == \
@@ -63,24 +58,24 @@ class TestSensorManager:
 
     @raises(ValueError)
     def test_errors_bubble_up_a(self):
-        SensorManager(FakeProgram()).parse("base.ascii_int", None, "non-int")
+        SensorManager(empty_config).parse("base.ascii_int", None, "non-int")
 
     @raises(ValueError)
     def test_errors_bubble_up_b(self):
-        SensorManager(FakeProgram(fake_db)).parse("libb.format_d", {}, "hmm")
+        SensorManager(fake_config).parse("libb.format_d", {}, "hmm")
 
     def test_parse_passes_config_dict(self):
-        SensorManager(FakeProgram(fake_db)).parse("libb.format_c", cfg_c,
+        SensorManager(fake_config).parse("libb.format_c", cfg_c,
                                                   "data")
 
     @raises(ValueError)
     def test_cannot_use_sensor_not_in_all(self):
-        SensorManager(FakeProgram(fake_db)).parse("libb.somethingelse", {},
+        SensorManager(fake_config).parse("libb.somethingelse", {},
                                                   "hah!")
 
     def test_repr_describes_manager(self):
-        mgr = SensorManager(FakeProgram())
-        expect = "<habitat.sensors.SensorManager: {num} libraries loaded>"
+        mgr = SensorManager(empty_config)
+        expect = "<habitat.parser.SensorManager: {num} libraries loaded>"
         assert repr(mgr) == expect.format(num=1)
         mgr.load(example_path + "_a", "liba")
         assert repr(mgr) == expect.format(num=2)

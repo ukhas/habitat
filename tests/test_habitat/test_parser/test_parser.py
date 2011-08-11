@@ -25,9 +25,8 @@ from copy import deepcopy
 from nose.tools import raises
 from test_habitat.lib import fake_couchdb
 import test_habitat
-from habitat.message_server import Message
 
-from habitat.parser import ParserSink
+from habitat.parser.parser import Parser
 
 test_certs_dir = os.path.join(test_habitat.habitat_root, "certs")
 
@@ -235,7 +234,7 @@ class WrongMessage(object):
         self.time_uploaded = 0
         self.data = { "string": "d3Jvbmc=", "ignorethis": 1234 }
 
-class TestParserSink(object):
+class TestParser(object):
     def setup(self):
         docs = {
             "parser_config": {
@@ -249,7 +248,7 @@ class TestParserSink(object):
         }
         self.server = FakeServer(docs)
         self.server.db.default_view_results = fake_view_results
-        self.sink = ParserSink(self.server)
+        self.sink = Parser(self.server)
 
     def test_sets_data_types(self):
         assert self.sink.types == set([Message.RECEIVED_TELEM])
@@ -260,7 +259,7 @@ class TestParserSink(object):
 
     def try_to_load_module(self, module):
         self.server.db["parser_config"]["modules"][0]["class"] = module
-        ParserSink(self.server)
+        Parser(self.server)
 
     @raises(TypeError)
     def test_doesnt_load_modules_with_no_required_methods(self):
@@ -307,7 +306,7 @@ class TestParserSink(object):
         self.server.db.default_view_results = empty_view_results
         self.server.db["parser_config"]["modules"][0]["default_config"] = \
             default_config
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].config == default_config["sentence"]
 
@@ -315,25 +314,25 @@ class TestParserSink(object):
         self.server.db.default_view_results = wrong_view_results
         self.server.db["parser_config"]["modules"][0]["default_config"] = \
             default_config
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].config == default_config["sentence"]
 
     def test_doesnt_parse_when_no_config_or_default_config_found(self):
         self.server.db.default_view_results = empty_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert self.server.message == None
 
     def test_doesnt_parse_when_wrong_config_and_no_default_config_found(self):
         self.server.db.default_view_results = wrong_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert self.server.message == None
 
     def test_doesnt_parse_when_config_has_wrong_protocol(self):
         self.server.db.default_view_results = wrong_protocol_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert self.server.message == None
 
@@ -345,13 +344,13 @@ class TestParserSink(object):
         self.server.db["parser_config"]["modules"][0]["pre-filters"] = [
             {"type": "normal", "callable": upper_case_filter}
         ]
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].pre_parse_string == "TEST MESSAGE"
 
     def test_applies_intermediate_filter(self):
         self.server.db.default_view_results = intermediate_filter_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "hotfix"
 
@@ -363,7 +362,7 @@ class TestParserSink(object):
             "key": ["habitat", no_signature["end"]],
             "doc": no_signature})
         self.server.db.default_view_results = no_signature_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "test message"
 
@@ -375,7 +374,7 @@ class TestParserSink(object):
             "key": ["habitat", no_certificate["end"]],
             "doc": no_certificate})
         self.server.db.default_view_results = no_certificate_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "test message"
 
@@ -387,7 +386,7 @@ class TestParserSink(object):
             "key": ["habitat", bad_signature["end"]],
             "doc": bad_signature})
         self.server.db.default_view_results = bad_signature_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "test message"
 
@@ -401,13 +400,13 @@ class TestParserSink(object):
                 "key": ["habitat", invalid_certfile["end"]],
                 "doc": invalid_certfile})
         self.server.db.default_view_results = invalid_certfile_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert sink.modules[0]["module"].string == "test message"
 
     def test_applies_post_filter(self):
         self.server.db.default_view_results = post_filter_view_results
-        sink = ParserSink(self.server)
+        sink = Parser(self.server)
         sink.message(FakeMessage())
         assert self.server.message.data["result"] == "config was like rad!"
 

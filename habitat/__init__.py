@@ -28,12 +28,4 @@ __authors__ = "Adam Greig, Daniel Richman"
 __short_copyright__ = "2010 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-from . import utils
-from . import message_server
-from . import http
-from . import main
-from . import archive
-from . import parser
-from . import sensor_manager
-from . import sensors
-from . import parser_modules
+__all__ = ["parser"]

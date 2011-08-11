@@ -20,7 +20,3 @@ Various utilities for general use by ``habitat``.
 """
 
 __all__ = ["checksums", "dynamicloader", "filtertools"]
-
-from . import checksums
-from . import dynamicloader
-from . import filtertools

@@ -17,7 +17,7 @@
 
 """Various utilities for filters to call upon."""
 
-import checksums
+from . import checksums
 
 class UKHASChecksumFixer(object):
     """

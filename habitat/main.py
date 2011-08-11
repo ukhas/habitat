@@ -37,11 +37,8 @@ import ConfigParser
 import couchdbkit
 import restkit.errors
 
-import habitat
-from habitat.message_server import Server
-from habitat.sensor_manager import SensorManager
-from habitat.http import SCGIApplication
-from habitat.utils import crashmat
+from . import parser
+from . import habitat
 
 __all__ = ["get_options", "setup_logging", "Program", "SignalListener"]
 
