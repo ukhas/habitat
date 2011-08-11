@@ -2,15 +2,9 @@
 habitat
 =======
 
-Habitat is a system for tracking high altitude balloons. People with radios
-upload telemetry strings to habitat, which parses them and stores them usefully
-in a database for later display via a web frontend.
+habitat is a web application for tracking the flight path of high altitude
+balloons, relying on a network of users with radios sending in received
+telemetry strings which are parsed into position information and displayed
+on maps.
 
-Habitat is currently still early in development.
-
-The GitHub project has up to date code and information:
-
-http://github.com/ukhas/habitat
-
-See also README.md for setup instructions.
-
+Written by various UKHAS members, see AUTHORS
