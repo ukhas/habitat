@@ -266,10 +266,10 @@ class TestUploader(object):
         try:
             self.uploader.payload_telemetry(payload_telemetry_string,
                                             payload_telemetry_metadata)
-        except uploader.Collision:
+        except uploader.CollisionError:
             pass
         else:
-            raise AssertionError("Did not raise Collision")
+            raise AssertionError("Did not raise CollisionError")
 
         self.mocker.VerifyAll()
 
@@ -320,9 +320,9 @@ class TestUploader(object):
         try:
             self.uploader.payload_telemetry(payload_telemetry_string,
                                             payload_telemetry_metadata)
-        except uploader.Unmergeable:
+        except uploader.UnmergeableError:
             pass
         else:
-            raise AssertionError("Did not raise Unmergeable")
+            raise AssertionError("Did not raise UnmergeableError")
 
         self.mocker.VerifyAll()

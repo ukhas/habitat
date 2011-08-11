@@ -27,10 +27,10 @@ import base64
 import hashlib
 import couchdbkit
 
-class Collision(Exception):
+class CollisionError(Exception):
     pass
 
-class Unmergeable(Exception):
+class UnmergeableError(Exception):
     pass
 
 class Uploader(object):
@@ -102,7 +102,7 @@ class Uploader(object):
                 else:
                     return
 
-            raise Unmergeable
+            raise UnmergeableError
 
     def _payload_telemetry_new(self, string, receiver_info):
         doc = {
@@ -115,7 +115,7 @@ class Uploader(object):
 
     def _payload_telemetry_merge(self, doc, string, receiver_info):
         if doc["data"]["_raw"] != base64.b64encode(string):
-            raise Collision
+            raise CollisionError
 
         doc["receivers"][self._callsign] = receiver_info
         return doc
