@@ -21,3 +21,57 @@ database where they can be used directly by the web client or picked up
 by a daemon for further processing.
 """
 
+import time
+import base64
+import hashlib
+import couchdbkit
+
+class Uploader(object):
+    def __init__(self, callsign,
+                       couch_uri="http://habhub.org/",
+                       couch_db="habitat"):
+        self._callsign = callsign
+
+        server = couchdbkit.Server(couch_uri)
+        self._db = server[couch_db]
+
+    def listener_telem(self, data, time_created=None):
+        time_uploaded = time.time()
+
+        if time_created is None:
+            time_created = time_uploaded
+
+        doc = {"data": data, "type": "listener_telem",
+               "time_created": time_created, "time_uploaded": time_uploaded}
+        self._db.save_doc(doc)
+
+    def listener_info(self, data, time_created=None):
+        time_uploaded = time.time()
+
+        if time_created is None:
+            time_created = time_uploaded
+
+        doc = {"data": data, "type": "listener_info",
+               "time_created": time_created, "time_uploaded": time_uploaded}
+        self._db.save_doc(doc)
+
+    def payload_telemetry(self, string, metadata, time_created=None):
+        time_uploaded = time.time()
+
+        if time_created is None:
+            time_created = time_uploaded
+
+        receiver_info = {
+            "time_created": time_created,
+            "time_uploaded": time_uploaded,
+        }
+
+        doc = {
+            "data": {"_raw": base64.b64encode(string)},
+            "receivers": {self._callsign: receiver_info},
+            "type": "payload_telemetry"
+        }
+
+        doc_id = hashlib.sha256(doc["data"]["_raw"]).hexdigest()
+
+        self._db[doc_id] = doc
