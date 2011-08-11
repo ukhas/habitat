@@ -36,23 +36,24 @@ class Uploader(object):
         self._db = server[couch_db]
 
     def listener_telem(self, data, time_created=None):
-        time_uploaded = time.time()
-
-        if time_created is None:
-            time_created = time_uploaded
-
-        doc = {"data": data, "type": "listener_telem",
-               "time_created": time_created, "time_uploaded": time_uploaded}
-        self._db.save_doc(doc)
+        self._listener_doc(data, "listener_telem", time_created)
 
     def listener_info(self, data, time_created=None):
+        self._listener_doc(data, "listener_info", time_created)
+
+    def _listener_doc(self, data, type, time_created=None):
         time_uploaded = time.time()
 
         if time_created is None:
             time_created = time_uploaded
 
-        doc = {"data": data, "type": "listener_info",
-               "time_created": time_created, "time_uploaded": time_uploaded}
+        doc = {
+            "data": data,
+            "type": type,
+            "time_created": time_created,
+            "time_uploaded": time_uploaded
+        }
+
         self._db.save_doc(doc)
 
     def payload_telemetry(self, string, metadata, time_created=None):
