@@ -21,8 +21,6 @@ Tests habitat.main.setup_logging()
 
 import logging
 
-from nose.tools import raises
-
 from habitat import main
 
 class FakeLogging:
