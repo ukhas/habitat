@@ -19,44 +19,43 @@
 The parser interprets incoming telemetry strings into useful telemetry data.
 """
 
-import time
 import base64
 import logging
 import hashlib
 import M2Crypto
 import os
 import os.path
-from copy import deepcopy
+import couchdbkit
 
-from habitat.message_server import SimpleSink, Message
-from habitat.utils import dynamicloader
+from . import sensor_manager
+from ..utils import dynamicloader
 
-__all__ = ["ParserSink", "ParserModule"]
+__all__ = ["Parser", "ParserModule"]
 
 logger = logging.getLogger("habitat.parser")
 
-class ParserSink(SimpleSink):
+class Parser(object):
     """
-    The Parser Sink
+    habitat's parser
 
-    The parser sink is the interface between the message server and the
-    parser modules. It is responsible for receiving raw telemetry from the
-    message server, giving it to modules which turn it into beautiful
-    telemetry data, and then sending that back to the message server.
+    Parser takes arbitrary newly uploaded payload telemetry and attempts to use
+    ParserModules to turn this telemetry into useful data, which is then saved
+    back to the database.
     """
 
-    def setup(self):
+    def __init__(self, config):
         """
-        Initialises the sink, adding the types of telemetry we care about
-        to our types list and setting up lists of modules
+        Loads a SensorManager with config["sensors"].
+        Loads modules from config["modules"].
+        Scans config["certs_dir"] for CA and developer certificates.
+        Connects to CouchDB using config["couch_uri"] and config["couch_db"].
+        """
 
-        Scans the certs/ca directory to find CA certificates and loads them.
-        """
-        self.add_type(Message.RECEIVED_TELEM)
+        self.sensor_manager = sensor_manager.SensorManager(config)
 
         self.modules = []
 
-        for module in self.server.db["parser_config"]["modules"]:
+        for module in config["modules"]:
             m = dynamicloader.load(module["class"])
             dynamicloader.expecthasmethod(m, "pre_parse")
             dynamicloader.expecthasmethod(m, "parse")
@@ -65,9 +64,11 @@ class ParserSink(SimpleSink):
             module["module"] = m(self)
             self.modules.append(module)
 
-        self.cert_path = self.server.program.options["certs_dir"]
         self.certificate_authorities = []
 
+        base_path = os.path.split(os.path.abspath(__file__))[0]
+        parent_path = os.path.join(base_path, '..')
+        self.cert_path = os.path.join(parent_path, config["certs_dir"])
         ca_path = os.path.join(self.cert_path, 'ca')
         for f in os.listdir(ca_path):
             ca = M2Crypto.X509.load_cert(os.path.join(ca_path, f))
@@ -75,7 +76,20 @@ class ParserSink(SimpleSink):
 
         self.loaded_certs = {}
 
-    def message(self, message):
+        self.couch_server = couchdbkit.Server(config["couch_uri"])
+        self.db = self.couch_server[config["couch_db"]]
+        self.last_seq = 0
+
+    def run(self):
+        """
+        Start a continuous connection to CouchDB's _changes feed, watching for
+        new unparsed telemetry.
+        """
+        consumer = couchdbkit.Consumer(self.db)
+        consumer.wait(self.couch_callback, filter="habitat/unparsed",
+                since=self.last_seq, heartbeat=1000)
+
+    def couch_callback(self, result):
         """
         Handles a new message from the server, hopefully turning it into
         parsed telemetry data.
@@ -129,18 +143,21 @@ class ParserSink(SimpleSink):
         Parser modules should be wary when outputting field names with
         leading underscores.
         """
-
+        print "in callback, considering {}".format(result)
+        self.last_seq = result['seq']
+        doc = self.db[result['id']]
         data = None
-        original_data = message.data["string"]
+        original_data = doc['data']['_raw']
         raw_data = base64.b64decode(original_data)
+        receiver_callsign = doc['receivers'].keys()[0]
+        time_created = doc['receivers'][receiver_callsign]['time_created']
 
         # Try using real configs
         for module in self.modules:
             try:
                 data = self._pre_filter(raw_data, module)
                 callsign = module["module"].pre_parse(data)
-                config_doc = self._find_config_doc(callsign,
-                    message.time_created)
+                config_doc = self._find_config_doc(callsign, time_created)
                 config = config_doc["payloads"][callsign]
                 if config["sentence"]["protocol"] == module["name"]:
                     data = self._intermediate_filter(data, config)
@@ -148,6 +165,7 @@ class ParserSink(SimpleSink):
                     data = self._post_filter(data, config)
                     data["_protocol"] = module["name"]
                     data["_flight"] = config_doc["_id"]
+                    data["_parsed"] = True
                     break
             except ValueError as e:
                 err = "ValueError from {0}: '{1}'"
@@ -170,6 +188,7 @@ class ParserSink(SimpleSink):
                     data = self._post_filter(data, config)
                     data["_protocol"] = module["name"]
                     data["_used_default_config"] = True
+                    data["_parsed"] = True
                     logger.info("Using a default configuration document")
                     break
                 except ValueError as e:
@@ -178,22 +197,32 @@ class ParserSink(SimpleSink):
                     continue
 
         if type(data) is dict:
-            data["_raw"] = original_data
-
-            # Every key apart from string contains RECEIVED_TELEM metadata
-            data["_listener_metadata"] = deepcopy(message.data)
-            del data["_listener_metadata"]["string"]
-
-            new_message = Message(message.source, Message.TELEM,
-                                  message.time_created, message.time_uploaded,
-                                  data)
-            self.server.push_message(new_message)
+            doc['data'].update(data)
+            print "saving doc: {}".format(doc)
+            self._save_updated_doc(doc)
 
             logger.info("{module} parsed data from {callsign} succesfully" \
                 .format(module=module["name"], callsign=callsign))
         else:
             logger.info("Unable to parse any data from '{d}'" \
                 .format(d=original_data))
+
+    def _save_updated_doc(self, doc, attempts=0):
+        """Save doc to the database, retrying with a merge in the event of
+        resource conflicts. This should definitely be a method of some Telem
+        class thing."""
+        latest = self.db[doc['_id']]
+        latest['data'].update(doc['data'])
+        try:
+            self.db.save_doc(latest)
+        except couchdbkit.exceptions.ResourceConflict:
+            attempts += 1
+            if attempts >= 30:
+                err = "Could not save telem doc after 30 conflicts."
+                logger.error(err)
+                raise RuntimeError(err)
+            else:
+                self._save_updated_doc(doc, attempts)
 
     def _find_config_doc(self, callsign, time_created):
         """
@@ -208,9 +237,8 @@ class ParserSink(SimpleSink):
         the sentence dictionary out of the payload config dictionary.
         """
         startkey = [callsign, time_created]
-        result = self.server.db.view("habitat/payload_config", limit=1,
-                                     include_docs=True,
-                                     startkey=startkey).first()
+        result = self.db.view("habitat/payload_config", limit=1,
+                include_docs=True, startkey=startkey).first()
         if not result or callsign not in result["doc"]["payloads"]:
             err = "No configuration document for callsign '{0}' found."
             err = err.format(callsign)
@@ -387,7 +415,7 @@ class ParserModule(object):
     def __init__(self, parser):
         """Store the parser reference for later use."""
         self.parser = parser
-        self.sensors = parser.server.program.sensor_manager
+        self.sensors = parser.sensor_manager
 
     def pre_parse(self, string):
         """

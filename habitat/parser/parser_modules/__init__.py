@@ -20,5 +20,3 @@ Parser modules for specific protocols.
 """
 
 __all__ = ["ukhas_parser"]
-
-from . import ukhas_parser

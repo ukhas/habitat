@@ -51,15 +51,15 @@ object that can be stored in a couchdb database.
 *data* is the string to parse.
 """
 
-from habitat.utils import dynamicloader
-from habitat.sensors import base
+from ..utils import dynamicloader
+from .sensors import base
 
 __all__ = ["SensorManager"]
 
 class SensorManager:
     """The main Sensor Manager class"""
 
-    def __init__(self, program):
+    def __init__(self, config):
         """
         *program*: a :py:class:`habitat.main.Program` object
 
@@ -69,9 +69,8 @@ class SensorManager:
 
         self.libraries = {"base": base}
 
-        loadlist = program.db["sensor_manager_config"]["libraries"].items()
-        for (shorthand, module) in loadlist:
-            self.load(module, shorthand)
+        for sensor in config["sensors"]:
+            self.load(sensor["class"], sensor["name"])
 
     def load(self, module, shorthand):
         """loads *module* as a library and assigns it to *shorthand*"""
@@ -103,7 +102,7 @@ class SensorManager:
 
         return func(config, data)
 
-    _repr_format = "<habitat.sensors.SensorManager: {l} libraries loaded>"
+    _repr_format = "<habitat.parser.SensorManager: {l} libraries loaded>"
 
     def __repr__(self):
         return self._repr_format.format(l=len(self.libraries))
