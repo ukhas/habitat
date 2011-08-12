@@ -28,16 +28,36 @@ import hashlib
 import couchdbkit
 
 class CollisionError(Exception):
+    """
+    Payload telemetry sha256 hash collision
+
+    Raised if two strings (in payload_telemetry docs) have the same
+    sha256 hash yet are different.
+    """
     pass
 
 class UnmergeableError(Exception):
+    """
+    Couldn't merge a payload_telemetry CouchDB conflict after many tries
+    """
     pass
 
 class Uploader(object):
+    """
+    An easy interface to insert documents into a habitat CouchDB.
+
+    This class is intended for use by a listener.
+
+    After having created an Uploader object, call payload_telemetry,
+    listener_telemetry or listener_info in any order. It is however
+    recommended that listener_info and listener_telem are called once
+    before any other uploads
+    """
+
     def __init__(self, callsign,
                        couch_uri="http://habhub.org/",
                        couch_db="habitat",
-                       max_merge_attempts = 20):
+                       max_merge_attempts=20):
         self._callsign = callsign
         self._latest = {}
         self._max_merge_attempts = max_merge_attempts
@@ -46,9 +66,66 @@ class Uploader(object):
         self._db = server[couch_db]
 
     def listener_telemetry(self, data, time_created=None):
+        """
+        Upload a listener_telemetry doc. The doc_id is returned
+
+        A listener_telemetry doc contains information about the listener's
+        current location, be it a rough stationary location or a constant
+        feed of GPS points. In the former case, you may only need to call
+        this function once, at startup. In the latter, you might want to
+        call it constantly.
+
+        The format of the document produced is described elsewhere (TODO?);
+        the actual document will be constructed by the Uploader.
+        **data** must be a dict and should typically look something like
+        this::
+
+            data = {
+                "time": {               # GPS Time
+                    "hour": 12,
+                    "minute": 40,
+                    "second: 12
+                },
+                "latitude": -35.11,     # Decimal degrees
+                "longitude": 137.567,
+                "altitude": 12          # Metres
+            }
+
+        Validation will be performed by the CouchDB server. **data** must not
+        contain the key ''callsign'', since that is added by the Uploader.
+        """
         return self._listener_doc(data, "listener_telemetry", time_created)
 
     def listener_info(self, data, time_created=None):
+        """
+        Upload a listener_info doc. The doc_id is returned
+
+        A listener_info document contains static human readable information
+        about a listener.
+
+        The format of the document produced is described elsewhere (TODO?);
+        the actual document will be constructed by the Uploader.
+        **data** must be a dict and should typically look something like
+        this::
+
+            "data": {
+                "callsign": "M0RND",
+                "name": "Adam Greig",
+                "location": "Cambridge, UK",
+                "radio": "ICOM IC-7000",
+                "antenna": "9el 434MHz Yagi"
+            }
+
+            data = {
+                "name": "Listener's Full Name",
+                "location": "Human readable description of location",
+                "radio": "Make and model",
+                "antenna": "As detailed or brief as you wish"
+            }
+
+        **data** must not contain the key **callsign**, since that is added
+        by the Uploader.
+        """
         return self._listener_doc(data, "listener_info", time_created)
 
     def _listener_doc(self, data, doc_type, time_created=None):
@@ -77,6 +154,28 @@ class Uploader(object):
         thing["time_created"] = int(round(time_created))
 
     def payload_telemetry(self, string, metadata, time_created=None):
+        """
+        Create or add to the payload_telemetry document for `string`
+
+        This function attempts to create a new payload_telemetry document
+        for the provided string (a new document, with one receiver: you).
+        If the document already exists in the database it instead downloads
+        it, adds you to the list of receivers, and reuploads.
+
+        **metadata** can contain extra information about your receipt of
+        **string**. Nothing has been standardised yet (TODO), but here's an
+        example of what you might be able to do in the future::
+
+            metadata = {
+                "frequency": 434075000,
+                "signal_strength": 5
+            }
+
+        **metadata** must not contain the keys **time_created**,
+        **time_uploaded**, **latest_listener_info** or
+        **latest_listener_telemetry**. These are added by the Uploader.
+        """
+
         if time_created is None:
             time_created = time.time()
 
