@@ -13,7 +13,7 @@ import habitat
 needs_sphinx = '1.0'
 
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.viewcode',
-              'sphinx.ext.intersphinx']
+              'sphinx.ext.autosummary', 'sphinx.ext.intersphinx']
 
 
 source_suffix = '.rst'
@@ -46,5 +46,6 @@ htmlhelp_basename = 'habitatdoc'
 autodoc_default_flags = ["members"]
 autodoc_member_order = "bysource"
 autoclass_content = "both"
+autosummary_generate = True
 
 intersphinx_mapping = {'python': ('http://docs.python.org/2.7', None)}

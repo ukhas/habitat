@@ -17,6 +17,12 @@
 
 """
 Sensor function libraries.
+
+.. autosummary::
+    :toctree: habitat
+
+    habitat.parser.sensors.base
+    habitat.parser.sensors.stdtelem
 """
 
 __all__ = ["base", "stdtelem"]

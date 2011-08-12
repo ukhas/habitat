@@ -4,8 +4,7 @@ habitat documentation
 Contents:
 
 .. toctree::
-   :maxdepth: 2
-   :glob:
+   :maxdepth: 3
 
    intro
    installing
@@ -14,7 +13,8 @@ Contents:
    messages
    filters
    ukhas_parser
-   reference/index
+   habitat
+
 
 Indices and tables
 ==================
