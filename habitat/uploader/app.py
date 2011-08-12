@@ -104,7 +104,7 @@ def listener_info():
     return "OK"
 
 @app.route("/listener_telemetry", methods=["POST"])
-def listener_info():
+def listener_telemetry():
     callsign = flask.request.form["callsign"]
     data = json.loads(flask.request.form["data"])
     time_created = get_time_created()
@@ -113,6 +113,6 @@ def listener_info():
     assert isinstance(data, dict)
 
     u = uploader.Uploader(callsign=callsign, **couch_settings)
-    u.listener_info(data, time_created)
+    u.listener_telemetry(data, time_created)
 
     return "OK"
