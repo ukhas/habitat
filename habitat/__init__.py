@@ -20,6 +20,13 @@ habitat is a web application for tracking the flight path of high altitude
 balloons, relying on a network of users with radios sending in received
 telemetry strings which are parsed into position information and displayed
 on maps.
+
+.. autosummary::
+    :toctree: habitat
+
+    habitat.parser
+    habitat.main
+    habitat.utils
 """
 
 __name__ = "habitat"
@@ -28,6 +35,6 @@ __authors__ = "Adam Greig, Daniel Richman"
 __short_copyright__ = "2010 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-__all__ = ["parser", "main"]
+__all__ = ["parser", "main", "utils"]
 
 from . import main

@@ -17,6 +17,11 @@
 
 """
 Parser modules for specific protocols.
+
+.. autosummary::
+    :toctree: habitat
+
+    habitat.parser.parser_modules.ukhas_parser
 """
 
 __all__ = ["ukhas_parser"]
