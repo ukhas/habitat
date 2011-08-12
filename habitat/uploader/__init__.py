@@ -52,6 +52,9 @@ class Uploader(object):
     listener_telemetry or listener_info in any order. It is however
     recommended that listener_info and listener_telem are called once
     before any other uploads
+
+    See the CouchDB schema for more information, both on
+    validation/restrictions and data formats.
     """
 
     def __init__(self, callsign,
@@ -81,15 +84,18 @@ class Uploader(object):
         this::
 
             data = {
-                "time": {               # GPS Time
+                "time": {
                     "hour": 12,
                     "minute": 40,
                     "second: 12
                 },
-                "latitude": -35.11,     # Decimal degrees
+                "latitude": -35.11,
                 "longitude": 137.567,
-                "altitude": 12          # Metres
+                "altitude": 12
             }
+
+        Time is the GPS time for this point, latitude and longitude are in
+        decimal degrees, and altitude is in metres.
 
         Validation will be performed by the CouchDB server. **data** must not
         contain the key ''callsign'', since that is added by the Uploader.
@@ -108,19 +114,12 @@ class Uploader(object):
         **data** must be a dict and should typically look something like
         this::
 
-            "data": {
+            data = {
                 "callsign": "M0RND",
                 "name": "Adam Greig",
                 "location": "Cambridge, UK",
                 "radio": "ICOM IC-7000",
                 "antenna": "9el 434MHz Yagi"
-            }
-
-            data = {
-                "name": "Listener's Full Name",
-                "location": "Human readable description of location",
-                "radio": "Make and model",
-                "antenna": "As detailed or brief as you wish"
             }
 
         **data** must not contain the key **callsign**, since that is added
