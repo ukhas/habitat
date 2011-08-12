@@ -24,9 +24,9 @@ from copy import deepcopy
 
 # It would require a disproportionate amount of work to create a
 # FakeSensorManager
-from habitat.sensor_manager import SensorManager
+from habitat.parser.sensor_manager import SensorManager
 
-from habitat.parser_modules.ukhas_parser import UKHASParser
+from habitat.parser.parser_modules.ukhas_parser import UKHASParser
 
 # A 'standard' config. Other configs can copy this and change parts.
 base_config = {
@@ -223,34 +223,20 @@ output_long = deepcopy(output_good)
 output_long["_extra_data"] = ["123", "4.56", "seven"]
 
 # Provide the sensor functions to the parser
-class FakeProgram:
-    def __init__(self, db):
-        self.db = db
-    def set_sensor_manager(self, sensor_manager):
-        self.sensor_manager = sensor_manager
-
-class FakeServer:
-    def __init__(self, program):
-        self.program = program
+fake_sensors_config = {
+    "sensors": [
+        {"name": "stdtelem", "class": "habitat.parser.sensors.stdtelem"}
+    ]
+}
 
 class FakeParser:
-    def __init__(self, server):
-        self.server = server
-
-fake_sensors_db = {
-    "sensor_manager_config": {
-        "libraries": { "stdtelem": "habitat.sensors.stdtelem" }
-    }
-}
+    def __init__(self):
+        self.sensor_manager = SensorManager(fake_sensors_config)
 
 class TestUKHASParser:
     """UKHAS Parser"""
     def setUp(self):
-        fake_program = FakeProgram(fake_sensors_db)
-        sensor_manager = SensorManager(fake_program)
-        fake_program.set_sensor_manager(sensor_manager)
-        fake_parser = FakeParser(FakeServer(fake_program))
-        self.p = UKHASParser(fake_parser)
+        self.p = UKHASParser(FakeParser())
 
     def test_pre_parse_rejects_bad_sentences(self):
         for sentence in bad_sentences:

@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Daniel Richman
+# Copyright 2011 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -15,9 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
-class ServerStub:
-    def __init__(self):
-        self.messages = []
+"""
+Parser parses received telemetry into useful data.
+"""
 
-    def push_message(self, message):
-        self.messages.append(message)
+__all__ = ["parser"]
+
+from . import parser

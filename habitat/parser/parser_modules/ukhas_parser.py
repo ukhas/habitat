@@ -93,13 +93,11 @@ Typical configuration (part of a payload dictionary in a flight document):
 
 """
 
-import time
-import math
 import re
-from string import ascii_lowercase, ascii_uppercase, digits, hexdigits
+from string import hexdigits
 
-from habitat.parser import ParserModule
-from habitat.utils import checksums
+from ..parser import ParserModule
+from ...utils import checksums
 
 __all__ = ["UKHASParser"]
 
