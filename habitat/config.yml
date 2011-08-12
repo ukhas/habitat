@@ -1,0 +1,12 @@
+log_stderr_level: DEBUG
+log_file_level: NONE
+log_file:
+certs_dir: "../certs"
+couch_uri: "http://localhost:15984"
+couch_db: test
+modules:
+    - name: "UKHAS"
+      class: "habitat.parser.parser_modules.ukhas_parser.UKHASParser"
+sensors:
+    - name: "stdtelem"
+      class: "habitat.parser.sensors.stdtelem"

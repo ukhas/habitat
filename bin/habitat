@@ -16,5 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+from os.path import abspath, split, join
+sys.path.append(join(split(abspath(__file__))[0], '..'))
 import habitat
 habitat.main.Program().main()

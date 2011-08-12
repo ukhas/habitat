@@ -28,4 +28,6 @@ __authors__ = "Adam Greig, Daniel Richman"
 __short_copyright__ = "2010 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-__all__ = ["parser"]
+__all__ = ["parser", "main"]
+
+from . import main

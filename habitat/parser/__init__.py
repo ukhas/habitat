@@ -20,3 +20,5 @@ Parser parses received telemetry into useful data.
 """
 
 __all__ = ["parser"]
+
+from . import parser

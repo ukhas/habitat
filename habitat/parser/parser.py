@@ -32,8 +32,7 @@ from ..utils import dynamicloader
 
 __all__ = ["Parser", "ParserModule"]
 
-#logger = logging.getLogger("habitat.parser")
-logger = logging.getLogger("")
+logger = logging.getLogger("habitat.parser")
 
 class Parser(object):
     """
@@ -65,9 +64,11 @@ class Parser(object):
             module["module"] = m(self)
             self.modules.append(module)
 
-        self.cert_path = config["certs_dir"]
         self.certificate_authorities = []
 
+        base_path = os.path.split(os.path.abspath(__file__))[0]
+        parent_path = os.path.join(base_path, '..')
+        self.cert_path = os.path.join(parent_path, config["certs_dir"])
         ca_path = os.path.join(self.cert_path, 'ca')
         for f in os.listdir(ca_path):
             ca = M2Crypto.X509.load_cert(os.path.join(ca_path, f))
