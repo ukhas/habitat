@@ -30,31 +30,27 @@ from ... import uploader
 
 telemetry_data = {"some_data": 123, "_flag": True}
 telemetry_doc = {
-    "data": telemetry_data,
+    "data": copy.deepcopy(telemetry_data),
     "type": "listener_telemetry",
     "time_created": 1234,
     "time_uploaded": 1234,
 }
-telemetry_time_doc = {
-    "data": telemetry_data,
-    "type": "listener_telemetry",
-    "time_created": 1232,
-    "time_uploaded": 1276
-}
+telemetry_doc["data"]["callsign"] = "TESTCALL"
+telemetry_time_doc = copy.deepcopy(telemetry_doc)
+telemetry_time_doc["time_created"] = 1232
+telemetry_time_doc["time_uploaded"] = 1276
 
 info_data = {"my_radio": "Duga-3", "vehicle": "Tractor"}
 info_doc = {
-    "data": info_data,
+    "data": copy.deepcopy(info_data),
     "type": "listener_info",
     "time_created": 1259,
     "time_uploaded": 1259
 }
-info_time_doc = {
-    "data": info_data,
-    "type": "listener_info",
-    "time_created": 1254,
-    "time_uploaded": 1290
-}
+info_doc["data"]["callsign"] = "TESTCALL"
+info_time_doc = copy.deepcopy(info_doc)
+info_time_doc["time_created"] = 1254
+info_time_doc["time_uploaded"] = 1290
 
 payload_telemetry_string = "asdf blah \x12 binar\x04\x00"
 payload_telemetry_metadata = {"frequency": 434075000, "misc": "Hi"}
@@ -192,6 +188,15 @@ class TestUploader(object):
         self.uploader.listener_info(info_data, time_created=1253.8)
         self.mocker.VerifyAll()
 
+    def test_returns_doc_id(self):
+        uploader.time.time().AndReturn(1233.9)
+        uploader.time.time().AndReturn(1234.0)
+        self.fake_db.save_doc(telemetry_doc).WithSideEffects(self.save_doc)
+        self.mocker.ReplayAll()
+
+        doc_id = self.uploader.listener_telemetry(telemetry_data)
+        assert self.docs[doc_id]["type"] == "listener_telemetry"
+
     def test_pushes_payload_telemetry_simple(self):
         uploader.time.time().AndReturn(1234.3)
         uploader.time.time().AndReturn(1234.3)
@@ -199,8 +204,9 @@ class TestUploader(object):
                                  payload_telemetry_doc)
         self.mocker.ReplayAll()
 
-        self.uploader.payload_telemetry(payload_telemetry_string,
-                                        payload_telemetry_metadata)
+        doc_id = self.uploader.payload_telemetry(payload_telemetry_string,
+                                                 payload_telemetry_metadata)
+        assert doc_id == payload_telemetry_doc_id
         self.mocker.VerifyAll()
 
     def ptlm_with_listener_docs(self, doc):
