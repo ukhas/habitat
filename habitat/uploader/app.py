@@ -28,25 +28,64 @@ from .. import uploader
 app = flask.Flask("habitat.uploader.app")
 
 couch_settings = {
-    "couch_uri": "http://habitat.habhub.org/",
+    "couch_uri": "http://localhost:5984/",
     "couch_db": "habitat_test"
 }
 
 @app.route("/")
 def hello():
-    return "Hello World! Perhaps you want to POST to somewhere else?"
+    return """
+    <html>
+    <body>
+
+    <form action="payload_telemetry" method="POST">
+    <h3>payload_telemetry</h3>
+    <p>Callsign: <input type="text" name="callsign"></p>
+    <p>String (b64): <input type="text" name="string"></p>
+    <p>Metadata (json): <input type="text" name="metadata" value="{}"></p>
+    <p>Time created (int, POSIX): <input type="text" name="time_created"></p>
+    <p><input type="submit" value="GO">
+    </form>
+
+    <form action="listener_info" method="POST">
+    <h3>listener_info</h3>
+    <p>Callsign: <input type="text" name="callsign"></p>
+    <p>Data (json): <input type="text" name="data" value="{}"></p>
+    <p>Time created (int, POSIX): <input type="text" name="time_created"></p>
+    <p><input type="submit" value="GO">
+    </form>
+
+    <form action="listener_telemetry" method="POST">
+    <h3>listener_telemetry</h3>
+    <p>Callsign: <input type="text" name="callsign"></p>
+    <p>Data (json): <input type="text" name="data" value="{}"></p>
+    <p>Time created (int, POSIX): <input type="text" name="time_created"></p>
+    <p><input type="submit" value="GO">
+    </form>
+    """
+
+def get_time_created():
+    if "time_created" not in flask.request.form:
+        return None
+
+    time_created = flask.request.form["time_created"]
+    if not time_created:
+        return None
+
+    return int(time_created)
 
 @app.route("/payload_telemetry", methods=["POST"])
 def payload_telemetry():
     callsign = flask.request.form["callsign"]
     string = base64.b64decode(flask.request.form["string"])
     metadata = json.loads(flask.request.form["metadata"])
+    time_created = get_time_created()
 
     assert callsign and string
     assert isinstance(metadata, dict)
 
     u = uploader.Uploader(callsign=callsign, **couch_settings)
-    u.payload_telemetry(string, metadata)
+    u.payload_telemetry(string, metadata, time_created)
 
     return "OK"
 
@@ -54,11 +93,13 @@ def payload_telemetry():
 def listener_info():
     callsign = flask.request.form["callsign"]
     data = json.loads(flask.request.form["data"])
+    time_created = get_time_created()
 
     assert callsign and data
     assert isinstance(data, dict)
 
     u = uploader.Uploader(callsign=callsign, **couch_settings)
+    u.listener_info(data, time_created)
 
     return "OK"
 
@@ -66,10 +107,12 @@ def listener_info():
 def listener_info():
     callsign = flask.request.form["callsign"]
     data = json.loads(flask.request.form["data"])
+    time_created = get_time_created()
 
     assert callsign and data
     assert isinstance(data, dict)
 
     u = uploader.Uploader(callsign=callsign, **couch_settings)
+    u.listener_info(data, time_created)
 
     return "OK"

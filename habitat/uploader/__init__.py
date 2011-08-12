@@ -46,17 +46,22 @@ class Uploader(object):
         self._db = server[couch_db]
 
     def listener_telemetry(self, data, time_created=None):
-        self._listener_doc(data, "listener_telemetry", time_created)
+        return self._listener_doc(data, "listener_telemetry", time_created)
 
     def listener_info(self, data, time_created=None):
-        self._listener_doc(data, "listener_info", time_created)
+        return self._listener_doc(data, "listener_info", time_created)
 
     def _listener_doc(self, data, doc_type, time_created=None):
         if time_created is None:
             time_created = time.time()
 
+        assert "callsign" not in data
+
+        data = copy.deepcopy(data)
+        data["callsign"] = self._callsign
+
         doc = {
-            "data": copy.deepcopy(data),
+            "data": data,
             "type": doc_type
         }
 
@@ -65,6 +70,7 @@ class Uploader(object):
 
         doc_id = doc["_id"]
         self._latest[doc_type] = doc_id
+        return doc_id
 
     def _set_time(self, thing, time_created):
         thing["time_uploaded"] = int(round(time.time()))
@@ -90,6 +96,7 @@ class Uploader(object):
             self._set_time(receiver_info, time_created)
             doc = self._payload_telemetry_new(string, receiver_info)
             self._db[doc_id] = doc
+            return doc_id
         except couchdbkit.exceptions.ResourceConflict:
             for i in xrange(self._max_merge_attempts):
                 try:
@@ -100,7 +107,7 @@ class Uploader(object):
                 except couchdbkit.exceptions.ResourceConflict:
                     continue
                 else:
-                    return
+                    return doc_id
 
             raise UnmergeableError
 
