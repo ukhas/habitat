@@ -17,6 +17,13 @@
 
 """
 Various utilities for general use by ``habitat``.
+
+.. autosummary::
+    :toctree: habitat
+
+    habitat.utils.checksums
+    habitat.utils.dynamicloader
+    habitat.utils.filtertools
 """
 
 __all__ = ["checksums", "dynamicloader", "filtertools"]

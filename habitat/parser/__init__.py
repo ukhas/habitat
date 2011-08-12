@@ -17,8 +17,16 @@
 
 """
 Parser parses received telemetry into useful data.
+
+.. autosummary::
+    :toctree: habitat
+
+    habitat.parser.parser
+    habitat.parser.sensor_manager
+    habitat.parser.parser_modules
+    habitat.parser.sensors
 """
 
-__all__ = ["parser"]
+__all__ = ["parser", "sensor_manager", "parser_modules", "sensors"]
 
 from . import parser
