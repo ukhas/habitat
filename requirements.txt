@@ -2,3 +2,4 @@ M2Crypto==0.21.1
 couchdbkit==0.5.4
 crcmod==1.7
 ipaddr==2.1.9
+PyYAML==3.10
