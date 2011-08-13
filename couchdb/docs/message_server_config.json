@@ -1,8 +1,0 @@
-{
-   "_id": "message_server_config",
-   "type": "config",
-   "sinks": [
-       "habitat.parser.ParserSink",
-       "habitat.archive.ArchiveSink"
-   ]
-}
