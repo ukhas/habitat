@@ -29,7 +29,7 @@ app = flask.Flask("habitat.uploader.app")
 
 couch_settings = {
     "couch_uri": "http://localhost:5984/",
-    "couch_db": "habitat_test"
+    "couch_db": "habitat"
 }
 
 @app.route("/")

@@ -2,8 +2,8 @@ log_stderr_level: DEBUG
 log_file_level: NONE
 log_file:
 certs_dir: "../certs"
-couch_uri: "http://localhost:15984"
-couch_db: test
+couch_uri: "http://localhost:5984"
+couch_db: habitat
 modules:
     - name: "UKHAS"
       class: "habitat.parser.parser_modules.ukhas_parser.UKHASParser"
