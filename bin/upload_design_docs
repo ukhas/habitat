@@ -21,7 +21,7 @@ import os.path
 import couchdbkit
 
 if len(sys.argv) != 3:
-    print "Usage: {} database_url database_name".format(sys.argv[0])
+    print "Usage: {0} database_url database_name".format(sys.argv[0])
     sys.exit(1)
 
 server = couchdbkit.Server(sys.argv[1])
