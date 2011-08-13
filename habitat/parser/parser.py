@@ -143,7 +143,7 @@ class Parser(object):
         Parser modules should be wary when outputting field names with
         leading underscores.
         """
-        print "in callback, considering {}".format(result)
+        print "in callback, considering {0}".format(result)
         self.last_seq = result['seq']
         doc = self.db[result['id']]
         data = None
@@ -198,7 +198,7 @@ class Parser(object):
 
         if type(data) is dict:
             doc['data'].update(data)
-            print "saving doc: {}".format(doc)
+            print "saving doc: {0}".format(doc)
             self._save_updated_doc(doc)
 
             logger.info("{module} parsed data from {callsign} succesfully" \

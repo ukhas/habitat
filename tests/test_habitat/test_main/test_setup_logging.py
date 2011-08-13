@@ -25,7 +25,7 @@ from habitat import main
 
 class FakeLogging:
     DEBUG = logging.DEBUG
-    WARNING = logging.WARNING
+    WARNING = WARN = logging.WARNING
 
     def __init__(self):
         self.rt = self.Logger()
@@ -80,7 +80,7 @@ class TestSetupLogging:
         main.logging = logging
 
     def test_adds_file_handler_correctly(self):
-        main.setup_logging(None, "testfile", logging.DEBUG)
+        main.setup_logging(None, "testfile", "DEBUG")
         assert main.logging.rt.level == logging.DEBUG
         assert len(main.logging.rt.handlers) == 1
         self.check_file_handler(main.logging.rt.handlers[0])
@@ -94,7 +94,7 @@ class TestSetupLogging:
         assert h.mode == "a"
 
     def test_adds_stderr_handler_correctly(self):
-        main.setup_logging(logging.WARN, None, None)
+        main.setup_logging("WARN", None, None)
         assert main.logging.rt.level == logging.DEBUG
         assert len(main.logging.rt.handlers) == 1
         self.check_stderr_handler(main.logging.rt.handlers[0])
@@ -106,7 +106,7 @@ class TestSetupLogging:
         assert h.level == logging.WARN
 
     def test_adds_both_handlers_correctly(self):
-        main.setup_logging(logging.WARN, "testfile", logging.DEBUG)
+        main.setup_logging("WARN", "testfile", "DEBUG")
         assert len(main.logging.rt.handlers) == 2
 
         if isinstance(main.logging.rt.handlers[0], main.logging.StreamHandler):

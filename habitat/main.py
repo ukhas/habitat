@@ -61,7 +61,11 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
 
     have_handlers = False
 
+    # TODO: check to ensure that log_*_level is valid.
+
     if log_stderr_level != None and log_stderr_level != "NONE":
+        log_stderr_level = getattr(logging, log_stderr_level)
+
         stderr_handler = logging.StreamHandler()
         stderr_handler.setFormatter(logging.Formatter(formatstring))
         stderr_handler.setLevel(log_stderr_level)
@@ -69,6 +73,8 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
         have_handlers = True
 
     if log_file_level != None and log_file_level != "NONE":
+        log_file_level = getattr(logging, log_file_level)
+
         file_handler = logging.FileHandler(log_file_name)
         file_handler.setFormatter(logging.Formatter(formatstring))
         file_handler.setLevel(log_file_level)
