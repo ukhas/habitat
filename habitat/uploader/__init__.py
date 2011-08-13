@@ -19,7 +19,10 @@
 The uploader is a client for end users that pushes documents into a couchdb
 database where they can be used directly by the web client or picked up
 by a daemon for further processing.
+
 """
+
+__all__ = ["Uploader"]
 
 import time
 import copy

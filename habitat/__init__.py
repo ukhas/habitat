@@ -25,6 +25,7 @@ on maps.
     :toctree: habitat
 
     habitat.parser
+    habitat.uploader
     habitat.main
     habitat.utils
 """
@@ -35,6 +36,6 @@ __authors__ = "Adam Greig, Daniel Richman"
 __short_copyright__ = "2010 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-__all__ = ["parser", "main", "utils"]
+__all__ = ["parser", "uploader", "main", "utils"]
 
 from . import main
