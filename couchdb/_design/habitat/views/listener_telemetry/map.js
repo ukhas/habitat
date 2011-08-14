@@ -16,10 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with habitat.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* Used by spacenearus_receivers */
+
 function(doc) {
     // Emit a row per current listener_info document containing their callsign
     // and the time this LISTENER_INFO document was created by the listener.
-    if(doc.type == "listener_telem") {
-        emit([doc.data.callsign, doc.time_created], null);
+    if(doc.type == "listener_telemetry") {
+        emit([doc.time_created,  doc.data.callsign], null);
     }
 }

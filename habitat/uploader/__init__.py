@@ -53,7 +53,7 @@ class Uploader(object):
 
     After having created an Uploader object, call payload_telemetry,
     listener_telemetry or listener_info in any order. It is however
-    recommended that listener_info and listener_telem are called once
+    recommended that listener_info and listener_telemetry are called once
     before any other uploads
 
     See the CouchDB schema for more information, both on

@@ -218,7 +218,7 @@ class Parser(object):
         except couchdbkit.exceptions.ResourceConflict:
             attempts += 1
             if attempts >= 30:
-                err = "Could not save telem doc after 30 conflicts."
+                err = "Could not save telemetry doc after 30 conflicts."
                 logger.error(err)
                 raise RuntimeError(err)
             else:
