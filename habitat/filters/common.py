@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Daniel Richman, Adam Greig
+# Copyright 2011 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -16,26 +16,13 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-habitat is a web application for tracking the flight path of high altitude
-balloons, relying on a network of users with radios sending in received
-telemetry strings which are parsed into position information and displayed
-on maps.
-
-.. autosummary::
-    :toctree: habitat
-
-    habitat.parser
-    habitat.uploader
-    habitat.main
-    habitat.utils
+Common filters for the parser.
 """
 
-__name__ = "habitat"
-__version__ = "0.0.1"
-__authors__ = "Adam Greig, Daniel Richman"
-__short_copyright__ = "2010 " + __authors__
-__copyright__ = "Copyright " + __short_copyright__
+from habitat.utils import filtertools
 
-__all__ = ["parser", "uploader", "main", "utils", "filters"]
-
-from . import main
+def semicolons_to_commas(data, config):
+    data = {"data": data}
+    with filtertools.UKHASChecksumFixer("crc16-ccitt", data) as c:
+        c["data"] = c["data"].replace(";", ",")
+    return c["data"]
