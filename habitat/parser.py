@@ -28,7 +28,7 @@ import os.path
 import couchdbkit
 
 from . import sensor_manager
-from ..utils import dynamicloader
+from .utils import dynamicloader
 
 __all__ = ["Parser", "ParserModule"]
 

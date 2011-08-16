@@ -22,11 +22,9 @@ Test the UKHAS protocol parser.
 from nose.tools import assert_raises
 from copy import deepcopy
 
-# It would require a disproportionate amount of work to create a
-# FakeSensorManager
-from habitat.parser.sensor_manager import SensorManager
-
-from habitat.parser.parser_modules.ukhas_parser import UKHASParser
+# Mocking the SensorManager is a heck of a lot of effort. Not worth it.
+from ...sensor_manager import SensorManager
+from ...parser_modules.ukhas_parser import UKHASParser
 
 # A 'standard' config. Other configs can copy this and change parts.
 base_config = {
@@ -225,7 +223,7 @@ output_long["_extra_data"] = ["123", "4.56", "seven"]
 # Provide the sensor functions to the parser
 fake_sensors_config = {
     "sensors": [
-        {"name": "stdtelem", "class": "habitat.parser.sensors.stdtelem"}
+        {"name": "stdtelem", "class": "habitat.sensors.stdtelem"}
     ]
 }
 
@@ -235,7 +233,7 @@ class FakeParser:
 
 class TestUKHASParser:
     """UKHAS Parser"""
-    def setUp(self):
+    def setup(self):
         self.p = UKHASParser(FakeParser())
 
     def test_pre_parse_rejects_bad_sentences(self):

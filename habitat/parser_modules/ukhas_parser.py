@@ -97,7 +97,7 @@ import re
 from string import hexdigits
 
 from ..parser import ParserModule
-from ...utils import checksums
+from ..utils import checksums
 
 __all__ = ["UKHASParser"]
 
