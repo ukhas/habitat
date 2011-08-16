@@ -22,19 +22,49 @@ Tests the Dynamic Loader module, ../dynamicloader.py
 import sys
 import os
 import time
-import functools
 import datetime
 
 from nose.tools import raises
 
 from habitat.utils import dynamicloader
 
-from test_habitat.lib.reloadable_module_writer import ReloadableModuleWriter
 from test_habitat.test_utils.garbage import dynamicloadme
 from test_habitat.test_utils.garbage.dynamicloadme import AClass
 
 unimp_name = "test_habitat.test_utils.garbage.dynamicloadunimp"
 unimp_b_name = "test_habitat.test_utils.garbage.dynamicloadunimp_b"
+
+class ReloadableModuleWriter:
+    def __init__(self, modname, itemname):
+        components = test_habitat.scratch_path + [modname, itemname]
+
+        self.loadable = ".".join(components)
+        self.fullmodname = ".".join(components[:-1])
+
+        self.filename = os.path.join(test_habitat.scratch_dir, modname + ".py")
+
+    # Even when the builtin reload is called python will read from the
+    # pyc file if the embedded mtime matches that of the py file. That's
+    # typically going to be fine, however, if you load, modify, reload
+    # within one second then the updated module won't be read.
+    # We won't be reloading that fast, but the test will. So hack the
+    # mtime two seconds into the future every time.
+
+    def is_loaded(self):
+        if self.fullmodname in sys.modules:
+            raise ValueError("modname {0} is already in sys.modules".format(
+                                 self.fullmodname))
+
+    def write_code(self, code):
+        try:
+            newtime = os.path.getmtime(self.filename) + 2
+        except OSError:
+            newtime = int(time.time())
+
+        with open(self.filename, 'w') as f:
+            f.write(code)
+
+        os.utime(self.filename, (newtime, newtime))
 
 class TestLoad:
     """dynamicloader.load():"""
