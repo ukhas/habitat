@@ -20,7 +20,7 @@ Tests the stdtelem sensor functions
 """
 
 from nose.tools import raises
-from habitat.parser.sensors import stdtelem
+from ...sensors import stdtelem
 
 times = [
     ("12:00:00", 12, 0, 0),

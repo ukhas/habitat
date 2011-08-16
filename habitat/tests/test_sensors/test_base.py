@@ -20,7 +20,7 @@ Tests the base sensor functions
 """
 
 from nose.tools import raises
-from habitat.parser.sensors import base
+from ...sensors import base
 
 class TestBaseSensors:
     def test_ascii_ints(self):
