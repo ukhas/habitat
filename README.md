@@ -13,7 +13,7 @@ Written by various UKHAS members, see AUTHORS.
     $ pip install -r requirements.txt
 
     # for testing
-    pip install nose mox
+    $ pip install nose mox
 ```
 
 ## Installation
