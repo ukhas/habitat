@@ -23,10 +23,9 @@ import mox
 import copy
 import uuid
 
-import time
 import couchdbkit
 
-from ... import uploader
+from .. import uploader
 
 telemetry_data = {"some_data": 123, "_flag": True}
 telemetry_doc = {
