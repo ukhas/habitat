@@ -17,7 +17,7 @@
 
 
 """
-``habitat.sensors``: the sensor-function manager
+``habitat.sensor_manager``: the sensor-function manager
 
 The sensor function manager provides a collection of sensor functions,
 which are used by parser modules to turn extracted fields into useful data.

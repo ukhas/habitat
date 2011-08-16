@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Daniel Richman, Adam Greig
+# Copyright 2010, 2011 (C) Daniel Richman, Adam Greig
 #
 # This file is part of habitat.
 #
@@ -33,9 +33,8 @@ on maps.
 __name__ = "habitat"
 __version__ = "0.0.1"
 __authors__ = "Adam Greig, Daniel Richman"
-__short_copyright__ = "2010 " + __authors__
+__short_copyright__ = "2010, 2011 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-__all__ = ["parser", "uploader", "main", "utils", "filters"]
-
-from . import main
+__all__ = ["filters", "main", "parser", "parser_modules", "sensor_manager",
+           "sensors", "uploader", "utils"]

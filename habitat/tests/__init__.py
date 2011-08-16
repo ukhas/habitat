@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Adam Greig
+# Copyright 2010 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -16,17 +16,5 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Parser parses received telemetry into useful data.
-
-.. autosummary::
-    :toctree: habitat
-
-    habitat.parser.parser
-    habitat.parser.sensor_manager
-    habitat.parser.parser_modules
-    habitat.parser.sensors
+Tests for the python backend of habitat. For use with nosetests.
 """
-
-__all__ = ["parser", "sensor_manager", "parser_modules", "sensors"]
-
-from . import parser

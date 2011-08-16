@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Daniel Richman
+# Copyright 2010 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -16,16 +16,12 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Sensor function libraries.
+Parser modules for specific protocols.
 
 .. autosummary::
     :toctree: habitat
 
-    habitat.parser.sensors.base
-    habitat.parser.sensors.stdtelem
+    habitat.parser_modules.ukhas_parser
 """
 
-__all__ = ["base", "stdtelem"]
-
-from . import base
-from . import stdtelem
+__all__ = ["ukhas_parser"]
