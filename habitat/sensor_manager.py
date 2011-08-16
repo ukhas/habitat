@@ -51,7 +51,7 @@ object that can be stored in a couchdb database.
 *data* is the string to parse.
 """
 
-from ..utils import dynamicloader
+from .utils import dynamicloader
 from .sensors import base
 
 __all__ = ["SensorManager"]

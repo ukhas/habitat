@@ -19,10 +19,13 @@
 Tests the Sensor Manager
 """
 
+import mox
 from nose.tools import raises
-from habitat.parser.sensor_manager import SensorManager
+from ... import sensor_manager
 
-example_path = "test_habitat.test_parser.test_sensor_manager.example_sensor_library"
+from . import example_sensor_library_a, example_sensor_library_b
+
+example_path = "habitat.tests.test_sensor_manager.example_sensor_library"
 
 fake_config = {
     "sensors": [
@@ -37,44 +40,86 @@ empty_config = {
 
 cfg_c = {"abracadabra": "15802"}
 
-class TestSensorManager:
+class TestSensorManager(object):
+    def setup(self):
+        self.mocker = mox.Mox()
+        self.mocker.StubOutWithMock(sensor_manager, "dynamicloader")
+
+    def teardown(self):
+        self.mocker.UnsetStubs()
+
     def test_module_includes_base_functions(self):
-        self.mgr = SensorManager(empty_config)
+        self.mgr = sensor_manager.SensorManager(empty_config)
         assert len(self.mgr.libraries) == 1
         assert self.mgr.parse("base.ascii_int", None, "1234") == 1234
         assert self.mgr.parse("base.ascii_float", None, "12.32") == 12.32
         assert self.mgr.parse("base.string", None, "1234") == "1234"
 
     def test_init_loads_db_listed_modules_and_works(self):
-        self.mgr = SensorManager(fake_config)
+        sensor_manager.dynamicloader.load(example_path+"_a").AndReturn(
+            example_sensor_library_a)
+        sensor_manager.dynamicloader.load(example_path+"_b").AndReturn(
+            example_sensor_library_b)
+        self.mocker.ReplayAll()
+        self.mgr = sensor_manager.SensorManager(fake_config)
         assert len(self.mgr.libraries) == 3
-
         assert self.mgr.parse("liba.format_a", None, "thedata") == \
             ('formatted by a', "'thedata'")
         assert self.mgr.parse("liba.format_b", None, "asdf") == \
             {"information": 64, "hello": "world"}
         assert self.mgr.parse("libb.format_c", cfg_c, "asdf") == \
             "more functions"
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
 
     @raises(ValueError)
     def test_errors_bubble_up_a(self):
-        SensorManager(empty_config).parse("base.ascii_int", None, "non-int")
+        sensor_manager.SensorManager(empty_config).parse("base.ascii_int",
+                                                         None, "non-int")
 
     @raises(ValueError)
     def test_errors_bubble_up_b(self):
-        SensorManager(fake_config).parse("libb.format_d", {}, "hmm")
+        sensor_manager.dynamicloader.load(example_path+"_a").AndReturn(
+            example_sensor_library_a)
+        sensor_manager.dynamicloader.load(example_path+"_b").AndReturn(
+            example_sensor_library_b)
+        self.mocker.ReplayAll()
+
+        sensor_manager.SensorManager(fake_config).parse("libb.format_d", {},
+                                                        "hmm")
+
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
 
     def test_parse_passes_config_dict(self):
-        SensorManager(fake_config).parse("libb.format_c", cfg_c,
-                                                  "data")
+        sensor_manager.dynamicloader.load(example_path+"_a").AndReturn(
+            example_sensor_library_a)
+        sensor_manager.dynamicloader.load(example_path+"_b").AndReturn(
+            example_sensor_library_b)
+        self.mocker.ReplayAll()
+
+        sensor_manager.SensorManager(fake_config).parse("libb.format_c",
+                                                        cfg_c, "data")
+
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
 
     @raises(ValueError)
     def test_cannot_use_sensor_not_in_all(self):
-        SensorManager(fake_config).parse("libb.somethingelse", {},
-                                                  "hah!")
+        sensor_manager.dynamicloader.load(example_path+"_a").AndReturn(
+            example_sensor_library_a)
+        sensor_manager.dynamicloader.load(example_path+"_b").AndReturn(
+            example_sensor_library_b)
+        self.mocker.ReplayAll()
+
+        sensor_manager.SensorManager(fake_config).parse("libb.somethingelse",
+                                                        {}, "hah!")
+
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
 
     def test_repr_describes_manager(self):
-        mgr = SensorManager(empty_config)
+        mgr = sensor_manager.SensorManager(empty_config)
         expect = "<habitat.parser.SensorManager: {num} libraries loaded>"
         assert repr(mgr) == expect.format(num=1)
         mgr.load(example_path + "_a", "liba")
