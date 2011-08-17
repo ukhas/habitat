@@ -1,0 +1,37 @@
+digraph {
+	graph [ranksep=0.25, fontname=Arial, nodesep=0.125];
+	node [fontname=Arial, style="filled,rounded", height=0, width=0, shape=box, fontcolor=white];
+	edge [fontname=Arial];
+	5 [color="#ff0100", fontcolor="#ffffff", fontsize="10.00", label="threading:230:wait\n99.89%\n(0.00%)\n6"];
+	5 -> 160 [color="#ff0100", label="99.89%\n12", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0100", labeldistance="4.00", penwidth="4.00"];
+	6 [color="#0d0f73", fontcolor="#ffffff", fontsize="10.00", label="threading:391:wait\n0.46%\n(0.00%)\n2"];
+	6 -> 5 [color="#0d0f73", label="0.46%\n2", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0f73", labeldistance="0.50", penwidth="0.50"];
+	9 [color="#fe0600", fontcolor="#ffffff", fontsize="10.00", label="Queue:150:get\n99.43%\n(0.00%)\n1"];
+	9 -> 5 [color="#fe0600", label="99.43%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#fe0600", labeldistance="3.98", penwidth="3.98"];
+	13 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="request:273:do_send\n0.11%\n(0.00%)\n1"];
+	13 -> 156 [color="#0d0d73", label="0.11%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	36 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="request:176:request\n0.11%\n(0.00%)\n1"];
+	36 -> 13 [color="#0d0d73", label="0.11%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	41 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="resource:177:request\n0.11%\n(0.00%)\n1"];
+	41 -> 36 [color="#0d0d73", label="0.11%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	66 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="main:351:run\n100.00%\n(0.00%)\n1"];
+	66 -> 9 [color="#fe0600", label="99.43%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#fe0600", labeldistance="3.98", penwidth="3.98"];
+	66 -> 106 [color="#0d0d73", label="0.11%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	66 -> 174 [color="#0d0f73", label="0.46%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0f73", labeldistance="0.50", penwidth="0.50"];
+	105 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="resource:145:post\n0.11%\n(0.00%)\n1"];
+	105 -> 181 [color="#0d0d73", label="0.11%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	106 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="client:767:ensure_full_commit\n0.11%\n(0.00%)\n1"];
+	106 -> 105 [color="#0d0d73", label="0.11%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+	120 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="<string>:1:<module>\n100.00%\n(0.00%)\n1"];
+	120 -> 136 [color="#ff0000", label="100.00%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0000", labeldistance="4.00", penwidth="4.00"];
+	136 [color="#ff0000", fontcolor="#ffffff", fontsize="10.00", label="threading:481:run\n100.00%\n(0.00%)\n1"];
+	136 -> 66 [color="#ff0000", label="100.00%\n1", arrowsize="1.00", fontsize="10.00", fontcolor="#ff0000", labeldistance="4.00", penwidth="4.00"];
+	156 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="~:0:<time.sleep>\n0.11%\n(0.11%)\n1"];
+	160 [color="#ff0100", fontcolor="#ffffff", fontsize="10.00", label="~:0:<built-in method acquire>\n99.89%\n(99.89%)\n51"];
+	167 [color="#0d0f73", fontcolor="#ffffff", fontsize="10.00", label="SocketServer:231:shutdown\n0.46%\n(0.00%)\n1"];
+	167 -> 6 [color="#0d0f73", label="0.46%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0f73", labeldistance="0.50", penwidth="0.50"];
+	174 [color="#0d0f73", fontcolor="#ffffff", fontsize="10.00", label="http:191:shutdown\n0.46%\n(0.00%)\n1"];
+	174 -> 167 [color="#0d0f73", label="0.46%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0f73", labeldistance="0.50", penwidth="0.50"];
+	181 [color="#0d0d73", fontcolor="#ffffff", fontsize="10.00", label="resource:71:request\n0.11%\n(0.00%)\n1"];
+	181 -> 41 [color="#0d0d73", label="0.11%\n1", arrowsize="0.35", fontsize="10.00", fontcolor="#0d0d73", labeldistance="0.50", penwidth="0.50"];
+}

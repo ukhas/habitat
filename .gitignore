@@ -1,0 +1,5 @@
+*.pyc
+*.swp
+dist/
+MANIFEST
+habitat.egg-info/

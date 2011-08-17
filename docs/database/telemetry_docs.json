@@ -1,0 +1,120 @@
+/*
+    Payload telemetry documents have the SHA256 of the sentence string as their
+    ID.  This helps avoid the race condition of two people submitting the same
+    string at the same time - CouchDB's optimistic concurrency model will block
+    two people from creating a document with the same ID, so one will succeed
+    and the other backs off, loads the new document and just appends a
+    receiver.
+*/
+"ab2a7300684278180d5d26d614a85139d186a5a09038bbbfcfbfce07f953507b": {
+    "type": "payload_telemetry",
+
+    /*
+        Estimated received time is calculated based on all the received times
+        of individual listeners, who may have inaccurately synchronised clocks
+        or be very far out indeed.
+    */
+    "estimated_time_created": 1292772125,
+
+    /*
+        Data is the dict returned by the parser module, containing all the
+        useful data from this string, hopefully including a latitude and
+        longitude.
+    */
+    "data": {
+        /*
+            The name chosen in the parser config for the parser module
+            that parsed this telemetry
+        */
+        "_protocol": "UKHAS",
+
+        /*
+            The flight document that was used to determine configuration
+            when the message was parsed is here if available
+        */
+        "_flight": "c89860d6f68b1f31ac9480ff9f95bb62",
+
+        /*
+            _raw is the original message string as transmitted by the payload,
+            in base64. If the payload used an ascii protocol, and there were no
+            errors, and the whole message could be represented as ascii,
+            then _sentence is also the original message string, but in ascii
+        */
+        "_raw": "JCRoYWJpdGF0LDEyMywxMjo0NTowNiwtMzUuMTAzMiwxMzguODU2OCw0Mjg1LDMuNixoYWIqNTY4MQ=="
+        "_sentence": "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681"
+
+        /*
+            The callsign of the payload
+        */
+        "payload": "habitat",
+
+        /*
+            Further data is typically protocol-specific, but the following
+            are typical of a telemetry message:
+        */
+
+        /*
+            Sequential Message ID
+        */
+        "message_count": 123,
+
+        /*
+            GPS Data
+        */
+        "time": {
+            "hour": 12,
+            "minute": 45,
+            "second": 6
+        },
+        "latitude": -35.1032,
+        "longitude": 138.8568,
+        "altitude": 0,
+        "speed": 0.0,
+
+        /*
+            Other data
+        */
+        "custom_string": "hab"
+    },
+
+    /*
+        Receivers is a list of people who received this message, including when
+        they think they received it, when habitat got their message and the
+        CouchIDs of the last listener position telemetry and listener
+        information they sent about themselves.
+    */
+    "receivers": {
+        "M0RND": {
+            "time_created": 1292772125,
+            "time_uploaded": 1292772130,
+            "latest_telemetry": "10bedc8832fe563c901596c900001906",
+            "latest_info": "10bedc8832fe563c901596c900038917"
+        },
+        "M0ZDR": {
+            "time_created": 1292772126,
+            "time_uploaded": 1292772122,
+            "latest_telemetry": "10bedc8832fe563c901596c9000031dd"
+            "latest_info": "10bedc8832fe563c901596c9000079fe"
+        }
+    }
+},
+
+/*
+    Listener telemetry documents use Couch IDs.
+*/
+"10bedc8832fe563c901596c900001906": {
+    "type": "listener_telemetry",
+    "time_created": 1292772138,
+    "time_uploaded": 1292772140,
+    "data": {
+        "callsign": "M0RND",
+        "time": {
+            "hour": 12,
+            "minute": 40,
+            "second": 12
+        },
+        "latitude": -35.11,
+        "longitude": 137.567,
+        "altitude": 12
+    }
+}

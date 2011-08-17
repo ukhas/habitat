@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+  <head>
+    <style type="text/css"> body { font-family: sans-serif; } </style>
+    <title>habitat overview</title>
+  </head>
+  <body>
+    <h1>habitat overview</h1>
+    <div>
+      <h2>Users:</h2>
+      <ul>
+        <li><b>People listening at home</b>: constitute the bulk of the distributed network nodes, have reasonably reliable internet connectivity and are uploading telemetry strings. They want to see a map with all known points on it, as well as compete for points in a points game</li>
+        <li><b>Chase cars:</b> usually only one or two per launch, but desire the latest position information when they have connectivity. Internet access patchy, usually via 3G networks which means restricted bandwidth and availability. Often upload telemetry strings, but will need to be able to spool them locally for retransmission when connectivity is established. Portable, no-network-required maps showing last known points a major plus.</li>
+        <li><b>People heading out to listen</b>: rare but main requirement will be to spool messages for transmission when internet is available</li>
+        <li><b>Non-listeners:</b> people who just want to see the balloon's (and chase car's/cars') progress on the map, without installing any extra software</li>
+        <li><b>Phones</b>: could decode RTTY and upload telem, or serve as chase car locators, but installing extra custom software is hard and there are a wide range of platforms that would need targetting. an HTTP access point for them to send data to would be easiest for the creators of the primary programs to use, and a web interface could provide return data (e.g., via google maps)</li>
+        <li><b>Servers</b>: want all data from everyone, for archiving, serving as maps, analysing, awarding points, et cetera. loads of bandwidth, very reliable internet and uptime. can function as central network nodes</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Homepage</h2>
+      <p>a static html file; fullscreen map, includes these independent JS libs</p>
+      <ul>
+        <li>
+          <b>map abstraction layer</b>
+          <ul>
+            <li>OS</li>
+            <li>OSM</li>
+            <li>GMaps</li>
+            <li>creates a 'Map Tracks' window showing all the current tracks that have been added to the map, e.g. from predictor, archives, current track, chase cars &amp;c, with options to hide or remove</li>
+          </ul>
+        </li>
+        <li>
+          <b>UI abstraction layer</b>
+          <ul>
+            <li>jQuery UI: floaty UI windows (like the ones in the v2 predictor) library; each of the below will create its own window. Must be minimisable.</li>
+            <li>UI for phones</li>
+            <li>etc.</li>
+          </ul>
+        </li>
+        <li>
+          <b>mission control</b>
+          <ul>
+            <li>downloads a file by ajax (and perhaps updates periodically) which specifies <b>flights</b> by a time range (24 hours, or more for floaters) and one or more callsigns. Anything that doesn't match goes into the "sandbox" track group (which clears every 24 hours @ UTC 0:00 ?) for people to test with w/o spamming up the homepage.</li>
+            <li>The windows for the tracker, predictor, and archive can be default minimised or open depending on what's happening *now*, so if during a flight someone goes to the homepage they get what they (probably) want there and then</li>
+          </ul>
+        </li>
+        <li>
+          <b>archive client</b>
+          <ul>
+            <li>Uses the mission control list to find out what's happening; list of old and in-progress missions</li>
+            <li>in the floaty UI box you can choose which tracks you want to show.</li>
+            <li>Loads data</li>
+            <li>If flight is in progress, streams (new only) data (by ajax or flash socket for push rather than poll) and plots the points on map. Asks the server to only send it the tracks that it's interested in.</li>
+            <li>Hiding indvidual tracks in the "group" (see mission control) could be done by the map tracks window (?)</li>
+          </ul>
+        </li>
+        <li>
+          <b>predictor client</b>
+          <ul>
+            <li>same interface as current "v2" predictor; put stuff in, press button, get prediction</li>
+          </ul>
+        </li>
+        <li>
+          notes:
+          <ul>
+            <li>All of these separate libs should be able to plot data on the map independently and simultaneously</li>
+            <li>In flight predictions: spacenear updates a prediction as the flight goes. (Since the predictor caches predictions we could say, request a new one every 5 minutes and "implement" this feature totally in Javascript with a call to the predictor lib from the tracker lib).</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h2>Current names &amp; Definitions</h2>
+      <p><i>Currently</i>, there are many <b>listeners</b> at home, or there may be a listener in a <b>chase car</b> (or boat?). The listeners use the <b>dl-client</b> software which may be dl-fldigi. dl stands for <b>distributed listener</b> and is the name for the system encompassing the dl-client, the many listeners, and the <b>dl-server or dlistener</b> (which sometimes, is confusingly referred to simply as <b>listen or listener</b>). The distributed listener could be thought of to include the tracker, though really the listener is a system which feeds into the tracker. The <b>tracker</b> collects points (although the strings are parsed by the listener) in a database, and serves ajax requests for data made by people using the html <b>map</b>.</p>
+    </div>
+    <div>
+      <h2>Proposed habitat definitions:</h2>
+      <ul>
+        <li><b>payloads</b> encode <i>payload data</i> into a <b>telemetry string</b> and send them out as a <b>transmission</b></li>
+        <li><b>payload data</b> contains information from the <i>payload</i> such as position, time and sensor information</li>
+        <li>
+          <b>messages</b> contain
+          <ul>
+            <li>the source <i>listener's identifier</i></li>
+            <li>a message type, which is one of:
+              <ul>
+                <li><i>received telemetry string</i></li>
+                <li><i>listener information</i></li>
+                <li><i>listener telemetry string</i> (from chase car gps, for example)</li>
+                <li><i>telemetry data</i></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>there are many <b>listeners</b>, which comprise
+          <ul>
+            <li>some sort of unique <b>identifier</b></li>
+            <li><b>listener information</b> (metadata such as callsign and location)</li>
+            <li>a <b>radio</b> - receives the <i>transmission</i></li>
+            <li>
+              <b>decoder</b> (a class of which fldigi is one)
+              <ul>
+                <li>decodes the <i>transmission</i> to a sequence of chars</li>
+                <li>splits the sequence of chars into <i>telemetry strings</i> by looking for start and end markers.</li>
+                <li>since noise creates imperfections in the received data, there are many <b>received telemetry strings</b> for each <i>telemetry string</i> transmitted by the payload</li>
+              </ul>
+            </li>
+            <li>
+              <b>uploader</b> - transmits (potentially via HTTP POST) this information, encapsulated in <i>messages,</i> to a <i>message server</i>, along with the <i>listener</i>'s <i>listener information</i>
+              <ul>
+                <li>every single <i>received telemetry string</i></li>
+                <li><i>listener telemetry strings</i> from a local gps (eg. chase car)</li>
+                <li>periodically, <i>listener information</i></li>
+                <li>if the listener is static, periodically, a <i>listener telemetry string</i> for their location is sent</li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <b>message server</b> is one of these
+          <ul>
+            <li>
+              <b>master message server</b> on the <i>master server</i>
+              <ul>
+                <li>
+                  gets <i>messages</i> from an <i>uploader</i>, a <i>spooler</i> or a <i>dummy message server</i> (although all three use the same HTTP POST interface/protocol) and
+                  <ul>
+                    <li>pushes each <i>message</i> to the relevant sink</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li>
+              <b>spooler</b> on localhost
+              <ul>
+                <li>gets <i>messages</i> from a localhost <i>uploader</i> and attempts to forward each <i>message</i> to the <i>master message server</i>. If it fails to receive an acknowledgement, it stores the <i>message</i> for later retry.</li>
+              </ul>
+            </li>
+            <li>
+              <b>dummy message server</b> on localhost
+              <ul>
+                <li>
+                  gets <i>messages</i> from a localhost <i>uploader</i> and
+                  <ul>
+                    <li>pushes each <i>message</i> to the relevant sink</li>
+                    <li>attempts to forward each <i>message</i> to the <i>master message server</i>. If it fails to receive an acknowledgement, it stores the <i>message</i> for later retry.</li>
+                  </ul>
+                </li>
+                <li>
+                  periodically attempts to contact the <i>archive</i> on the <i>master server</i> in order to download all of the <i>messages</i> that the <i>master server</i> has. It then
+                  <ul>
+                    <li>pushes each <i>message</i> to the relevant sink</li>
+                    <li>(NB: this may cause duplicates; localhost-&gt;master-&gt;localhost, but this is known)</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <b>raw sinks</b>
+          <ul>
+            <li>accept <i>messages</i> of type <i>received telemetry strings</i></li>
+            <li>must tolerate duplicates</li>
+            <li><b>repairer</b> attempts to correct an invalid message and reinserts it into the local <i>message server</i> if possible</li>
+            <li><b>raw logger</b> stores the <i>received telemetry strings</i></li>
+            <li><b>parser</b> decodes the <i>received telemetry string</i> into <i>telemetry data</i> only if the checksum is correct, and sends a <i>telemetry data -</i> <i>message</i> to the local <i>message server</i></li>
+          </ul>
+        </li>
+        <li>
+          <b>parsed sinks</b>
+          <ul>
+            <li>accept <i>messages</i> of types <i>telemetry data,</i> <i>listener telemetry strings</i> and <i>listener information</i></li>
+            <li>
+              the <b>archive</b>
+              <ul>
+                <li>stores <i>telemetry data</i></li>
+                <li>stores <i>listener telemetry strings</i></li>
+                <li>stores <i>listener information</i></li>
+                <li>instead of duplicates, against each <i>telemetry data</i> item, it stores a list of <i>listener identifiers</i> and has the ability to recall what their most recent <i>listener telemetry string</i> was at the time when the <i>listener</i> uploaded their copy</li>
+                <li>if not installed on the <i>master server</i>, it periodically attempts to contact the <i>archive</i> on the <i>master server</i> in order to download all of the de-duplicated data it has, and merge it into its own data</li>
+              </ul>
+            </li>
+            <li><b>points game</b> awards points to <i>listener identifiers</i> (possibly based on their distance to the payload, as determined from their most recent <i>listener telemetry string</i>)</li>
+          </ul>
+        </li>
+        <li><b>mission control</b> contains a list of <b>flights</b>, defined by a time range, and one or more callsigns, which may be the callsigns of payloads or chase cars</li>
+        <li>
+          <i>listeners</i> and spectators will use the <b>map</b> web application
+          <ul>
+            <li>some may be using a copy served by a HTTP daemon on localhost, and some using one on the <i>master server.</i> The machine that runs the HTTP server they are using is hereafter referred to as the <b>web application server</b></li>
+            <li>the <b>predictor client</b> contacts the <b>predictor binary</b> running on the <i>web application server</i> in order to display predictions on the <i>map</i></li>
+            <li>the <b>archive client</b> contacts the <b>archive</b> running on the <i>web application server</i> in order to download and display all information from a <i>flight</i> on the map. if <i>mission control</i> reports that the flight is currently in progress, it will stream or poll for that information</li>
+            <li>the <i>points game client</i> and <i>mission control client</i> periodically download data from the <i>points game</i> or <i>mission control</i>, respectively</li>
+          </ul>
+        </li>
+        <li>
+          notes:
+          <ul>
+            <li>the <i>master server</i> in our setup will typically be nessie</li>
+            <li>that some of these may be implemented in a single process (for example, <b>dl-fldigi</b> currently is a single process containing a modified fldigi and a builtin <i>uploader</i>)</li>
+            <li>some <i>messages</i> by design will contain duplicated information from different <i>listener</i>, or perhaps (due to replication) from the same <i>listener</i></li>
+            <li>the <i>points game</i> and the <i>dummy message server</i> could really do with better names</li>
+            <li>We've looked at the possible users and if they require one of the "tools", their use case will probably require a message daemon install anyway. Therefore the communication between the listener and the other tools doesn't have to be HTTP or even IP; could be a unix socket (which might be a bit nicer).</li>
+            <li>The tool that would be concerned about replication or internet reliability is the listener. We could use an existing DB or write our own; however, if we do use an existing one (SQL or NoSQL) using the built-in replication may cause problems. For starters, users would have to be authenticated with it in order to replicate it. The message system we want to create is append-only; but most DBs are not. We probably - either way - would have to create a frontend API which is used by listeners to add data to the listener tool but also by the chase car when it wants to bring itself up to speed. The operations (put and get) are exactly the same.</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+    <div>
+      <p>
+        habitat plan – Copyright Daniel Richman and Adam Greig 2010
+        <br />
+        This work is licensed under a Creative Commons Attribution-NonCommerical-ShareAlike 2.0 UK:England &amp; Wales License
+        <br />
+        <a href="http://creativecommons.org/licenses/by-nc-sa/2.0/uk/">http://creativecommons.org/licenses/by-nc-sa/2.0/uk/</a>
+      </p>
+    </div>
+  </body>
+</html>
