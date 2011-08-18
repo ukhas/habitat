@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
-from habitat.utils import checksums
+from ...utils import checksums
 
 class TestChecksums:
     def setUp(self):
