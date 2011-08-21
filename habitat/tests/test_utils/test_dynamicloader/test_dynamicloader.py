@@ -23,25 +23,27 @@ import sys
 import os
 import time
 import datetime
+import tempfile
+import shutil
 
 from nose.tools import raises
 
-from habitat.utils import dynamicloader
+from ....utils import dynamicloader
 
-from test_habitat.test_utils.garbage import dynamicloadme
-from test_habitat.test_utils.garbage.dynamicloadme import AClass
+from . import example_module
+from .example_module import AClass
 
-unimp_name = "test_habitat.test_utils.garbage.dynamicloadunimp"
-unimp_b_name = "test_habitat.test_utils.garbage.dynamicloadunimp_b"
+unimp_a_name = "unimpa.dynamicloadunimp_a"
+unimp_b_name = "unimpb.dynamicloadunimp_b"
 
 class ReloadableModuleWriter:
-    def __init__(self, modname, itemname):
-        components = test_habitat.scratch_path + [modname, itemname]
+    def __init__(self, tempdir, modname, itemname):
+        components = [modname, itemname]
 
         self.loadable = ".".join(components)
         self.fullmodname = ".".join(components[:-1])
 
-        self.filename = os.path.join(test_habitat.scratch_dir, modname + ".py")
+        self.filename = os.path.join(tempdir, modname + ".py")
 
     # Even when the builtin reload is called python will read from the
     # pyc file if the embedded mtime matches that of the py file. That's
@@ -69,11 +71,35 @@ class ReloadableModuleWriter:
 class TestLoad:
     """dynamicloader.load():"""
 
+    def setup(self):
+        """setup a tempdir for messing about in (e.g. reloadablemodulewriter);
+        also use it to copy example_module.py into two other names, then put
+        this folder on the path so it can be imported from."""
+        self.tempdir = tempfile.mkdtemp()
+        #unimp_dir = os.path.join(self.tempdir, 'unimp')
+        #os.mkdir(unimp_dir)
+        unimpa_dir = os.path.join(self.tempdir, 'unimpa')
+        unimpb_dir = os.path.join(self.tempdir, 'unimpb')
+        os.mkdir(unimpa_dir)
+        os.mkdir(unimpb_dir)
+        unimp_a = os.path.join(unimpa_dir, 'dynamicloadunimp_a.py')
+        unimp_b = os.path.join(unimpb_dir, 'dynamicloadunimp_b.py')
+        shutil.copyfile("./example_module.py", unimp_a)
+        shutil.copyfile("./example_module.py", unimp_b)
+        open(os.path.join(unimpa_dir, '__init__.py'), 'w').close()
+        open(os.path.join(unimpb_dir, '__init__.py'), 'w').close()
+        sys.path.insert(0, self.tempdir)
+
+    def teardown(self):
+        """clean up the temp folder and path entries"""
+        sys.path.remove(self.tempdir)
+        shutil.rmtree(self.tempdir)
+
     def test_load_gets_correct_object(self):
         # This tests calls of the format load(MyClass) and
         # load("packagea.packageb.aclass")
-        for i in [dynamicloadme.AClass, dynamicloadme.BClass,
-                  dynamicloadme.AFunction, dynamicloadme.BFunction]:
+        for i in [example_module.AClass, example_module.BClass,
+                  example_module.AFunction, example_module.BFunction]:
             assert dynamicloader.load(i) == i
 
             # if nosetests is running --with-isolation, this is required:
@@ -121,18 +147,18 @@ class TestLoad:
         assert dynamicloader.load("whichdb", force_reload=True).whichdb
         assert new_reload.hits == 1  # no change; no longer wrapped
 
-    def test_can_load_module_not_imported_by_parent_module(self):
-        dynamicloader.load(unimp_b_name)
-
     def test_can_load_notyetimported_function(self):
         """can load an object from a module that has not been imported yet"""
-        f = dynamicloader.load(unimp_name + ".AFunction")
+        f = dynamicloader.load(unimp_b_name + ".AFunction")
         assert f() == 412314
+
+    def test_can_load_module_not_imported_by_parent_module(self):
+        dynamicloader.load(unimp_a_name)
 
     def test_can_use_loaded_class(self):
         # CClass is subclass of AClass; CClass is callable
-        a = dynamicloader.load(dynamicloadme.AClass.__fullname__)
-        c = dynamicloader.load(dynamicloadme.CClass.__fullname__)
+        a = dynamicloader.load(example_module.AClass.__fullname__)
+        c = dynamicloader.load(example_module.CClass.__fullname__)
         assert issubclass(c, a)
         oa = a()
         oc = c()
@@ -142,8 +168,8 @@ class TestLoad:
         assert oc(None, None) == None
 
     def test_can_load_generator(self):
-        a = dynamicloader.load(dynamicloadme.GFunction.__fullname__)
-        b = dynamicloader.load(dynamicloadme.GFunction)
+        a = dynamicloader.load(example_module.GFunction.__fullname__)
+        b = dynamicloader.load(example_module.GFunction)
         t = ["Hello", "World"]
         ta = [i for i in a()]
         tb = [i for i in b()]
@@ -152,7 +178,7 @@ class TestLoad:
     @raises(TypeError)
     def test_load_rejects_garbage_target(self):
         """load rejects a target that is neither a function nor a class"""
-        dynamicloader.load(dynamicloadme.__name__ + ".avariable")
+        dynamicloader.load(example_module.__name__ + ".avariable")
 
     @raises(TypeError)
     def test_load_rejects_garbage_argument(self):
@@ -164,11 +190,11 @@ class TestLoad:
 
     @raises(AttributeError)
     def test_load_rejects_nonexistent_class(self):
-        dynamicloader.load(dynamicloadme.__name__ + ".nothingasdf")
+        dynamicloader.load(example_module.__name__ + ".nothingasdf")
 
     @raises(ImportError)
     def test_load_does_not_recurse_into_classes(self):
-        dynamicloader.load(dynamicloadme.__name__ + ".AClass.afunc")
+        dynamicloader.load(example_module.__name__ + ".AClass.afunc")
 
     @raises(TypeError)
     def test_refuses_to_load_garbage_loadable(self):
@@ -197,10 +223,11 @@ class TestLoad:
         self.check_reload_module("reloadableb", modulecode_1, modulecode_2)
 
     def check_reload_module(self, modname, modulecode_1, modulecode_2):
-        rmod = ReloadableModuleWriter(modname, 'asdf')
+        rmod = ReloadableModuleWriter(self.tempdir, modname, 'asdf')
         assert not rmod.is_loaded()
 
-        roundabout_mod = ReloadableModuleWriter(modname + "_alias", "asdf")
+        roundabout_mod = ReloadableModuleWriter(self.tempdir,
+            modname + "_alias", "asdf")
         assert not roundabout_mod.is_loaded()
         roundabout_mod.write_code("from {0} import asdf".format(modname))
 
@@ -254,8 +281,8 @@ class TestLoad:
 
 class TestFullname:
     def test_fullname(self):
-        lm = dynamicloadme
-        lmn = dynamicloadme.__name__
+        lm = example_module
+        lmn = example_module.__name__
 
         assert dynamicloader.fullname(lm.AClass) == lmn + ".AClass"
         assert dynamicloader.fullname(lm.AFunction) == lmn + ".AFunction"
@@ -265,7 +292,7 @@ class TestFullname:
         assert dynamicloader.fullname(lmn) == lmn
         assert dynamicloader.fullname(lmn + ".AClass") == lmn + ".AClass"
 
-        # Because we import dynamicloadme into this module, we *could*
+        # Because we import example_module into this module, we *could*
         # import AClass by this route (see above). fullname must tolerate this
         acwn = __name__ + ".AClass"
         assert dynamicloader.fullname(acwn) == lmn + ".AClass"
@@ -278,16 +305,16 @@ class TestInspectors:
     def test_isclass(self):
         fn = dynamicloader.isclass
         ex = dynamicloader.expectisclass
-        self.check_function_success(fn, ex, dynamicloadme.AClass)
-        self.check_function_failure(fn, ex, dynamicloadme.AFunction,
+        self.check_function_success(fn, ex, example_module.AClass)
+        self.check_function_failure(fn, ex, example_module.AFunction,
             TypeError)
         self.check_function_failure(fn, ex, "asdf", TypeError)
 
     def test_issubclass(self):
         fn = dynamicloader.issubclass
         ex = dynamicloader.expectissubclass
-        self.check_value_function(fn, ex, dynamicloadme.CClass,
-            dynamicloadme.Parent2, dynamicloadme.BClass, TypeError)
+        self.check_value_function(fn, ex, example_module.CClass,
+            example_module.Parent2, example_module.BClass, TypeError)
 
     def test_isfunction(self):
         """isfunction, isgeneratorfunction, isstandardfunction, iscallable"""
@@ -300,11 +327,11 @@ class TestInspectors:
         fni = dynamicloader.iscallable
         exi = dynamicloader.expectiscallable
 
-        afn = dynamicloadme.AFunction
-        gfn = dynamicloadme.GFunction
-        acl = dynamicloadme.AClass
-        ccl = dynamicloadme.CClass
-        dcl = dynamicloadme.DClass
+        afn = example_module.AFunction
+        gfn = example_module.GFunction
+        acl = example_module.AClass
+        ccl = example_module.CClass
+        dcl = example_module.DClass
 
         self.check_function_success(fnn, exn, afn)
         self.check_function_success(fnn, exn, gfn)
@@ -326,11 +353,11 @@ class TestInspectors:
         self.check_function_failure(fni, exi, "asdf", TypeError)
 
     def test_hasnumargs(self):
-        for func, val in [(dynamicloadme.AFunction, 0),
-                          (dynamicloadme.BFunction, 3),
-                          (dynamicloadme.CClass, 2),
-                          (dynamicloadme.DClass, 2),
-                          (dynamicloadme.BClass.a_method, 0)]:
+        for func, val in [(example_module.AFunction, 0),
+                          (example_module.BFunction, 3),
+                          (example_module.CClass, 2),
+                          (example_module.DClass, 2),
+                          (example_module.BClass.a_method, 0)]:
 
             self.check_value_function(dynamicloader.hasnumargs,
                                       dynamicloader.expecthasnumargs,
@@ -342,10 +369,10 @@ class TestInspectors:
         exa = dynamicloader.expecthasattr
         fnm = dynamicloader.hasmethod
         exm = dynamicloader.expecthasmethod
-        acl = dynamicloadme.AClass
-        bcl = dynamicloadme.BClass
-        ccl = dynamicloadme.CClass
-        mod = dynamicloadme
+        acl = example_module.AClass
+        bcl = example_module.BClass
+        ccl = example_module.CClass
+        mod = example_module
 
         self.check_value_function(fna, exa, acl, "anattr", "asdf", TypeError)
         self.check_value_function(fna, exa, ccl, "anattr", "asdf", TypeError)
