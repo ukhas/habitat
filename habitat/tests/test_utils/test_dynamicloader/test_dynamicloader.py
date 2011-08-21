@@ -33,8 +33,8 @@ from ....utils import dynamicloader
 from . import example_module
 from .example_module import AClass
 
-unimp_a_name = "unimpa.dynamicloadunimp_a"
-unimp_b_name = "unimpb.dynamicloadunimp_b"
+unimp_a_name = "unimp.dynamicloadunimp_a"
+unimp_b_name = "unimp.dynamicloadunimp_b"
 
 class ReloadableModuleWriter:
     def __init__(self, tempdir, modname, itemname):
@@ -76,23 +76,22 @@ class TestLoad:
         also use it to copy example_module.py into two other names, then put
         this folder on the path so it can be imported from."""
         self.tempdir = tempfile.mkdtemp()
-        #unimp_dir = os.path.join(self.tempdir, 'unimp')
-        #os.mkdir(unimp_dir)
-        unimpa_dir = os.path.join(self.tempdir, 'unimpa')
-        unimpb_dir = os.path.join(self.tempdir, 'unimpb')
-        os.mkdir(unimpa_dir)
-        os.mkdir(unimpb_dir)
-        unimp_a = os.path.join(unimpa_dir, 'dynamicloadunimp_a.py')
-        unimp_b = os.path.join(unimpb_dir, 'dynamicloadunimp_b.py')
-        shutil.copyfile("./example_module.py", unimp_a)
-        shutil.copyfile("./example_module.py", unimp_b)
-        open(os.path.join(unimpa_dir, '__init__.py'), 'w').close()
-        open(os.path.join(unimpb_dir, '__init__.py'), 'w').close()
+        unimp_dir = os.path.join(self.tempdir, 'unimp')
+        os.mkdir(unimp_dir)
+        unimp_a = os.path.join(unimp_dir, 'dynamicloadunimp_a.py')
+        unimp_b = os.path.join(unimp_dir, 'dynamicloadunimp_b.py')
+        this_path = os.path.abspath(os.path.dirname(__file__))
+        file_path = os.path.join(this_path, 'example_module.py')
+        shutil.copyfile(file_path, unimp_a)
+        shutil.copyfile(file_path, unimp_b)
+        open(os.path.join(unimp_dir, '__init__.py'), 'w').close()
         sys.path.insert(0, self.tempdir)
 
     def teardown(self):
         """clean up the temp folder and path entries"""
         sys.path.remove(self.tempdir)
+        if 'unimp' in sys.modules:
+            del sys.modules['unimp']
         shutil.rmtree(self.tempdir)
 
     def test_load_gets_correct_object(self):
