@@ -118,7 +118,6 @@ class Uploader(object):
         this::
 
             data = {
-                "callsign": "M0RND",
                 "name": "Adam Greig",
                 "location": "Cambridge, UK",
                 "radio": "ICOM IC-7000",
