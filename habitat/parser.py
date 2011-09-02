@@ -315,31 +315,24 @@ class Parser(object):
                     repr(f))
             return data
 
-    def _hotfix_filter(self, data, f):
-        """Load a filter specified by some code in the database. Check its
-        authenticity by verifying its certificate, then run if OK."""
+    def _sanity_check_hotfix(self, f):
+        """Perform basic sanity checks on **f**"""
         if "code" not in f:
-            logger.warning("A hotfix didn't have any code: " + repr(f))
-            return data
+            err = "Hotfix didn't have any code: " + repr(f)
+            raise ValueError(err)
         if "signature" not in f:
-            logger.warning("A hotfix didn't have a signature: " + repr(f))
-            return data
+            err = "Hotfix didn't have a signature: " + repr(f)
+            raise ValueError(err)
         if "certificate" not in f:
-            logger.warning("A hotfix didn't specify a certificate: " + repr(f))
-            return data
+            err = "Hotfix didn't specify a certificate: " + repr(f)
+            raise ValueError(err)
         if os.path.basename(f["certificate"]) != f["certificate"]:
-            logger.warning("A hotfix's specified certificate was invalid: " + \
-                           repr(f))
-            return data
-        
-        # Load requested certificate
-        try:
-            cert = self._get_certificate(f["certificate"])
-        except RuntimeError:
-            logger.error("Could not load certificate '" +
-                f["certificate"] + "'.")
-            return data
+            err = "Hotfix's specified certificate was invalid: " + repr(f)
+            raise ValueError(err)
 
+    def _verify_certificate(self, cert):
+        """Check that the certificate is cryptographically signed by a key
+        which is signed by a known CA."""
         # Check the certificate is valid
         valid = False
         for ca_cert in self.certificate_authorities:
@@ -347,8 +340,7 @@ class Parser(object):
                 valid = True
                 break
         if not valid:
-            logger.error("Certificate is not signed by a recognised CA.")
-            return data
+            raise ValueError("Certificate is not signed by a recognised CA.")
 
         # Check the signature is valid
         digest = hashlib.sha256(f["code"]).hexdigest()
@@ -356,23 +348,53 @@ class Parser(object):
         try:
             ok = cert.get_pubkey().get_rsa().verify(digest, sig, 'sha256')
         except M2Crypto.RSA.RSAError:
-            logger.error("Signature is invalid.")
-            return data
-
+            raise ValueError("Signature is invalid.")
         if not ok:
-            logger.error("Hotfix signature is not valid")
-            return data
+            raise ValueError("Hotfix signature is not valid")
 
+    def _compile_hotfix(self, f):
+        """Compile a hotfix into a function **f** in an empty namespace."""
         logger.debug("Compiling a hotfix")
         body = "def f(data):\n"
-        for line in f["code"].split("\n"):
-            body += "    " + line + "\n"
+        body += "\n".join("    " + l + "\n" for l in f["code"].split("\n"))
         env = {}
         try:
             code = compile(body, "<filter>", "exec")
             exec code in env
         except (SyntaxError, TypeError):
-            logger.warning("Hotfix code didn't compile: " + repr(f))
+            raise ValueError("Hotfix code didn't compile: " + repr(f))
+        return env
+
+    def _hotfix_filter(self, data, f):
+        """Load a filter specified by some code in the database. Check its
+        authenticity by verifying its certificate, then run if OK."""
+        # Check the hotfix has all the right fields
+        try:
+            self._sanity_check_hotfix(f)
+        except ValueError as e:
+            logger.warning(e)
+            return data
+        
+        # Load requested certificate
+        try:
+            cert = self._get_certificate(f["certificate"])
+        except RuntimeError:
+            err = "Could not load certificate ''{0}''."
+            logger.warning(err.format(f["certificate"]))
+            return data
+        
+        # Check the certificate and signature are cryptographically okay
+        try:
+            self._verify_certificate(cert)
+        except ValueError as e:
+            logger.warning(e)
+            return data
+        
+        # Compile the hotfix
+        try:
+            env = self._compile_hotfix(self, f)
+        except ValueError as e:
+            logger.warning(e)
             return data
 
         logger.debug("Hotfix compiled, executing")
@@ -382,8 +404,8 @@ class Parser(object):
             # this is a pretty hardcore except! it'l catch anything.
             # but that's desirable as who knows what this crazy code
             # might do.
-            logger.warning("An exception occured when trying to run a " +
-                    "hotfix: " + repr(f))
+            err = "An exception occured while running a hotfix: " + repr(f)
+            logger.warning(err)
             return data
     
     def _get_certificate(self, certname):
