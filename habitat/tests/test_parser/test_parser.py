@@ -21,15 +21,16 @@ Unit tests for the Parser's Sink class.
 
 import os
 import time
+import mox
 from copy import deepcopy
 from nose.tools import raises
 from nose.plugins.skip import SkipTest
-from test_habitat.lib import fake_couchdb
-import test_habitat
 
-from habitat.parser.parser import Parser
+from ...parser import Parser
 
-test_certs_dir = os.path.join(test_habitat.habitat_root, "certs")
+base_dir = os.path.split(os.path.abspath(__file__))[0]
+test_certs_dir = os.path.join(base_dir, "certs")
+del base_dir
 
 def upper_case_filter(data):
     return data.upper()
