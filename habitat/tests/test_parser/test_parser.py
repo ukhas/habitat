@@ -221,4 +221,40 @@ class TestParser(object):
         assert_raises(ValueError, self.parser._find_config_doc, callsign,
                 time_created)
         self.m.VerifyAll()
+    
+    def test_doesnt_parse_bad_configs(self):
+        pass
+    
+    def test_doesnt_parse_if_no_callsign_found(self):
+        pass
+
+    def test_uses_default_config(self):
+        pass
+
+    def test_doesnt_use_bad_default_config(self):
+        pass
+
+    def test_parses(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        config = {'payloads': {'callsign': {'sentence': {'protocol': 'Mock'}}}}
+        config['_id'] = 'test'
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
+        self.mock_module.parse('test string',
+                config['payloads']['callsign']['sentence']).AndReturn({})
+        self.m.ReplayAll()
+        result = self.parser.parse(doc)
+        assert result['data']['_parsed']
+        assert result['data']['_protocol'] == 'Mock'
+        assert result['data']['_flight'] == 'test'
+        assert result['data']['_raw'] == "dGVzdCBzdHJpbmc="
+        assert result['receivers']['tester']['time_created'] == 1234567890
+        assert len(result['receivers']) == 1
+        self.m.VerifyAll()
+
+    def test_calls_filters(self):
+        pass
 
