@@ -52,7 +52,7 @@ class TestParser(object):
         assert self.parser.modules[0]["module"] == self.mock_module
 
     def test_init_doesnt_load_bad_modules(self):
-        def try_to_load_module(self, module):
+        def try_to_load_module(module):
             new_config = deepcopy(self.parser_config) 
             new_config["modules"][0]["class"] = module
             parser.Parser(new_config)
