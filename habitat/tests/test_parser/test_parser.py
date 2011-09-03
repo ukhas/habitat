@@ -22,6 +22,7 @@ Unit tests for the Parser's Sink class.
 import os
 import time
 import mox
+import couchdbkit
 from copy import deepcopy
 from nose.tools import assert_raises
 from nose.plugins.skip import SkipTest
@@ -170,16 +171,16 @@ class TestParser(object):
             "couch_uri": "http://localhost:5984", "couch_db": "test"}
         self.parser = parser.Parser(self.parser_config)
 
-    def test_doesnt_mess_up_config_modules(self):
+    def test_init_doesnt_mess_up_config_modules(self):
         # once upon a time parser didn't deepcopy config, so config['modules']
         # would get all messed up
         assert 'module' not in self.parser_config['modules'][0]
 
-    def test_loads_modules_in_config(self):
+    def test_init_loads_modules_in_config(self):
         assert len(self.parser.modules) == 1
         assert isinstance(self.parser.modules[0]["module"], FakeModule)
 
-    def test_doesnt_load_bad_modules(self):
+    def test_init_doesnt_load_bad_modules(self):
         def try_to_load_module(self, module):
             print self.parser_config
             new_config = deepcopy(self.parser_config) 
@@ -246,15 +247,39 @@ class TestParser(object):
                 pass
         assert_raises(TypeError, try_to_load_module, BadParseModule)
 
-    def test_loads_CAs(self):
+    def test_init_loads_CAs(self):
         assert len(self.parser.certificate_authorities) == 1
         cert = self.parser.certificate_authorities[0]
         assert cert.get_serial_number() == 9315532607032814920L
 
-    def test_doesnt_load_non_CA_cert(self):
+    def test_init_doesnt_load_non_CA_cert(self):
         config = deepcopy(self.parser_config)
         config['certs_dir'] = 'habitat/tests/test_parser/non_ca_certs'
         assert_raises(ValueError, parser.Parser, config)
+
+    def test_init_connects_to_couch(self):
+        m = mox.Mox()
+        m.StubOutWithMock(parser, 'couchdbkit')
+        s = m.CreateMock(couchdbkit.Server)
+        parser.couchdbkit.Server("http://localhost:5984").AndReturn(s)
+        s.__getitem__("test")
+        m.ReplayAll()
+        parser.Parser(self.parser_config)
+        m.UnsetStubs()
+        m.VerifyAll()
+
+    def test_run_calls_wait(self):
+        m = mox.Mox()
+        p = parser.Parser(self.parser_config)
+        m.StubOutWithMock(parser, 'couchdbkit')
+        c = m.CreateMock(couchdbkit.Consumer)
+        parser.couchdbkit.Consumer(p.db).AndReturn(c)
+        c.wait(p._couch_callback, filter="habitat/unparsed", since=0,
+                include_docs=True, heartbeat=1000)
+        m.ReplayAll()
+        p.run()
+        m.UnsetStubs()
+        m.VerifyAll()
 
     def test_calls_view_properly(self):
         raise SkipTest
