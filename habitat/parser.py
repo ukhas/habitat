@@ -231,9 +231,11 @@ class Parser(object):
             return None
 
     def _save_updated_doc(self, doc, attempts=0):
-        """Save doc to the database, retrying with a merge in the event of
+        """
+        Save doc to the database, retrying with a merge in the event of
         resource conflicts. This should definitely be a method of some Telem
-        class thing."""
+        class thing.
+        """
         latest = self.db[doc['_id']]
         latest['data'].update(doc['data'])
         try:

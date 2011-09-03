@@ -170,6 +170,10 @@ class TestParser(object):
             "sensors": [], "certs_dir": "habitat/tests/test_parser/certs",
             "couch_uri": "http://localhost:5984", "couch_db": "test"}
         self.parser = parser.Parser(self.parser_config)
+        self.m = mox.Mox()
+
+    def teardown(self):
+        self.m.UnsetStubs()
 
     def test_init_doesnt_mess_up_config_modules(self):
         # once upon a time parser didn't deepcopy config, so config['modules']
@@ -258,28 +262,93 @@ class TestParser(object):
         assert_raises(ValueError, parser.Parser, config)
 
     def test_init_connects_to_couch(self):
-        m = mox.Mox()
-        m.StubOutWithMock(parser, 'couchdbkit')
-        s = m.CreateMock(couchdbkit.Server)
+        self.m.StubOutWithMock(parser, 'couchdbkit')
+        s = self.m.CreateMock(couchdbkit.Server)
         parser.couchdbkit.Server("http://localhost:5984").AndReturn(s)
         s.__getitem__("test")
-        m.ReplayAll()
+        self.m.ReplayAll()
         parser.Parser(self.parser_config)
-        m.UnsetStubs()
-        m.VerifyAll()
+        self.m.VerifyAll()
 
     def test_run_calls_wait(self):
-        m = mox.Mox()
-        p = parser.Parser(self.parser_config)
-        m.StubOutWithMock(parser, 'couchdbkit')
-        c = m.CreateMock(couchdbkit.Consumer)
-        parser.couchdbkit.Consumer(p.db).AndReturn(c)
-        c.wait(p._couch_callback, filter="habitat/unparsed", since=0,
+        self.m.StubOutWithMock(parser, 'couchdbkit')
+        c = self.m.CreateMock(couchdbkit.Consumer)
+        parser.couchdbkit.Consumer(self.parser.db).AndReturn(c)
+        c.wait(self.parser._couch_callback, filter="habitat/unparsed", since=0,
                 include_docs=True, heartbeat=1000)
-        m.ReplayAll()
-        p.run()
-        m.UnsetStubs()
-        m.VerifyAll()
+        self.m.ReplayAll()
+        self.parser.run()
+        self.m.VerifyAll()
+
+    def test_couch_callback(self):
+        # TODO is there any point to this test? it is almost literally the code
+        # from the parser itself.
+        result = {'doc': {'hello': 'world'}, 'seq': 1}
+        parsed = {'hello': 'parser'}
+        self.m.StubOutWithMock(self.parser, 'parse')
+        self.m.StubOutWithMock(self.parser, '_save_updated_doc')
+        self.parser.parse(result['doc']).AndReturn(parsed)
+        self.parser._save_updated_doc(parsed)
+        self.m.ReplayAll()
+        self.parser._couch_callback(result)
+        self.m.VerifyAll()
+
+    def test_saving_saves(self):
+        orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
+        parsed_doc = deepcopy(orig_doc)
+        parsed_doc['data']['b'] = 2
+        self.m.StubOutWithMock(self.parser, 'db')
+        self.parser.db.__getitem__('id').AndReturn(orig_doc)
+        self.parser.db.save_doc(parsed_doc)
+        self.m.ReplayAll()
+        self.parser._save_updated_doc(parsed_doc)
+        self.m.VerifyAll()
+
+    def test_saving_merges(self):
+        orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
+        parsed_doc = deepcopy(orig_doc)
+        parsed_doc['data']['b'] = 2
+        updated_doc = deepcopy(orig_doc)
+        updated_doc['receivers'].append(2)
+        merged_doc = deepcopy(parsed_doc)
+        merged_doc['receivers'] = deepcopy(updated_doc['receivers'])
+        self.m.StubOutWithMock(self.parser, 'db')
+        self.parser.db.__getitem__('id').AndReturn(updated_doc)
+        self.parser.db.save_doc(merged_doc)
+        self.m.ReplayAll()
+        self.parser._save_updated_doc(parsed_doc)
+        self.m.VerifyAll()
+    
+    def test_saving_merges_after_conflict(self):
+        orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
+        parsed_doc = deepcopy(orig_doc)
+        parsed_doc['data']['b'] = 2
+        updated_doc = deepcopy(orig_doc)
+        updated_doc['receivers'].append(2)
+        merged_doc = deepcopy(parsed_doc)
+        merged_doc['receivers'] = deepcopy(updated_doc['receivers'])
+        self.m.StubOutWithMock(self.parser, 'db')
+        self.parser.db.__getitem__('id').AndReturn(orig_doc)
+        self.parser.db.save_doc(parsed_doc).AndRaise(
+            couchdbkit.exceptions.ResourceConflict())
+        self.parser.db.__getitem__('id').AndReturn(updated_doc)
+        self.parser.db.save_doc(merged_doc)
+        self.m.ReplayAll()
+        self.parser._save_updated_doc(parsed_doc)
+        self.m.VerifyAll()
+    
+    def test_saving_quits_after_many_conflicts(self):
+        orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
+        parsed_doc = deepcopy(orig_doc)
+        parsed_doc['data']['b'] = 2
+        self.m.StubOutWithMock(self.parser, 'db')
+        for i in xrange(30):
+            self.parser.db.__getitem__('id').AndReturn(orig_doc)
+            self.parser.db.save_doc(parsed_doc).AndRaise(
+                couchdbkit.exceptions.ResourceConflict())
+        self.m.ReplayAll()
+        assert_raises(RuntimeError, self.parser._save_updated_doc, parsed_doc)
+        self.m.VerifyAll()
 
     def test_calls_view_properly(self):
         raise SkipTest
