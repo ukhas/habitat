@@ -24,8 +24,8 @@ import logging
 import hashlib
 import M2Crypto
 import os
-import os.path
 import couchdbkit
+import copy
 
 from . import sensor_manager
 from .utils import dynamicloader
@@ -51,6 +51,8 @@ class Parser(object):
         Connects to CouchDB using config["couch_uri"] and config["couch_db"].
         """
 
+        config = copy.deepcopy(config)
+
         self.sensor_manager = sensor_manager.SensorManager(config)
 
         self.modules = []
@@ -72,7 +74,11 @@ class Parser(object):
         ca_path = os.path.join(self.cert_path, 'ca')
         for f in os.listdir(ca_path):
             ca = M2Crypto.X509.load_cert(os.path.join(ca_path, f))
-            self.certificate_authorities.append(ca)
+            if ca.check_ca():
+                self.certificate_authorities.append(ca)
+            else:
+                raise ValueError("CA certificate is not a CA: " +
+                    os.path.join(ca_path, f))
 
         self.loaded_certs = {}
 
@@ -86,13 +92,27 @@ class Parser(object):
         new unparsed telemetry.
         """
         consumer = couchdbkit.Consumer(self.db)
-        consumer.wait(self.couch_callback, filter="habitat/unparsed",
-                since=self.last_seq, heartbeat=1000)
+        consumer.wait(self._couch_callback, filter="habitat/unparsed",
+                since=self.last_seq, include_docs=True, heartbeat=1000)
 
-    def couch_callback(self, result):
+    def _couch_callback(self, result):
         """
-        Handles a new message from the server, hopefully turning it into
-        parsed telemetry data.
+        Handle a new result from the CouchDB _changes feed. Passes the doc off
+        to self.parse, then saves the result.
+        """
+        self.last_seq = result['seq']
+        doc = self.parse(result['doc'])
+        if doc:
+            self._save_updated_doc(doc)
+
+    def parse(self, doc):
+        """
+        Attempts to parse telemetry information out of a new telemetry
+        document.
+
+        Parameters:
+            doc:
+                An unparsed payload telemetry document.
 
         This function attempts to determine which of the loaded parser
         modules should be used to parse the message, and which config
@@ -124,9 +144,9 @@ class Parser(object):
         parse methods will all raise a ValueError if failure occurs,
         continuing the loop.
 
-        The output is a new message of type Message.TELEM, with message.data
-        being the parsed data as well as any special fields, identified by
-        a leading underscore in the key.
+        Once parsed, documents are saved back to the CouchDB database with the
+        newly parsed data included. Some reserved field names will also be
+        saved, which are indicated by a leading underscore.
 
         These fields may include:
 
@@ -134,8 +154,10 @@ class Parser(object):
           decode this message
         * _used_default_config is a boolean value set to True if a
           default configuration was used for the module as no specific
-          configuration could be found
-        * _raw gives the original submitted data
+          configuration could be found and not included otherwise
+
+        From the UKHAS parser module in particular:
+
         * _sentence gives the ASCII sentence from the UKHAS parser
         * _extra_data from the UKHAS parser, where the sentence contained
           more data than the UKHAS parser was configured for
@@ -143,15 +165,17 @@ class Parser(object):
         Parser modules should be wary when outputting field names with
         leading underscores.
         """
-        print "in callback, considering {0}".format(result)
-        self.last_seq = result['seq']
-        doc = self.db[result['id']]
         data = None
-        original_data = doc['data']['_raw']
+        try:
+            original_data = doc['data']['_raw']
+            receiver_callsign = doc['receivers'].keys()[0]
+            time_created = doc['receivers'][receiver_callsign]['time_created']
+        except (KeyError, IndexError) as e:
+            logger.warning("Could not find required key in doc: " + e)
+            return None
         raw_data = base64.b64decode(original_data)
-        receiver_callsign = doc['receivers'].keys()[0]
-        time_created = doc['receivers'][receiver_callsign]['time_created']
 
+        # TODO these two chunks below are ripe for refactoring
         # Try using real configs
         for module in self.modules:
             try:
@@ -198,14 +222,13 @@ class Parser(object):
 
         if type(data) is dict:
             doc['data'].update(data)
-            print "saving doc: {0}".format(doc)
-            self._save_updated_doc(doc)
-
             logger.info("{module} parsed data from {callsign} succesfully" \
                 .format(module=module["name"], callsign=callsign))
+            return doc
         else:
             logger.info("Unable to parse any data from '{d}'" \
                 .format(d=original_data))
+            return None
 
     def _save_updated_doc(self, doc, attempts=0):
         """Save doc to the database, retrying with a merge in the event of
@@ -214,6 +237,7 @@ class Parser(object):
         latest = self.db[doc['_id']]
         latest['data'].update(doc['data'])
         try:
+            logger.info("saving doc: {0}".format(doc))
             self.db.save_doc(latest)
         except couchdbkit.exceptions.ResourceConflict:
             attempts += 1

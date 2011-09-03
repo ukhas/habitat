@@ -23,10 +23,9 @@ import os
 import time
 import mox
 from copy import deepcopy
-from nose.tools import raises
+from nose.tools import assert_raises
 from nose.plugins.skip import SkipTest
-
-from ...parser import Parser
+from ... import parser
 
 base_dir = os.path.split(os.path.abspath(__file__))[0]
 test_certs_dir = os.path.join(base_dir, "certs")
@@ -130,75 +129,24 @@ class FakeModule(object):
         else:
             raise ValueError("Invalid message string given.")
 
-class EmptyModule(object):
-    """A mock parser module without any required methods"""
-    pass
 
-class BadInitModule(object):
-    """A mock parser module whose init signature is wrong"""
-    def __init__(self):
-        pass
-    def pre_parse(self, string):
-        pass
-    def parse(self, string, config):
-        pass
+#fake_view_results = fake_couchdb.ViewResults({"value": None,
+    #"key": ["habitat", flight_doc["end"]], "doc": flight_doc})
 
-class BadPreParseModule(object):
-    """A mock parser module with an incorrect pre_parse signature"""
-    def __init__(self, parser):
-        pass
-    def pre_parse(self):
-        pass
-    def parse(self, string, config):
-        pass
+#intermediate_filter_view_results = fake_couchdb.ViewResults({"value": None,
+    #"key": ["habitat", intermediate_filters_doc["end"]],
+    #"doc": intermediate_filters_doc})
 
-class BadParseModule(object):
-    """A mock parser module with an incorrect parse signature"""
-    def __init__(self, parser):
-        pass
-    def pre_parse(self, string):
-        pass
-    def parse(self):
-        pass
+#post_filter_view_results = fake_couchdb.ViewResults({"value": None,
+    #"key": ["habitat", post_filters_doc["end"]], "doc": post_filters_doc})
 
-class NoInitModule(object):
-    """A mock parser module which lacks an __init__ method"""
-    def pre_parse(self, string):
-        pass
-    def parse(self, string, config):
-        pass
+#empty_view_results = fake_couchdb.ViewResults()
 
-class NoPreParseModule(object):
-    """A mock parser module with no pre_parse method"""
-    def __init__(self, parser):
-        pass
-    def parse(self, string, config):
-        pass
+#wrong_view_results = fake_couchdb.ViewResults({"value": None,
+    #"key": ["wrong", wrong_flight_doc["end"]], "doc": wrong_flight_doc})
 
-class NoParseModule(object):
-    """A mock parser module with no parse method"""
-    def __init__(self, parser):
-        pass
-    def pre_parse(self, string):
-        pass
-
-fake_view_results = fake_couchdb.ViewResults({"value": None,
-    "key": ["habitat", flight_doc["end"]], "doc": flight_doc})
-
-intermediate_filter_view_results = fake_couchdb.ViewResults({"value": None,
-    "key": ["habitat", intermediate_filters_doc["end"]],
-    "doc": intermediate_filters_doc})
-
-post_filter_view_results = fake_couchdb.ViewResults({"value": None,
-    "key": ["habitat", post_filters_doc["end"]], "doc": post_filters_doc})
-
-empty_view_results = fake_couchdb.ViewResults()
-
-wrong_view_results = fake_couchdb.ViewResults({"value": None,
-    "key": ["wrong", wrong_flight_doc["end"]], "doc": wrong_flight_doc})
-
-wrong_protocol_view_results = fake_couchdb.ViewResults({"value": None,
-    "key": ["habitat", wrong_p_flight_doc["end"]], "doc": wrong_p_flight_doc})
+#wrong_protocol_view_results = fake_couchdb.ViewResults({"value": None,
+    #"key": ["habitat", wrong_p_flight_doc["end"]], "doc": wrong_p_flight_doc})
 
 class FakeMessage(object):
     """A basic fake message"""
@@ -218,46 +166,95 @@ class TestParser(object):
     def setup(self):
         self.parser_config = {"modules": [
             {"name": "Fake", "class": FakeModule}],
-            "sensors": [], "certs_dir": "../certs", "couch_uri":
-            "http://localhost:5984", "couch_db": "test"}
-        self.parser = Parser(self.parser_config)
+            "sensors": [], "certs_dir": "habitat/tests/test_parser/certs",
+            "couch_uri": "http://localhost:5984", "couch_db": "test"}
+        self.parser = parser.Parser(self.parser_config)
+
+    def test_doesnt_mess_up_config_modules(self):
+        # once upon a time parser didn't deepcopy config, so config['modules']
+        # would get all messed up
+        assert 'module' not in self.parser_config['modules'][0]
 
     def test_loads_modules_in_config(self):
         assert len(self.parser.modules) == 1
         assert isinstance(self.parser.modules[0]["module"], FakeModule)
 
-    def try_to_load_module(self, module):
-        new_config = deepcopy(self.parser_config) 
-        new_config["modules"][0]["class"] = module
-        Parser(new_config)
+    def test_doesnt_load_bad_modules(self):
+        def try_to_load_module(self, module):
+            print self.parser_config
+            new_config = deepcopy(self.parser_config) 
+            new_config["modules"][0]["class"] = module
+            parser.Parser(new_config)
 
-    @raises(TypeError)
-    def test_doesnt_load_modules_with_no_required_methods(self):
-        self.try_to_load_module(EmptyModule)
+        class EmptyModule(object):
+            """A mock parser module without any required methods"""
+            pass
+        assert_raises(TypeError, try_to_load_module, EmptyModule)
 
-    @raises(TypeError)
-    def test_doesnt_load_module_with_no_init(self):
-        self.try_to_load_module(NoInitModule)
+        class NoInitModule(object):
+            """A mock parser module which lacks an __init__ method"""
+            def pre_parse(self, string):
+                pass
+            def parse(self, string, config):
+                pass
+        assert_raises(TypeError, try_to_load_module, NoInitModule)
 
-    @raises(TypeError)
-    def test_doesnt_load_modules_with_wrong_init(self):
-        self.try_to_load_module(BadInitModule)
+        class BadInitModule(object):
+            """A mock parser module whose init signature is wrong"""
+            def __init__(self):
+                pass
+            def pre_parse(self, string):
+                pass
+            def parse(self, string, config):
+                pass
+        assert_raises(TypeError, try_to_load_module, BadInitModule)
 
-    @raises(TypeError)
-    def test_doesnt_load_module_with_no_pre_parse(self):
-        self.try_to_load_module(NoPreParseModule)
+        class NoPreParseModule(object):
+            """A mock parser module with no pre_parse method"""
+            def __init__(self, parser):
+                pass
+            def parse(self, string, config):
+                pass
+        assert_raises(TypeError, try_to_load_module, NoPreParseModule)
 
-    @raises(TypeError)
-    def test_doesnt_load_modules_with_wrong_pre_parse(self):
-        self.try_to_load_module(BadPreParseModule)
+        class BadPreParseModule(object):
+            """A mock parser module with an incorrect pre_parse signature"""
+            def __init__(self, parser):
+                pass
+            def pre_parse(self):
+                pass
+            def parse(self, string, config):
+                pass
 
-    @raises(TypeError)
-    def test_doesnt_load_module_with_no_parse(self):
-        self.try_to_load_module(NoParseModule)
+        assert_raises(TypeError, try_to_load_module, BadPreParseModule)
 
-    @raises(TypeError)
-    def test_doesnt_load_modules_with_wrong_parse(self):
-        self.try_to_load_module(BadParseModule)
+        class NoParseModule(object):
+            """A mock parser module with no parse method"""
+            def __init__(self, parser):
+                pass
+            def pre_parse(self, string):
+                pass
+        assert_raises(TypeError, try_to_load_module, NoParseModule)
+
+        class BadParseModule(object):
+            """A mock parser module with an incorrect parse signature"""
+            def __init__(self, parser):
+                pass
+            def pre_parse(self, string):
+                pass
+            def parse(self):
+                pass
+        assert_raises(TypeError, try_to_load_module, BadParseModule)
+
+    def test_loads_CAs(self):
+        assert len(self.parser.certificate_authorities) == 1
+        cert = self.parser.certificate_authorities[0]
+        assert cert.get_serial_number() == 9315532607032814920L
+
+    def test_doesnt_load_non_CA_cert(self):
+        config = deepcopy(self.parser_config)
+        config['certs_dir'] = 'habitat/tests/test_parser/non_ca_certs'
+        assert_raises(ValueError, parser.Parser, config)
 
     def test_calls_view_properly(self):
         raise SkipTest
@@ -394,17 +391,3 @@ class TestParser(object):
         sink = Parser(self.server)
         sink.message(FakeMessage())
         assert self.server.message.data["result"] == "config was like rad!"
-
-    def test_pushes_message(self):
-        raise SkipTest
-        self.sink.message(FakeMessage())
-        assert self.server.message
-        assert self.server.message.source.callsign == "test callsign"
-        assert self.server.message.source.ip == "123.123.123.123"
-        assert self.server.message.time_created == 1234
-        assert self.server.message.time_uploaded == 5768
-        assert self.server.message.type == Message.TELEM
-        assert self.server.message.data == {"data": True,
-            "_protocol": "Fake", "_raw": "dGVzdCBtZXNzYWdl",
-            "_flight": "1234567890",
-            '_listener_metadata': {'metametadata': 'asdf'}}
