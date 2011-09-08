@@ -191,9 +191,10 @@ class Parser(object):
                     data["_flight"] = config_doc["_id"]
                     data["_parsed"] = True
                     break
-            except ValueError as e:
-                err = "ValueError from {0}: '{1}'"
-                logger.debug(err.format(module["name"], e))
+            except (ValueError, KeyError) as e:
+                err = "Exception occured while attempting to parse: "
+                err += "'{e}' from {module}".format(module=module['name'], e=e)
+                logger.debug(err)
                 continue
 
         # If that didn't work, try using default configurations
@@ -215,9 +216,10 @@ class Parser(object):
                     data["_parsed"] = True
                     logger.info("Using a default configuration document")
                     break
-                except ValueError as e:
-                    errstr = "Error from {0} with default config: '{1}'"
-                    logger.debug(errstr.format(module["name"], e))
+                except (ValueError, KeyError) as e:
+                    err = "Exception occured while attempting to parse "
+                    err += "using default config: '{e}' from {module}"
+                    logger.debug(err.format(module=module['name'], e=e))
                     continue
 
         if type(data) is dict:

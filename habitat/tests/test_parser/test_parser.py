@@ -222,17 +222,66 @@ class TestParser(object):
                 time_created)
         self.m.VerifyAll()
     
-    def test_doesnt_parse_bad_configs(self):
-        pass
-    
     def test_doesnt_parse_if_no_callsign_found(self):
-        pass
+        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        self.mock_module.pre_parse('test string').AndRaise(ValueError)
+        self.m.ReplayAll()
+        assert self.parser.parse(doc) is None
+        self.m.VerifyAll()
 
     def test_uses_default_config(self):
-        pass
+        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        default = {'sentence': {'protocol': 'Mock'}}
+        self.parser.modules[0]['default_config'] = default
+        self.mock_module.pre_parse('test string').AndRaise(ValueError)
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.mock_module.parse('test string',default['sentence']).AndReturn({})
+        self.m.ReplayAll()
+        result = self.parser.parse(doc)
+        assert result['data']['_parsed']
+        assert result['data']['_used_default_config']
+        self.m.VerifyAll()
 
-    def test_doesnt_use_bad_default_config(self):
-        pass
+    def test_doesnt_parse_if_no_config(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign',
+                1234567890).AndRaise(ValueError)
+        self.m.ReplayAll()
+        assert self.parser.parse(doc) is None
+        self.m.VerifyAll()
+
+    def test_doesnt_parse_if_bad_config(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        config = {'payloads': {'callsign': {'messed': 'up'}}, '_id': 'test'}
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
+        self.m.ReplayAll()
+        assert self.parser.parse(doc) is None
+        self.m.VerifyAll()
+
+    def test_doesnt_parse_if_wrong_config_protocol(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        config = {'payloads': {'callsign': {'sentence': {'protocol': 'Fake'}}}}
+        config['_id'] = 'test'
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
+        self.m.ReplayAll()
+        assert self.parser.parse(doc) is None
+        self.m.VerifyAll()
 
     def test_parses(self):
         doc = {'data': {}, 'receivers': {'tester': {}}}
