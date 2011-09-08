@@ -31,12 +31,12 @@ def semicolons_to_commas(data, config):
 def _post_singlefield(config):
     source = config["source"]
 
-    if "destination" in config
+    if "destination" in config:
         destination = config["destination"]
     else:
         destination = source
 
-    if "destination".startswith("_"):
+    if destination.startswith("_"):
         raise ValueError("destination must not start with _")
 
     return (source, destination)
@@ -47,7 +47,7 @@ def numeric_scale(data, config):
     factor = float(config["factor"])
 
     source = float(data[source_key])
-    data[destination] = source * factor
+    data[destination_key] = source * factor
     return data
 
 def simple_map(data, config):
