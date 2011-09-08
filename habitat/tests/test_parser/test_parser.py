@@ -306,4 +306,48 @@ class TestParser(object):
 
     def test_calls_filters(self):
         pass
+    
+    def test_runs_normal_filters(self):
+        pass
 
+    def test_runs_hotfix_filters(self):
+        pass
+
+    def test_runs_pre_filters(self):
+        pass
+
+    def test_runs_intermediate_filters(self):
+        pass
+
+    def test_runs_post_filters(self):
+        pass
+
+    def test_handles_hotfix_exceptions(self):
+        pass
+
+    def test_handles_hotfix_syntax_error(self):
+        pass
+
+    def test_hotfix_doesnt_allow_signature_from_other_cert(self):
+        pass
+
+    def test_hotfix_doesnt_allow_invalid_signature(self):
+        pass
+
+    def test_hotfix_doesnt_allow_missing_signature(self):
+        pass
+
+    def test_hotfix_doesnt_allow_missing_certificate(self):
+        pass
+    
+    def test_hotfix_doesnt_allow_missing_code(self):
+        pass
+
+    def test_hotfix_doesnt_allow_certs_not_signed_by_ca(self):
+        pass
+
+    def test_hotfix_doesnt_allow_unloadable_certs(self):
+        pass
+
+    def test_hotfix_doesnt_allow_certs_with_paths_in_name(self):
+        pass
