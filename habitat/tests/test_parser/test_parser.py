@@ -304,8 +304,36 @@ class TestParser(object):
         assert len(result['receivers']) == 1
         self.m.VerifyAll()
 
+    def setup_parse(self, config=None, doc=None):
+        if config is None:
+            config = {'payloads': {'callsign': { 'sentence': {}}}}
+            config['_id'] = 'test'
+            config['payloads']['callsign']['sentence']['protocol'] = 'Mock'
+        payload_config = config['payloads']['callsign']['sentence']
+        if doc is None:
+            doc = {'data': {}, 'receivers': {'tester': {}}}
+            doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+            doc['receivers']['tester']['time_created'] = 123
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign', 123).AndReturn(config)
+        self.mock_module.parse('test string', payload_config).AndReturn({})
+        return doc, config
+
     def test_calls_filters(self):
-        pass
+        doc, config = self.setup_parse()
+        self.m.StubOutWithMock(self.parser, '_pre_filter')
+        self.m.StubOutWithMock(self.parser, '_intermediate_filter')
+        self.m.StubOutWithMock(self.parser, '_post_filter')
+        payload_config = config['payloads']['callsign']
+        self.parser._pre_filter('test string',
+                self.parser.modules[0]).AndReturn('test string')
+        self.parser._intermediate_filter('test string',
+                payload_config).AndReturn('test string')
+        self.parser._post_filter({}, payload_config).AndReturn({})
+        self.m.ReplayAll()
+        self.parser.parse(doc)
+        self.m.VerifyAll()
     
     def test_runs_normal_filters(self):
         pass
@@ -314,13 +342,34 @@ class TestParser(object):
         pass
 
     def test_runs_pre_filters(self):
-        pass
+        self.m.StubOutWithMock(self.parser, '_filter')
+        data = 'test data'
+        module = {'pre-filters': ['f1', 'f2']}
+        self.parser._filter('test data', 'f1').AndReturn('filtered data')
+        self.parser._filter('filtered data', 'f2').AndReturn('result')
+        self.m.ReplayAll()
+        assert self.parser._pre_filter(data, module) == 'result'
+        self.m.VerifyAll()
 
     def test_runs_intermediate_filters(self):
-        pass
+        self.m.StubOutWithMock(self.parser, '_filter')
+        data = 'test data'
+        config = {'filters': {'intermediate': ['f1', 'f2']}}
+        self.parser._filter('test data', 'f1').AndReturn('filtered data')
+        self.parser._filter('filtered data', 'f2').AndReturn('result')
+        self.m.ReplayAll()
+        assert self.parser._intermediate_filter(data, config) == 'result'
+        self.m.VerifyAll()
 
     def test_runs_post_filters(self):
-        pass
+        self.m.StubOutWithMock(self.parser, '_filter')
+        data = 'test data'
+        config = {'filters': {'post': ['f1', 'f2']}}
+        self.parser._filter('test data', 'f1').AndReturn('filtered data')
+        self.parser._filter('filtered data', 'f2').AndReturn('result')
+        self.m.ReplayAll()
+        assert self.parser._post_filter(data, config) == 'result'
+        self.m.VerifyAll()
 
     def test_handles_hotfix_exceptions(self):
         pass
