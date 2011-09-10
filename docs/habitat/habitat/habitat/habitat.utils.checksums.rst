@@ -11,7 +11,6 @@ habitat.utils.checksums
    
       crc16_ccitt
       fletcher_16
-      op_xor
       xor
    
    

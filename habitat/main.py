@@ -30,7 +30,7 @@ import os.path
 
 from . import parser
 
-__all__ = ["setup_logging", "Program"]
+__all__ = ["setup_logging", "Program", "null_logger"]
 
 logger = logging.getLogger("habitat.main")
 
@@ -90,8 +90,7 @@ def setup_logging(log_stderr_level, log_file_name, log_file_level):
 
 class Program(object):
     """
-    Program provides the :py:meth:`main`, :py:meth:`shutdown` and \
-    :py:meth:`reload` methods
+    Program provides the main method for habitat.
     """
 
     def __init__(self):
@@ -143,5 +142,6 @@ class Program(object):
         self.parser = parser.parser.Parser(self.options)
 
 class null_logger(logging.Handler):
+    """a python logging handler that discards log messages silently"""
     def emit(self, record):
         pass

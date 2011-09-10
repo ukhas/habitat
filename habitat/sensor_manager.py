@@ -39,7 +39,7 @@ The sensor_manager provides the *base* library built in; it includes
  * ascii_float
  * string
 
-Other libraries are available with habitat. See :py:mod:`sensors`
+Other libraries are available with habitat. See :py:mod:`habitat.sensors`
 
 A sensor function takes two arguments, *config* and *data*. It
 can return a string, list, dict, int, float, or any other python

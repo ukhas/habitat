@@ -22,7 +22,7 @@ by a daemon for further processing.
 
 """
 
-__all__ = ["Uploader"]
+__all__ = ["Uploader", "CollisionError", "UnmergeableError"]
 
 import time
 import copy

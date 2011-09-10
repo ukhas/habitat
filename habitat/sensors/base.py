@@ -21,6 +21,18 @@ Basic sensor functions
 
 __all__ = ["ascii_int", "ascii_float", "string"]
 
-ascii_int = lambda config, data: None if data == '' else int(data)
-ascii_float = lambda config, data: None if data == '' else float(data)
-string = lambda config, data: str(data)
+def ascii_int(config, data):
+    """parse a string to an integer, or None if the string is empty"""
+    if data == '':
+        return None
+    return int(data)
+
+def ascii_float(config, data):
+    """parse a string to a float, or None if the string is empty"""
+    if data == '':
+        return None
+    return float(data)
+
+def string(config, data):
+    """null sensor; just returns the data as a string"""
+    return str(data)

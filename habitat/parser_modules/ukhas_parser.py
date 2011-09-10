@@ -27,8 +27,8 @@ The typical minimum telemetry string is:
 The number of custom data fields and their types are configurable.
 
 Data fields are typically human readable (or at the least ASCII) readings
-of sensors or other system information. See the :py:mod:`sensors` module
-for more information on supported formats.
+of sensors or other system information. See the :py:mod:`habitat.sensors`
+module for more information on supported formats.
 
 Checksums work on the message content between the ``$$`` and the ``*``,
 non-inclusive, and are given as hexadecimal (upper or lower case) after
