@@ -1,5 +1,4 @@
-# Copyright 2010 (C) Daniel Richman
-# Copyright 2010 (C) Adam Greig
+# Copyright 2010 (C) Daniel Richman, Adam Greig
 #
 # This file is part of habitat.
 #
@@ -61,10 +60,8 @@ module are.
 """
 
 import sys
-import collections
 import functools
 import inspect
-import imp
 import logging
 
 all_tests = ["isclass", "isfunction", "isgeneratorfunction",

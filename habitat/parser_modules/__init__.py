@@ -1,4 +1,4 @@
-# Copyright 2010, 2011 (C) Daniel Richman, Adam Greig
+# Copyright 2010 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -16,25 +16,12 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-habitat is a web application for tracking the flight path of high altitude
-balloons, relying on a network of users with radios sending in received
-telemetry strings which are parsed into position information and displayed
-on maps.
+Parser modules for specific protocols.
 
 .. autosummary::
     :toctree: habitat
 
-    habitat.parser
-    habitat.uploader
-    habitat.main
-    habitat.utils
+    habitat.parser_modules.ukhas_parser
 """
 
-__name__ = "habitat"
-__version__ = "0.0.1"
-__authors__ = "Adam Greig, Daniel Richman"
-__short_copyright__ = "2010, 2011 " + __authors__
-__copyright__ = "Copyright " + __short_copyright__
-
-__all__ = ["filters", "main", "parser", "parser_modules", "sensor_manager",
-           "sensors", "uploader", "utils"]
+__all__ = ["ukhas_parser"]

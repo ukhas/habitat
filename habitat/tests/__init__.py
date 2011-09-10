@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Adam Greig
+# Copyright 2010 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -16,13 +16,5 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Filters that might be applied to incoming payload telemetry which are supplied
-with habitat as commonly used pieces of code.
-
-.. autosummary::
-    :toctree: habitat
-
-    habitat.filters.common
+Tests for the python backend of habitat. For use with nosetests.
 """
-
-__all__ = ["common"]
