@@ -330,7 +330,11 @@ class Parser(object):
         if "config" in f:
             config = f["config"]
 
-        fil = dynamicloader.load(f["callable"])
+        try:
+            fil = dynamicloader.load(f["callable"])
+        except ImportError:
+            logger.warning("Could not import filter: " + repr(f))
+            return data
         if not dynamicloader.iscallable(fil):
             logger.warning("A loaded filter wasn't callable: " + repr(f))
             return data
@@ -358,24 +362,21 @@ class Parser(object):
             err = "Hotfix's specified certificate was invalid: " + repr(f)
             raise ValueError(err)
 
-    def _verify_certificate(self, cert):
+    def _verify_certificate(self, f, cert):
         """Check that the certificate is cryptographically signed by a key
         which is signed by a known CA."""
         # Check the certificate is valid
-        valid = False
         for ca_cert in self.certificate_authorities:
             if cert.verify(ca_cert.get_pubkey()):
-                valid = True
                 break
-        if not valid:
             raise ValueError("Certificate is not signed by a recognised CA.")
 
         # Check the signature is valid
-        digest = hashlib.sha256(f["code"]).hexdigest()
-        sig = base64.b64decode(f["signature"])
         try:
+            digest = hashlib.sha256(f["code"]).hexdigest()
+            sig = base64.b64decode(f["signature"])
             ok = cert.get_pubkey().get_rsa().verify(digest, sig, 'sha256')
-        except M2Crypto.RSA.RSAError:
+        except (TypeError, M2Crypto.RSA.RSAError):
             raise ValueError("Signature is invalid.")
         if not ok:
             raise ValueError("Hotfix signature is not valid")
@@ -384,12 +385,12 @@ class Parser(object):
         """Compile a hotfix into a function **f** in an empty namespace."""
         logger.debug("Compiling a hotfix")
         body = "def f(data):\n"
-        body += "\n".join("    " + l + "\n" for l in f["code"].split("\n"))
         env = {}
         try:
+            body += "\n".join("    "+l+"\n" for l in f["code"].split("\n"))
             code = compile(body, "<filter>", "exec")
             exec code in env
-        except (SyntaxError, TypeError):
+        except (SyntaxError, AttributeError, TypeError):
             raise ValueError("Hotfix code didn't compile: " + repr(f))
         return env
 
@@ -413,7 +414,7 @@ class Parser(object):
         
         # Check the certificate and signature are cryptographically okay
         try:
-            self._verify_certificate(cert)
+            self._verify_certificate(f, cert)
         except ValueError as e:
             logger.warning(e)
             return data
@@ -446,11 +447,11 @@ class Parser(object):
             try:
                 cert = M2Crypto.X509.load_cert(cert_path)
             except (IOError, M2Crypto.X509.X509Error):
-                raise RuntimeError("Certificate could not be loaded.")
+                raise ValueError("Certificate could not be loaded.")
             self.loaded_certs[certname] = cert
             return cert
         else:
-            raise RuntimeError("Certificate could not be loaded.")
+            raise ValueError("Certificate could not be loaded.")
 
 class ParserModule(object):
     """

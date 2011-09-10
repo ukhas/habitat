@@ -20,7 +20,10 @@ Unit tests for the Parser's Sink class.
 """
 
 import mox
+
 import couchdbkit
+import M2Crypto
+
 from copy import deepcopy
 from nose.tools import assert_raises
 
@@ -334,12 +337,6 @@ class TestParser(object):
         self.m.ReplayAll()
         self.parser.parse(doc)
         self.m.VerifyAll()
-    
-    def test_runs_normal_filters(self):
-        pass
-
-    def test_runs_hotfix_filters(self):
-        pass
 
     def test_runs_pre_filters(self):
         self.m.StubOutWithMock(self.parser, '_filter')
@@ -370,33 +367,152 @@ class TestParser(object):
         self.m.ReplayAll()
         assert self.parser._post_filter(data, config) == 'result'
         self.m.VerifyAll()
+    
+    def test_filters_must_have_type(self):
+        assert self.parser._filter('test data', {}) == 'test data'
+
+    def test_calls_normal_filter(self):
+        self.m.StubOutWithMock(self.parser, '_normal_filter')
+        data = 'test data'
+        f = {'type': 'normal'}
+        self.parser._normal_filter('test data', f).AndReturn('filtered')
+        self.m.ReplayAll()
+        assert self.parser._filter(data, f) == 'filtered'
+        self.m.VerifyAll()
+
+    def test_calls_hotfix_filter(self):
+        self.m.StubOutWithMock(self.parser, '_hotfix_filter')
+        data = 'test data'
+        f = {'type': 'hotfix'}
+        self.parser._hotfix_filter('test data', f).AndReturn('filtered')
+        self.m.ReplayAll()
+        assert self.parser._filter(data, f) == 'filtered'
+        self.m.VerifyAll()
+
+    def test_skips_unknown_filter_types(self):
+        assert self.parser._filter('test data', {'type': '?'}) == 'test data'
+
+    def test_normal_filters(self):
+        def fil(data):
+            assert data == 'test string'
+            return 'filtered'
+        f = {'callable': fil}
+        assert self.parser._normal_filter('test string', f) == 'filtered'
+
+    def test_normal_filters_with_config(self):
+        def fil(data, config):
+            assert data == 'test string'
+            assert config == 'config'
+            return 'filtered'
+        f = {'callable': fil, 'config': 'config'}
+        assert self.parser._normal_filter('test string', f) == 'filtered'
+
+    def test_uncallable_normal_filters(self):
+        class F:
+            pass
+        f = {'callable': F}
+        assert self.parser._normal_filter('test string', f) == 'test string'
+
+    def test_unimportable_normal_filters(self):
+        f = {'callable': 'fakefakefake.fakepath.is.fake'}
+        assert self.parser._normal_filter('test string', f) == 'test string'
+
+    def test_incorrect_num_args_normal_filters(self):
+        def fil(data, config, too, many, args):
+            assert data == 'test string'
+            assert config == 'config'
+            return 'filtered'
+        f = {'callable': fil, 'config': 'config'}
+        assert self.parser._normal_filter('test string', f) == 'test string'
+
+    def test_hotfix_filters(self):
+        self.m.StubOutWithMock(self.parser, '_sanity_check_hotfix')
+        self.m.StubOutWithMock(self.parser, '_get_certificate')
+        self.m.StubOutWithMock(self.parser, '_verify_certificate')
+        self.m.StubOutWithMock(self.parser, '_compile_hotfix')
+        f = {'certificate': 'cert'}
+        env = {'f': lambda data: 'hotfix ran'}
+        self.parser._sanity_check_hotfix(f)
+        self.parser._get_certificate('cert').AndReturn('got_cert')
+        self.parser._verify_certificate(f, 'got_cert')
+        self.parser._compile_hotfix(self.parser, f).AndReturn(env)
+        self.m.ReplayAll()
+        assert self.parser._hotfix_filter({}, f) == 'hotfix ran'
+        self.m.VerifyAll()
 
     def test_handles_hotfix_exceptions(self):
-        pass
+        self.m.StubOutWithMock(self.parser, '_sanity_check_hotfix')
+        self.m.StubOutWithMock(self.parser, '_get_certificate')
+        self.m.StubOutWithMock(self.parser, '_verify_certificate')
+        self.m.StubOutWithMock(self.parser, '_compile_hotfix')
+        f = {'certificate': 'cert'}
+        def OhNoError(Exception):
+            pass
+        def hotfix(data):
+            raise OhNoError()
+        env = {'f': hotfix}
+        self.parser._sanity_check_hotfix(f)
+        self.parser._get_certificate('cert').AndReturn('got_cert')
+        self.parser._verify_certificate(f, 'got_cert')
+        self.parser._compile_hotfix(self.parser, f).AndReturn(env)
+        self.m.ReplayAll()
+        assert self.parser._hotfix_filter('unfiltered', f) == 'unfiltered'
+        self.m.VerifyAll()
 
     def test_handles_hotfix_syntax_error(self):
-        pass
-
-    def test_hotfix_doesnt_allow_signature_from_other_cert(self):
-        pass
+        f = {'code': "this isn't python!"}
+        assert_raises(ValueError, self.parser._compile_hotfix, f)
+    
+    def test_handles_invalid_hotfix_code(self):
+        f = {'code': 12}
+        assert_raises(ValueError, self.parser._compile_hotfix, f)
 
     def test_hotfix_doesnt_allow_invalid_signature(self):
-        pass
+        f = {'code': 'return False', 'certificate': 'adamgreig.crt'}
+        f['signature'] = "this isn't a signature!"
+        cert = self.m.CreateMock(M2Crypto.X509.X509)
+        cert.verify(mox.IsA(M2Crypto.EVP.PKey)).AndReturn(True)
+        self.m.ReplayAll()
+        assert_raises(ValueError, self.parser._verify_certificate, f, cert)
+        self.m.VerifyAll()
+
+    def test_hotfix_doesnt_allow_wrong_signature(self):
+        f = {'code': 'return False', 'certificate': 'adamgreig.crt'}
+        f['signature'] = "c2lnbmF0dXJl"
+        d = "e706fa9325ded821b93ed8bde1093c7c1394b3342739239f6f5f848b8ea76eb4"
+        cert = self.m.CreateMock(M2Crypto.X509.X509)
+        pubkey = self.m.CreateMock(M2Crypto.EVP.PKey)
+        rsa = self.m.CreateMock(M2Crypto.RSA.RSA_pub)
+        cert.verify(mox.IsA(M2Crypto.EVP.PKey)).AndReturn(True)
+        cert.get_pubkey().AndReturn(pubkey)
+        pubkey.get_rsa().AndReturn(rsa)
+        rsa.verify(d, "signature", 'sha256').AndReturn(False)
+        self.m.ReplayAll()
+        assert_raises(ValueError, self.parser._verify_certificate, f, cert)
+        self.m.VerifyAll()
 
     def test_hotfix_doesnt_allow_missing_signature(self):
-        pass
+        f = {'code': 'bla', 'certificate': 'cert.pem'}
+        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
 
     def test_hotfix_doesnt_allow_missing_certificate(self):
-        pass
+        f = {'code': 'bla', 'signature': 'sign here'}
+        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
     
     def test_hotfix_doesnt_allow_missing_code(self):
-        pass
+        f = {'certificate': 'cert.pem', 'signature': 'sign here'}
+        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
 
     def test_hotfix_doesnt_allow_certs_not_signed_by_ca(self):
-        pass
+        cert = self.m.CreateMock(M2Crypto.X509.X509)
+        cert.verify(mox.IsA(M2Crypto.EVP.PKey)).AndReturn(False)
+        self.m.ReplayAll()
+        assert_raises(ValueError, self.parser._verify_certificate, {}, cert)
+        self.m.VerifyAll()
 
     def test_hotfix_doesnt_allow_unloadable_certs(self):
-        pass
+        assert_raises(ValueError, self.parser._get_certificate, 'doesntexist')
 
     def test_hotfix_doesnt_allow_certs_with_paths_in_name(self):
-        pass
+        f = {'certificate': '../../dots.pem', 'code': '', 'signature': ''}
+        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
