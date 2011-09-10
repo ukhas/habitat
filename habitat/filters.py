@@ -16,7 +16,8 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Common filters for the parser.
+Filters that might be applied to incoming payload telemetry which are supplied
+with habitat as commonly used pieces of code.
 """
 
 from habitat.utils import filtertools

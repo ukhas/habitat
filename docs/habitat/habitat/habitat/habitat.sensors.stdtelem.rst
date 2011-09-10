@@ -1,7 +1,7 @@
-habitat.parser.sensors.stdtelem
-===============================
+habitat.sensors.stdtelem
+========================
 
-.. automodule:: habitat.parser.sensors.stdtelem
+.. automodule:: habitat.sensors.stdtelem
 
    
    

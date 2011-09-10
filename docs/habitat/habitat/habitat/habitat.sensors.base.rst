@@ -1,7 +1,7 @@
-habitat.parser.sensors.base
-===========================
+habitat.sensors.base
+====================
 
-.. automodule:: habitat.parser.sensors.base
+.. automodule:: habitat.sensors.base
 
    
    

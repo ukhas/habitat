@@ -25,6 +25,10 @@ on maps.
     :toctree: habitat
 
     habitat.parser
+    habitat.parser_modules
+    habitat.sensor_manager
+    habitat.sensors
+    habitat.filters
     habitat.uploader
     habitat.main
     habitat.utils

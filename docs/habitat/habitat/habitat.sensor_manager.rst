@@ -1,7 +1,7 @@
-habitat.parser.sensor_manager
-=============================
+habitat.sensor_manager
+======================
 
-.. automodule:: habitat.parser.sensor_manager
+.. automodule:: habitat.sensor_manager
 
    
    
