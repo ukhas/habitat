@@ -84,7 +84,7 @@ class Parser(object):
 
         self.couch_server = couchdbkit.Server(config["couch_uri"])
         self.db = self.couch_server[config["couch_db"]]
-        self.last_seq = 0
+        self.last_seq = self.db.info()["update_seq"]
 
     def run(self):
         """
