@@ -410,20 +410,20 @@ class TestParser(object):
     def test_uncallable_normal_filters(self):
         class F:
             pass
-        f = {'callable': F}
-        assert self.parser._normal_filter('test string', f) == 'test string'
+        f = {'callable': F, 'type': 'normal'}
+        assert self.parser._filter('test string', f) == 'test string'
 
     def test_unimportable_normal_filters(self):
-        f = {'callable': 'fakefakefake.fakepath.is.fake'}
-        assert self.parser._normal_filter('test string', f) == 'test string'
+        f = {'callable': 'fakefakefake.fakepath.is.fake', 'type': 'normal'}
+        assert self.parser._filter('test string', f) == 'test string'
 
     def test_incorrect_num_args_normal_filters(self):
         def fil(data, config, too, many, args):
             assert data == 'test string'
             assert config == 'config'
             return 'filtered'
-        f = {'callable': fil, 'config': 'config'}
-        assert self.parser._normal_filter('test string', f) == 'test string'
+        f = {'callable': fil, 'config': 'config', 'type': 'normal'}
+        assert self.parser._filter('test string', f) == 'test string'
 
     def test_hotfix_filters(self):
         self.m.StubOutWithMock(self.parser, '_sanity_check_hotfix')
@@ -445,18 +445,18 @@ class TestParser(object):
         self.m.StubOutWithMock(self.parser, '_get_certificate')
         self.m.StubOutWithMock(self.parser, '_verify_certificate')
         self.m.StubOutWithMock(self.parser, '_compile_hotfix')
-        f = {'certificate': 'cert'}
-        def OhNoError(Exception):
+        f = {'certificate': 'cert', 'type': 'hotfix'}
+        class OhNoError(Exception):
             pass
         def hotfix(data):
-            raise OhNoError()
+            raise OhNoError
         env = {'f': hotfix}
         self.parser._sanity_check_hotfix(f)
         self.parser._get_certificate('cert').AndReturn('got_cert')
         self.parser._verify_certificate(f, 'got_cert')
         self.parser._compile_hotfix(self.parser, f).AndReturn(env)
         self.m.ReplayAll()
-        assert self.parser._hotfix_filter('unfiltered', f) == 'unfiltered'
+        assert self.parser._filter('unfiltered', f) == 'unfiltered'
         self.m.VerifyAll()
 
     def test_handles_hotfix_syntax_error(self):
