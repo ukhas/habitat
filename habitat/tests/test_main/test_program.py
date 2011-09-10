@@ -22,19 +22,11 @@ habitat.main, so the tests are fairly boring.
 """
 
 import sys
-import os
 import logging
 
 from nose.tools import raises
 
-from test_habitat import scratch_dir
-
-from habitat.main import Program, setup_logging
-from habitat import parser
-import habitat.main as program_module
-
-# Make sure it doesn't read a configuration file
-missing_file = os.path.join(scratch_dir, "config.yml")
+from ... import main
 
 # Replace setup_logging with a function that does nothing
 def new_setup_logging(*args):
@@ -96,17 +88,19 @@ class FakeParser:
 class TestProgram:
     def setup(self):
 
+        # Store old stuff
+        self.main_setup_logging = main.setup_logging
+        self.main_logging = main.logging
+        self.main_parser = main.parser
+
         # Do the replacing:
-        assert program_module.setup_logging == setup_logging
-        assert program_module.logging == logging
-        assert program_module.parser == parser
-        program_module.default_configuration_file = missing_file
-        program_module.setup_logging = new_setup_logging
-        program_module.parser = FakeParser()
+        main.default_configuration_file = "/doesnt/exist"
+        main.setup_logging = new_setup_logging
+        main.parser = FakeParser()
         self.new_logging = FakeLogging()
-        self.old_logger = program_module.logger
-        program_module.logging = self.new_logging
-        program_module.logger = self.new_logging.getLogger("habitat.main")
+        self.old_logger = main.logger
+        main.logging = self.new_logging
+        main.logger = self.new_logging.getLogger("habitat.main")
 
         # Clear the list, reset the counter, reset the functions
         new_main_setup.action = action_nothing
@@ -114,17 +108,13 @@ class TestProgram:
 
     def teardown(self):
         # Restore everything we replaced in setup()
-        assert program_module.default_configuration_file == missing_file
-        assert program_module.setup_logging == new_setup_logging
-        assert program_module.logging == self.new_logging
-        assert program_module.logger == self.new_logging.hbt
-        program_module.setup_logging = setup_logging
-        program_module.logging = logging
-        program_module.logger = self.old_logger
-        program_module.parser = parser
+        main.setup_logging = self.main_setup_logging
+        main.logging = self.main_logging
+        main.logger = self.old_logger
+        main.parser = self.main_parser
 
     def create_main_tester(self):
-        p = Program()
+        p = main.Program()
         p.main_setup = new_main_setup
         p.parser = FakeParser.parser.Parser('config')
         return p
@@ -166,7 +156,7 @@ class TestProgram:
 
     def test_main_setup_execution(self):
         """main_setup and main_execution"""
-        p = Program()
+        p = main.Program()
 
         # setup phase
         p.main_setup()
