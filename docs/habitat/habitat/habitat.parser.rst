@@ -9,6 +9,13 @@ habitat.parser
 
    
    
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Parser
+      ParserModule
+   
    
 
    

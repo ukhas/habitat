@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Daniel Richman, Adam Greig
+# Copyright 2011 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -16,15 +16,10 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Various utilities for general use by ``habitat``.
+Tests for habitat.utils.startup
 
-.. autosummary::
-    :toctree: habitat
-
-    habitat.utils.checksums
-    habitat.utils.dynamicloader
-    habitat.utils.filtertools
-    habitat.utils.startup
+There are no tests here, since it's probably not useful to have them.
+Tests for the startup functions would largely just be the startup functions
+re-written with Mox, as they just call other modules rather than do
+anything really useful themselves.
 """
-
-__all__ = ["checksums", "dynamicloader", "filtertools", "startup"]

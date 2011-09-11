@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Daniel Richman, Adam Greig
+# Copyright 2010 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -15,16 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Various utilities for general use by ``habitat``.
+from ...utils import checksums
 
-.. autosummary::
-    :toctree: habitat
-
-    habitat.utils.checksums
-    habitat.utils.dynamicloader
-    habitat.utils.filtertools
-    habitat.utils.startup
-"""
-
-__all__ = ["checksums", "dynamicloader", "filtertools", "startup"]
+class TestChecksums:
+    def setUp(self):
+        self.data = "hello, world"
+    def test_calculates_crc16_ccitt_checksum(self):
+        assert checksums.crc16_ccitt(self.data) == "D4C0"
+    def test_calculates_xor_checksum(self):
+        assert checksums.xor(self.data) == "0C"
+    def test_calculates_fletcher_16_checksum(self):
+        assert checksums.fletcher_16(self.data) == "8C65"
+    def test_calculates_fletcher_16_checksum_modulus_256(self):
+        assert checksums.fletcher_16(self.data, 256) == "8848"

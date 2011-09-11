@@ -282,8 +282,8 @@ in ``estimated_time_created``:
 The information parsed out of the message string is stored in the ``data``
 dictionary, directly as returned by the parser:
 
-.. seealso:: :doc:`../messages`, :doc:`example`,
-             :py:mod:`habitat.parser`, :py:mod:`habitat.parser_modules`
+.. seealso:: :doc:`example`, :py:mod:`habitat.parser`,
+             :py:mod:`habitat.parser_modules`
 
 .. code-block:: javascript
 

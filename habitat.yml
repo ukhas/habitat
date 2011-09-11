@@ -1,0 +1,17 @@
+couch_uri: "http://localhost:5984"
+couch_db: habitat
+log_stderr_level: DEBUG
+log_file_level: NONE
+parser:
+    certs_dir: "certs"
+    log_file:
+    modules:
+        - name: "UKHAS"
+          class: "habitat.parser_modules.ukhas_parser.UKHASParser"
+loadables:
+    - name: "sensors.base"
+      class: "habitat.sensors.base"
+    - name: "sensors.stdtelem"
+      class: "habitat.sensors.stdtelem"
+    - name: "filters.common"
+      class: "habitat.filters"

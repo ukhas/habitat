@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Daniel Richman, Adam Greig
+# Copyright 2010 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -16,15 +16,5 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Various utilities for general use by ``habitat``.
-
-.. autosummary::
-    :toctree: habitat
-
-    habitat.utils.checksums
-    habitat.utils.dynamicloader
-    habitat.utils.filtertools
-    habitat.utils.startup
+Tests for the python backend of habitat. For use with nosetests.
 """
-
-__all__ = ["checksums", "dynamicloader", "filtertools", "startup"]

@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Daniel Richman, Adam Greig
+# Copyright 2010 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -16,15 +16,12 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Various utilities for general use by ``habitat``.
+Parser modules for specific protocols.
 
 .. autosummary::
     :toctree: habitat
 
-    habitat.utils.checksums
-    habitat.utils.dynamicloader
-    habitat.utils.filtertools
-    habitat.utils.startup
+    habitat.parser_modules.ukhas_parser
 """
 
-__all__ = ["checksums", "dynamicloader", "filtertools", "startup"]
+__all__ = ["ukhas_parser"]

@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Daniel Richman, Adam Greig
+# Copyright 2010, 2011 (C) Daniel Richman, Adam Greig
 #
 # This file is part of habitat.
 #
@@ -25,17 +25,19 @@ on maps.
     :toctree: habitat
 
     habitat.parser
+    habitat.parser_modules
+    habitat.loadable_manager
+    habitat.sensors
+    habitat.filters
     habitat.uploader
-    habitat.main
     habitat.utils
 """
 
 __name__ = "habitat"
-__version__ = "0.0.1"
+__version__ = "0.2.0"
 __authors__ = "Adam Greig, Daniel Richman"
-__short_copyright__ = "2010 " + __authors__
+__short_copyright__ = "2010, 2011 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-__all__ = ["parser", "uploader", "main", "utils", "filters"]
-
-from . import main
+__all__ = ["filters", "parser", "parser_modules", "loadable_manager",
+           "sensors", "uploader", "utils"]

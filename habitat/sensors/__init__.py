@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Daniel Richman, Adam Greig
+# Copyright 2011 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -16,15 +16,16 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Various utilities for general use by ``habitat``.
+Sensor function libraries.
 
 .. autosummary::
     :toctree: habitat
 
-    habitat.utils.checksums
-    habitat.utils.dynamicloader
-    habitat.utils.filtertools
-    habitat.utils.startup
+    habitat.sensors.base
+    habitat.sensors.stdtelem
 """
 
-__all__ = ["checksums", "dynamicloader", "filtertools", "startup"]
+__all__ = ["base", "stdtelem"]
+
+from . import base
+from . import stdtelem

@@ -10,7 +10,6 @@ Contents:
    installing
    configuration
    database/index
-   messages
    filters
    ukhas_parser
    habitat

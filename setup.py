@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="habitat",
-    version="0.1dev",
+    version="0.2dev",
     author="HABHUB Team",
     author_email="root@habhub.org",
     url="http://habitat.habhub.org/",

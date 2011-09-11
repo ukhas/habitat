@@ -1,5 +1,4 @@
-# Copyright 2010 (C) Daniel Richman
-# Copyright 2010 (C) Adam Greig
+# Copyright 2010 (C) Daniel Richman, Adam Greig
 #
 # This file is part of habitat.
 #
@@ -61,10 +60,8 @@ module are.
 """
 
 import sys
-import collections
 import functools
 import inspect
-import imp
 import logging
 
 all_tests = ["isclass", "isfunction", "isgeneratorfunction",
@@ -195,8 +192,9 @@ from inspect import isclass, isfunction, isgeneratorfunction
 from __builtin__ import issubclass, hasattr
 
 # Some are very simple
-isstandardfunction = lambda loadable: (isfunction(loadable) and not
-                                       isgeneratorfunction(loadable))
+def isstandardfunction(loadable):
+    """is the function a normal function (i.e., not a generator)"""
+    return isfunction(loadable) and not isgeneratorfunction(loadable)
 
 # The following we have to implement ourselves
 def hasnumargs(thing, num):
@@ -248,15 +246,19 @@ def iscallable(loadable):
     else:
         return inspect.isroutine(loadable)
 
-# Generate an expect function decorator, which will wrap a function and
-# raise error rather than return false.
 def expectgenerator(error):
+    """
+    Generate an expect function decorator, which will wrap a function and \
+    raise error rather than return false.
+    """
+
     def decorator(function):
         def new_function(*args, **kwargs):
             if not function(*args, **kwargs):
                 raise error
         functools.update_wrapper(new_function, function)
         return new_function
+
     return decorator
 
 expectisclass = expectgenerator(
