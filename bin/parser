@@ -11,4 +11,4 @@ except:
 
 from habitat.parser import Parser
 from habitat.utils.startup import main
-main('parser', Parser)
+main(Parser)

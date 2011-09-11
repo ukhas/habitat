@@ -106,16 +106,18 @@ def setup_logging(config, daemon_name):
 
     logger.info("Log initalised")
 
-def main(daemon_name, main_class):
+def main(main_class):
     """
     main function for habitat daemons. Loads config, sets up logging, and runs
 
-    *daemon_name* specifies the config sub-section that will be used.
+    *main_class.__name__.lower()* will be used as the config sub section
+    and passed as *daemon_name*.
 
     *main_class* specifies a class from which an object will be created.
     It will be initialised with arguments (config, daemon_name) and then
     the method run() of the object will be invoked.
     """
     config = load_config()
+    daemon_name = main_class.__name__.lower()
     setup_logging(config, daemon_name)
     main_class(config, daemon_name).run()
