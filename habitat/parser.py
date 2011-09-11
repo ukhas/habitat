@@ -43,21 +43,24 @@ class Parser(object):
     back to the database.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, daemon_name="parser"):
         """
-        Loads a SensorManager with config["sensors"].
-        Loads modules from config["modules"].
-        Scans config["certs_dir"] for CA and developer certificates.
-        Connects to CouchDB using config["couch_uri"] and config["couch_db"].
+        Uses config[daemon_name] as self.config (defaults to 'parser')
+        Loads a SensorManager with self.config["sensors"].
+        Loads modules from self.config["modules"].
+        Scans self.config["certs_dir"] for CA and developer certificates.
+        Connects to CouchDB using self.config["couch_uri"] and \
+            config["couch_db"].
         """
 
         config = copy.deepcopy(config)
+        parser_config = config[daemon_name]
 
-        self.sensor_manager = sensor_manager.SensorManager(config)
+        self.sensor_manager = sensor_manager.SensorManager(parser_config)
 
         self.modules = []
 
-        for module in config["modules"]:
+        for module in parser_config["modules"]:
             m = dynamicloader.load(module["class"])
             dynamicloader.expecthasmethod(m, "pre_parse")
             dynamicloader.expecthasmethod(m, "parse")
@@ -68,9 +71,7 @@ class Parser(object):
 
         self.certificate_authorities = []
 
-        base_path = os.path.split(os.path.abspath(__file__))[0]
-        parent_path = os.path.join(base_path, '..')
-        self.cert_path = os.path.join(parent_path, config["certs_dir"])
+        self.cert_path = parser_config["certs_dir"]
         ca_path = os.path.join(self.cert_path, 'ca')
         for f in os.listdir(ca_path):
             ca = M2Crypto.X509.load_cert(os.path.join(ca_path, f))
