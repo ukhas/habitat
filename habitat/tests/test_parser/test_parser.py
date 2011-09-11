@@ -36,9 +36,9 @@ class TestParser(object):
         class MockModule(parser.ParserModule):
             def __new__(cls, parser):
                 return self.mock_module
-        self.parser_config = {"modules": [
+        self.parser_config = {"parser": {"modules": [
             {"name": "Mock", "class": MockModule}],
-            "sensors": [], "certs_dir": "habitat/tests/test_parser/certs",
+            "sensors": [], "certs_dir": "habitat/tests/test_parser/certs"},
             "couch_uri": "http://localhost:5984", "couch_db": "test"}
 
         self.m.StubOutWithMock(parser, 'couchdbkit')
@@ -60,7 +60,7 @@ class TestParser(object):
     def test_init_doesnt_mess_up_config_modules(self):
         # once upon a time parser didn't deepcopy config, so config['modules']
         # would get all messed up
-        assert 'module' not in self.parser_config['modules'][0]
+        assert 'module' not in self.parser_config['parser']['modules'][0]
 
     def test_init_loads_modules_in_config(self):
         assert len(self.parser.modules) == 1
@@ -69,7 +69,7 @@ class TestParser(object):
     def test_init_doesnt_load_bad_modules(self):
         def try_to_load_module(module):
             new_config = deepcopy(self.parser_config) 
-            new_config["modules"][0]["class"] = module
+            new_config["parser"]["modules"][0]["class"] = module
             parser.Parser(new_config)
 
         class EmptyModule(object):
@@ -117,7 +117,8 @@ class TestParser(object):
 
     def test_init_doesnt_load_non_CA_cert(self):
         config = deepcopy(self.parser_config)
-        config['certs_dir'] = 'habitat/tests/test_parser/non_ca_certs'
+        config['parser']['certs_dir'] = \
+                'habitat/tests/test_parser/non_ca_certs'
         assert_raises(ValueError, parser.Parser, config)
 
     def test_init_connects_to_couch(self):
