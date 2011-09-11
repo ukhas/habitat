@@ -24,6 +24,13 @@ import yaml
 logger = logging.getLogger("habitat.utils.startup")
 
 def load_config():
+    """
+    loads the habitat config
+
+    If a single argument is provided (sys.argv) then that yml file is used,
+    otherwise './habitat.yml' is used.
+    """
+
     if len(sys.argv) == 2:
         filename = sys.argv[1]
     elif len(sys.argv) <= 1:
@@ -100,6 +107,15 @@ def setup_logging(config, daemon_name):
     logger.info("Log initalised")
 
 def main(daemon_name, main_class):
+    """
+    main function for habitat daemons. Loads config, sets up logging, and runs
+
+    *daemon_name* specifies the config sub-section that will be used.
+
+    *main_class* specifies a class from which an object will be created.
+    It will be initialised with arguments (config, daemon_name) and then
+    the method run() of the object will be invoked.
+    """
     config = load_config()
     setup_logging(config, daemon_name)
     main_class(config, daemon_name).run()
