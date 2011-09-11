@@ -75,8 +75,8 @@ class LoadableManager:
         """
         *program*: a :py:class:`habitat.main.Program` object
 
-        All modules listed in the config document for the sensor manager
-        will be loaded using :py:meth:`load`.
+        All modules listed in config["loadables"] will be loaded using
+        :py:meth:`load`.
         """
 
         self.libraries = {}
@@ -95,21 +95,21 @@ class LoadableManager:
         Runs *name* loadable using *config* and *data* (though *config* is only
         passed to *name* if *name* takes two arguments).
 
-        *name*: The sensor function to use.
+        *name*: The loaded function to use.
 
-        *config*: The config dict to provide to the sensor function
+        *config*: The config dict to provide to the function
 
         *data*: The data to parse.
         """
 
         name_parts = name.split('.')
         if len(name_parts) != 2:
-            raise ValueError("Invalid sensor name")
+            raise ValueError("Invalid function library name")
 
         library = self.libraries[name_parts[0]]
 
         if name_parts[1] not in library.__all__:
-            raise ValueError("Invalid sensor name")
+            raise ValueError("Invalid function name")
 
         func = getattr(library, name_parts[1])
 
