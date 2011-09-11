@@ -45,27 +45,27 @@ base_config = {
     "fields": [
         {
             "name": "message_count",
-            "type": "base.ascii_int"
+            "sensor": "base.ascii_int"
         }, {
             "name": "time",
-            "type": "stdtelem.time"
+            "sensor": "stdtelem.time"
         }, {
             "name": "latitude",
-            "type": "stdtelem.coordinate",
+            "sensor": "stdtelem.coordinate",
             "format": "dd.dddd"
         }, {
             "name": "longitude",
-            "type": "stdtelem.coordinate",
+            "sensor": "stdtelem.coordinate",
             "format": "dd.dddd"
         }, {
             "name": "altitude",
-            "type": "base.ascii_int"
+            "sensor": "base.ascii_int"
         }, {
             "name": "speed",
-            "type": "base.ascii_float"
+            "sensor": "base.ascii_float"
         }, {
             "name": "custom_string",
-            "type": "base.string"
+            "sensor": "base.string"
         }
     ]
 }
@@ -174,11 +174,11 @@ class TestUKHASParser:
         assert_raises(ValueError, self.p.parse, sentence,
                 config_field_without_name)
 
-        # A configuration where a field has no type (should fail)
-        config_field_without_type = deepcopy(config_checksum_none)
-        del config_field_without_type["fields"][0]["type"]
+        # A configuration where a field has no sensor (should fail)
+        config_field_without_sensor = deepcopy(config_checksum_none)
+        del config_field_without_sensor["fields"][0]["sensor"]
         assert_raises(ValueError, self.p.parse, sentence,
-                config_field_without_type)
+                config_field_without_sensor)
 
         # A configuration where a coordinate field lacks a format (should fail)
         config_field_without_format = deepcopy(config_checksum_none)
@@ -198,11 +198,11 @@ class TestUKHASParser:
         assert_raises(ValueError, self.p.parse, sentence,
                 config_invalid_protocol)
 
-        # A configuration with an invalid field type (should fail)
-        config_field_type_invalid = deepcopy(config_checksum_none)
-        config_field_type_invalid["fields"][0]["type"] = "invalid"
+        # A configuration with an invalid field sensor (should fail)
+        config_field_sensor_invalid = deepcopy(config_checksum_none)
+        config_field_sensor_invalid["fields"][0]["sensor"] = "invalid"
         assert_raises(ValueError, self.p.parse, sentence,
-                config_field_type_invalid)
+                config_field_sensor_invalid)
 
         # A configuration with an invalid coordinate format (should fail)
         config_format_invalid = deepcopy(config_checksum_none)

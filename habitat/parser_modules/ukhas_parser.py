@@ -184,7 +184,7 @@ class UKHASParser(ParserModule):
                 raise ValueError("Less than one fields are defined.")
             for field in config["fields"]:
                 field["name"]
-                field["type"]
+                field["sensor"]
                 if field["name"][0] == "_":
                     raise ValueError("Field name starts with an underscore.")
         except (KeyError, TypeError):
@@ -220,7 +220,7 @@ class UKHASParser(ParserModule):
             raise ValueError("Invalid callsign, contains characters "
                              "besides A-Z and 0-9.")
 
-    def _parse_field(self, field, field_config):
+    def _parse_field(self, field, config):
         """
         Parse a *field* string using its configuration dictionary.
 
@@ -229,10 +229,10 @@ class UKHASParser(ParserModule):
         inputs.
         """
 
-        field_name = field_config["name"]
-        field_type = field_config["type"]
-        field_data = self.loadable_manager.run(field_type, field_config, field)
-        return [field_name, field_data]
+        name = config["name"]
+        sensor = config["sensor"]
+        data = self.loadable_manager.run(sensor, config, field)
+        return [name, data]
 
     def pre_parse(self, string):
         """
