@@ -84,7 +84,7 @@ class Parser(object):
 
         self.couch_server = couchdbkit.Server(config["couch_uri"])
         self.db = self.couch_server[config["couch_db"]]
-        self.last_seq = 0
+        self.last_seq = self.db.info()["update_seq"]
 
     def run(self):
         """
@@ -314,15 +314,20 @@ class Parser(object):
         Returns the filtered data, or leaves the data untouched
         if the filter could not be run.
         """
-        if "type" not in f:
-            logger.warning("A filter didn't have a type: " + repr(f))
-            return data
-        if f["type"] == "normal":
-            return self._normal_filter(data, f)
-        elif f["type"] == "hotfix":
-            return self._hotfix_filter(data, f)
-        else:
-            return data
+        
+        rollback = data
+        data = copy.deepcopy(data)
+
+        try:
+            if f["type"] == "normal":
+                return self._normal_filter(data, f)
+            elif f["type"] == "hotfix":
+                return self._hotfix_filter(data, f)
+            else:
+                raise ValueError("Invalid filter type")
+        except:
+            logger.exception("Error while applying filter " + repr(f))
+            return rollback
 
     def _normal_filter(self, data, f):
         """Load and run a filter specified by a callable."""
@@ -330,37 +335,26 @@ class Parser(object):
         if "config" in f:
             config = f["config"]
 
-        try:
-            fil = dynamicloader.load(f["callable"])
-        except ImportError:
-            logger.warning("Could not import filter: " + repr(f))
-            return data
-        if not dynamicloader.iscallable(fil):
-            logger.warning("A loaded filter wasn't callable: " + repr(f))
-            return data
+        fil = dynamicloader.load(f["callable"])
+        assert dynamicloader.iscallable(fil)
+
         if dynamicloader.hasnumargs(fil, 1):
             return fil(data)
         elif dynamicloader.hasnumargs(fil, 2):
             return fil(data, config)
         else:
-            logger.warning("A loaded filter had wrong number of args: " +
-                    repr(f))
-            return data
+            raise TypeError("The loaded filter had the wrong number of args")
 
     def _sanity_check_hotfix(self, f):
         """Perform basic sanity checks on **f**"""
         if "code" not in f:
-            err = "Hotfix didn't have any code: " + repr(f)
-            raise ValueError(err)
+            raise ValueError("Hotfix didn't have any code")
         if "signature" not in f:
-            err = "Hotfix didn't have a signature: " + repr(f)
-            raise ValueError(err)
+            raise ValueError("Hotfix didn't have a signature")
         if "certificate" not in f:
-            err = "Hotfix didn't specify a certificate: " + repr(f)
-            raise ValueError(err)
+            raise ValueError("Hotfix didn't specify a certificate")
         if os.path.basename(f["certificate"]) != f["certificate"]:
-            err = "Hotfix's specified certificate was invalid: " + repr(f)
-            raise ValueError(err)
+            raise ValueError("Hotfix's specified certificate was invalid")
 
     def _verify_certificate(self, f, cert):
         """Check that the certificate is cryptographically signed by a key
@@ -398,44 +392,19 @@ class Parser(object):
         """Load a filter specified by some code in the database. Check its
         authenticity by verifying its certificate, then run if OK."""
         # Check the hotfix has all the right fields
-        try:
-            self._sanity_check_hotfix(f)
-        except ValueError as e:
-            logger.warning(e)
-            return data
+        self._sanity_check_hotfix(f)
         
         # Load requested certificate
-        try:
-            cert = self._get_certificate(f["certificate"])
-        except RuntimeError:
-            err = "Could not load certificate ''{0}''."
-            logger.warning(err.format(f["certificate"]))
-            return data
+        cert = self._get_certificate(f["certificate"])
         
         # Check the certificate and signature are cryptographically okay
-        try:
-            self._verify_certificate(f, cert)
-        except ValueError as e:
-            logger.warning(e)
-            return data
+        self._verify_certificate(f, cert)
         
         # Compile the hotfix
-        try:
-            env = self._compile_hotfix(self, f)
-        except ValueError as e:
-            logger.warning(e)
-            return data
+        env = self._compile_hotfix(self, f)
 
-        logger.debug("Hotfix compiled, executing")
-        try:
-            return env["f"](data)
-        except:
-            # this is a pretty hardcore except! it'l catch anything.
-            # but that's desirable as who knows what this crazy code
-            # might do.
-            err = "An exception occured while running a hotfix: " + repr(f)
-            logger.warning(err)
-            return data
+        logger.debug("Executing a hotfix")
+        return env["f"](data)
     
     def _get_certificate(self, certname):
         """Fetch the specified certificate, returning the X509 object.
