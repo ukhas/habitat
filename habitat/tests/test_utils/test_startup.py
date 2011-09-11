@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# Copyright 2010 (C) Daniel Richman
+# Copyright 2011 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -16,8 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-from os.path import abspath, split, join
-sys.path.append(join(split(abspath(__file__))[0], '..'))
-import habitat
-habitat.main.Program().main()
+"""
+Tests for habitat.utils.startup
+
+There are no tests here, since it's probably not useful to have them.
+Tests for the startup functions would largely just be the startup functions
+re-written with Mox, as they just call other modules rather than do
+anything really useful themselves.
+"""
