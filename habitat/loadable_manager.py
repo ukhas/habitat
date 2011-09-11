@@ -59,7 +59,7 @@ loadable function name, as with sensors.
 
 See :py:mod:`habitat.filters` for some filters included with habitat.
 
-Filters can take one or two arguments, *data* and optionally *config*. They
+Filters can take one or two arguments, *config*, *data* or just *data*. They
 should return a suitably modified form of data, optionally using anything from
 *config* which was specified by the user in the flight document.
 """

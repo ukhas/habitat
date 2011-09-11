@@ -24,18 +24,18 @@ import habitat.filters as f
 class TestFilters:
     def test_semicolons_to_commas(self):
         data = "$$testpayload,1,2,3;4;5;6*8A24"
-        fixed = f.semicolons_to_commas(data, {})
+        fixed = f.semicolons_to_commas({}, data)
         assert fixed == "$$testpayload,1,2,3,4,5,6*888F"
 
     def test_numeric_scale(self):
         config = {"source": "key", "factor": (1.0/7.0)}
         data = {"key": 49, "something": True}
-        fixed = f.numeric_scale(data, config)
+        fixed = f.numeric_scale(config, data)
         assert fixed == {"key": 7, "something": True}
 
     def test_simple_map(self):
         config = {"source": "key", "destination": "key_thing",
                   "map": {48: "test", 49: "something"}}
         data = {"key": 49}
-        fixed = f.simple_map(data, config)
+        fixed = f.simple_map(config, data)
         assert fixed == {"key": 49, "key_thing": "something"}
