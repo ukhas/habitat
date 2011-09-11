@@ -230,7 +230,7 @@ class UKHASParser(ParserModule):
         """
 
         name = config["name"]
-        sensor = config["sensor"]
+        sensor = 'sensors.' + config["sensor"]
         data = self.loadable_manager.run(sensor, config, field)
         return [name, data]
 

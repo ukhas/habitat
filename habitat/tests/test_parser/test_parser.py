@@ -382,7 +382,7 @@ class TestParser(object):
         data = 'test data'
         f = {'type': 'normal', 'filter': 'some.func'}
         self.parser.loadable_manager.run(
-            'some.func', None, 'test data').AndReturn('filtered')
+            'filters.some.func', f, 'test data').AndReturn('filtered')
         self.m.ReplayAll()
         assert self.parser._filter(data, f) == 'filtered'
         self.m.VerifyAll()
@@ -392,7 +392,7 @@ class TestParser(object):
         data = 'test data'
         f = {'type': 'normal', 'filter': 'some.func', 'config': 'parameters'}
         self.parser.loadable_manager.run(
-            'some.func', 'parameters', 'test data').AndReturn('filtered')
+            'filters.some.func', f, 'test data').AndReturn('filtered')
         self.m.ReplayAll()
         assert self.parser._filter(data, f) == 'filtered'
         self.m.VerifyAll()

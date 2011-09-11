@@ -103,15 +103,18 @@ class LoadableManager:
         """
 
         name_parts = name.split('.')
-        if len(name_parts) != 2:
-            raise ValueError("Invalid function library name")
+        library_name = '.'.join(name_parts[0:-1])
+        function_name = name_parts[-1]
 
-        library = self.libraries[name_parts[0]]
+        if library_name not in self.libraries:
+            raise ValueError("Invalid library name: " + library_name)
 
-        if name_parts[1] not in library.__all__:
-            raise ValueError("Invalid function name")
+        library = self.libraries[library_name]
 
-        func = getattr(library, name_parts[1])
+        if function_name not in library.__all__:
+            raise ValueError("Invalid function name: " + function_name)
+
+        func = getattr(library, function_name)
 
         if dynamicloader.hasnumargs(func, 1):
             return func(data)

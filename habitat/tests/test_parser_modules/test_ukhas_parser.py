@@ -29,8 +29,8 @@ from ...parser_modules.ukhas_parser import UKHASParser
 # Provide the sensor functions to the parser
 fake_sensors_config = {
     "loadables": [
-        {"name": "base", "class": "habitat.sensors.base"},
-        {"name": "stdtelem", "class": "habitat.sensors.stdtelem"}
+        {"name": "sensors.base", "class": "habitat.sensors.base"},
+        {"name": "sensors.stdtelem", "class": "habitat.sensors.stdtelem"}
     ]
 }
 

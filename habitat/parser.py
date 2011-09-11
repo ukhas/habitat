@@ -321,7 +321,8 @@ class Parser(object):
 
         try:
             if f["type"] == "normal":
-                return self.loadable_manager.run(f['filter'], f, data)
+                fil = 'filters.' + f['filter']
+                return self.loadable_manager.run(fil, f, data)
             elif f["type"] == "hotfix":
                 return self._hotfix_filter(data, f)
             else:

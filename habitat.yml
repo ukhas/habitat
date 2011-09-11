@@ -9,7 +9,9 @@ parser:
         - name: "UKHAS"
           class: "habitat.parser_modules.ukhas_parser.UKHASParser"
 loadables:
-    - name: "base"
+    - name: "sensors.base"
       class: "habitat.sensors.base"
-    - name: "stdtelem"
+    - name: "sensors.stdtelem"
       class: "habitat.sensors.stdtelem"
+    - name: "filters.common"
+      class: "habitat.filters"
