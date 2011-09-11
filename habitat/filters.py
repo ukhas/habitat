@@ -22,6 +22,8 @@ with habitat as commonly used pieces of code.
 
 from habitat.utils import filtertools
 
+__all__ = ["semicolons_to_commas", "numeric_scale", "simple_map"]
+
 def semicolons_to_commas(config, data):
     """intermediate filter that converts semicolons to commas"""
     data = {"data": data}
