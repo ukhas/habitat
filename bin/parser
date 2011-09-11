@@ -2,7 +2,7 @@
 
 try:
     import habitat
-except:
+except ImportError:
     # Find habitat, assuming we're in the habitat git repo.
     import sys
     from os.path import abspath, split, join
