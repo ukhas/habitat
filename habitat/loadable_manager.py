@@ -39,12 +39,12 @@ Python data formats. See :py:mod:`habitat.sensors` for some sensors included
 with habitat, but you may also want to write your own for a specific type of
 data.
 
-A sensor function takes two arguments, *config* and *data*. It
-can return a string, list, dict, int, float, or any other python
-object that can be stored in a couchdb database.
+A sensor function may two one or two arguments, *config* and *data* or just
+*data*. It can return any Python object which can be stored in the CouchDB
+database.
 
 *config* is a dict of options. It is passed to the function from
-:py:meth:`LoadableManager.parse`
+:py:meth:`LoadableManager.run`
 
 *data* is the string to parse.
 
@@ -92,7 +92,8 @@ class LoadableManager:
 
     def run(self, name, config, data):
         """
-        parses the *data* provided
+        Runs *name* loadable using *config* and *data* (though *config* is only
+        passed to *name* if *name* takes two arguments).
 
         *name*: The sensor function to use.
 
