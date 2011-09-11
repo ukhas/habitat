@@ -19,6 +19,7 @@
 Unit tests for the Parser's Sink class.
 """
 
+import os
 import mox
 
 import couchdbkit
@@ -36,9 +37,11 @@ class TestParser(object):
         class MockModule(parser.ParserModule):
             def __new__(cls, parser):
                 return self.mock_module
+        base_path = os.path.split(os.path.abspath(__file__))[0]
+        cert_path = os.path.join(base_path, 'certs')
         self.parser_config = {"parser": {"modules": [
             {"name": "Mock", "class": MockModule}],
-            "sensors": [], "certs_dir": "habitat/tests/test_parser/certs"},
+            "certs_dir": cert_path}, "loadables": [],
             "couch_uri": "http://localhost:5984", "couch_db": "test"}
 
         self.m.StubOutWithMock(parser, 'couchdbkit')
@@ -117,8 +120,9 @@ class TestParser(object):
 
     def test_init_doesnt_load_non_CA_cert(self):
         config = deepcopy(self.parser_config)
-        config['parser']['certs_dir'] = \
-                'habitat/tests/test_parser/non_ca_certs'
+        base_path = os.path.split(os.path.abspath(__file__))[0]
+        cert_path = os.path.join(base_path, 'non_ca_certs')
+        config['parser']['certs_dir'] = cert_path
         assert_raises(ValueError, parser.Parser, config)
 
     def test_init_connects_to_couch(self):
@@ -373,11 +377,22 @@ class TestParser(object):
     def test_filters_must_have_type(self):
         assert self.parser._filter('test data', {}) == 'test data'
 
-    def test_calls_normal_filter(self):
-        self.m.StubOutWithMock(self.parser, '_normal_filter')
+    def test_calls_loadable_manager_for_normal_filters(self):
+        self.m.StubOutWithMock(self.parser, 'loadable_manager')
         data = 'test data'
-        f = {'type': 'normal'}
-        self.parser._normal_filter('test data', f).AndReturn('filtered')
+        f = {'type': 'normal', 'filter': 'some.func'}
+        self.parser.loadable_manager.run(
+            'some.func', None, 'test data').AndReturn('filtered')
+        self.m.ReplayAll()
+        assert self.parser._filter(data, f) == 'filtered'
+        self.m.VerifyAll()
+
+    def test_calls_loadable_manager_for_normal_filters_with_config(self):
+        self.m.StubOutWithMock(self.parser, 'loadable_manager')
+        data = 'test data'
+        f = {'type': 'normal', 'filter': 'some.func', 'config': 'parameters'}
+        self.parser.loadable_manager.run(
+            'some.func', 'parameters', 'test data').AndReturn('filtered')
         self.m.ReplayAll()
         assert self.parser._filter(data, f) == 'filtered'
         self.m.VerifyAll()
@@ -393,21 +408,6 @@ class TestParser(object):
 
     def test_skips_unknown_filter_types(self):
         assert self.parser._filter('test data', {'type': '?'}) == 'test data'
-
-    def test_normal_filters(self):
-        def fil(data):
-            assert data == 'test string'
-            return 'filtered'
-        f = {'callable': fil}
-        assert self.parser._normal_filter('test string', f) == 'filtered'
-
-    def test_normal_filters_with_config(self):
-        def fil(data, config):
-            assert data == 'test string'
-            assert config == 'config'
-            return 'filtered'
-        f = {'callable': fil, 'config': 'config'}
-        assert self.parser._normal_filter('test string', f) == 'filtered'
 
     def test_uncallable_normal_filters(self):
         class F:

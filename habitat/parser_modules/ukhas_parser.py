@@ -231,7 +231,7 @@ class UKHASParser(ParserModule):
 
         field_name = field_config["name"]
         field_type = field_config["type"]
-        field_data = self.sensors.parse(field_type, field_config, field)
+        field_data = self.loadable_manager.run(field_type, field_config, field)
         return [field_name, field_data]
 
     def pre_parse(self, string):

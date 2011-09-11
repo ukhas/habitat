@@ -22,20 +22,21 @@ Test the UKHAS protocol parser.
 from nose.tools import assert_raises
 from copy import deepcopy
 
-# Mocking the SensorManager is a heck of a lot of effort. Not worth it.
-from ...sensor_manager import SensorManager
+# Mocking the LoadableManager is a heck of a lot of effort. Not worth it.
+from ...loadable_manager import LoadableManager
 from ...parser_modules.ukhas_parser import UKHASParser
 
 # Provide the sensor functions to the parser
 fake_sensors_config = {
-    "sensors": [
+    "loadables": [
+        {"name": "base", "class": "habitat.sensors.base"},
         {"name": "stdtelem", "class": "habitat.sensors.stdtelem"}
     ]
 }
 
 class FakeParser:
     def __init__(self):
-        self.sensor_manager = SensorManager(fake_sensors_config)
+        self.loadable_manager = LoadableManager(fake_sensors_config)
 
 # A 'standard' config. Other configs can copy this and change parts.
 base_config = {

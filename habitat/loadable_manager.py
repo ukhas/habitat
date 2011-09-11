@@ -17,47 +17,59 @@
 
 
 """
-``habitat.sensor_manager``: the sensor-function manager
+``habitat.loadable_manager``: the loadable-function manager
 
-The sensor function manager provides a collection of sensor functions,
-which are used by parser modules to turn extracted fields into useful data.
+This manager is given a list of modules to load from the configuration file,
+and it loads all of the functions in each module such that they can later be
+used by other pieces of habitat code while ensuring that only modules specified
+on the command line can be used in such a way; this prevents user-specified
+Python code paths being used.
 
-Sensor functions are grouped into "libraries", which are python
-modules. When loaded, these modules are assigned a shorthand. For example,
-functions in ``habitat.sensors.stdtelem`` are available simply as
-``stdtelem.func``. The shorthand assigned is specified in the config document.
-
-These all libraries listed in the Sensor Manager's configuration are loaded
-upon initialisation.
+The modules that functions are loaded from are given shorthand names to ease
+referring to them from configuration documents et cetera, for example
+``habitat.sensors.stdtelem.time`` might become ``stdtelem.time``. The shorthand
+is specified in the configuration document.
 
 Sensor Functions
 ================
 
-The sensor_manager provides the *base* library built in; it includes
-
- * ascii_int
- * ascii_float
- * string
-
-Other libraries are available with habitat. See :py:mod:`habitat.sensors`
+One of the major uses of loadable_manager (and historically its only use) is
+sensor functions, used by parser modules to convert input data into usable
+Python data formats. See :py:mod:`habitat.sensors` for some sensors included
+with habitat, but you may also want to write your own for a specific type of
+data.
 
 A sensor function takes two arguments, *config* and *data*. It
 can return a string, list, dict, int, float, or any other python
 object that can be stored in a couchdb database.
 
 *config* is a dict of options. It is passed to the function from
-:py:meth:`SensorManager.parse`
+:py:meth:`LoadableManager.parse`
 
 *data* is the string to parse.
+
+
+Filter Functions
+================
+
+Another use for the loadable_manager is filters that are applied against
+incoming telemetry strings. Which filters to use is specified in a payload's
+flight document, either as user-specified (but signed) hotfix code or a
+loadable function name, as with sensors.
+
+See :py:mod:`habitat.filters` for some filters included with habitat.
+
+Filters can take one or two arguments, *data* and optionally *config*. They
+should return a suitably modified form of data, optionally using anything from
+*config* which was specified by the user in the flight document.
 """
 
 from .utils import dynamicloader
-from .sensors import base
 
-__all__ = ["SensorManager"]
+__all__ = ["LoadableManager"]
 
-class SensorManager:
-    """The main Sensor Manager class"""
+class LoadableManager:
+    """The main Loadable Manager class"""
 
     def __init__(self, config):
         """
@@ -67,10 +79,10 @@ class SensorManager:
         will be loaded using :py:meth:`load`.
         """
 
-        self.libraries = {"base": base}
+        self.libraries = {}
 
-        for sensor in config["sensors"]:
-            self.load(sensor["class"], sensor["name"])
+        for loadable in config["loadables"]:
+            self.load(loadable["class"], loadable["name"])
 
     def load(self, module, shorthand):
         """loads *module* as a library and assigns it to *shorthand*"""
@@ -78,7 +90,7 @@ class SensorManager:
         module = dynamicloader.load(module)
         self.libraries[shorthand] = module
 
-    def parse(self, name, config, data):
+    def run(self, name, config, data):
         """
         parses the *data* provided
 
@@ -100,9 +112,12 @@ class SensorManager:
 
         func = getattr(library, name_parts[1])
 
-        return func(config, data)
+        if dynamicloader.hasnumargs(func, 1):
+            return func(data)
+        else:
+            return func(config, data)
 
-    _repr_format = "<habitat.parser.SensorManager: {l} libraries loaded>"
+    _repr_format = "<habitat.LoadableManager: {l} libraries loaded>"
 
     def __repr__(self):
         return self._repr_format.format(l=len(self.libraries))
