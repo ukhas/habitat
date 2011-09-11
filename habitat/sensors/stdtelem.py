@@ -24,7 +24,7 @@ from time import strptime
 
 __all__ = ["time", "coordinate"]
 
-def time(config, data):
+def time(data):
     """Parses time in ``HH:MM:SS`` format"""
 
     if len(data) == 8:
