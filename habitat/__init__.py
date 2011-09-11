@@ -34,7 +34,7 @@ on maps.
 """
 
 __name__ = "habitat"
-__version__ = "0.0.1"
+__version__ = "0.2.0"
 __authors__ = "Adam Greig, Daniel Richman"
 __short_copyright__ = "2010, 2011 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
