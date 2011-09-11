@@ -73,8 +73,6 @@ class LoadableManager:
 
     def __init__(self, config):
         """
-        *program*: a :py:class:`habitat.main.Program` object
-
         All modules listed in config["loadables"] will be loaded using
         :py:meth:`load`.
         """

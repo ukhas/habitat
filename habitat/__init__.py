@@ -30,7 +30,6 @@ on maps.
     habitat.sensors
     habitat.filters
     habitat.uploader
-    habitat.main
     habitat.utils
 """
 
@@ -40,5 +39,5 @@ __authors__ = "Adam Greig, Daniel Richman"
 __short_copyright__ = "2010, 2011 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-__all__ = ["filters", "main", "parser", "parser_modules", "loadable_manager",
+__all__ = ["filters", "parser", "parser_modules", "loadable_manager",
            "sensors", "uploader", "utils"]
