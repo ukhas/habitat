@@ -27,7 +27,7 @@ import os
 import couchdbkit
 import copy
 
-from . import sensor_manager
+from . import loadable_manager
 from .utils import dynamicloader
 
 __all__ = ["Parser", "ParserModule"]
@@ -45,8 +45,8 @@ class Parser(object):
 
     def __init__(self, config, daemon_name="parser"):
         """
-        Uses config[daemon_name] as self.config (defaults to 'parser')
-        Loads a SensorManager with self.config["sensors"].
+        Uses config[daemon_name] as self.config (defaults to 'parser').
+        Loads a LoadableManager, passing it config.
         Loads modules from self.config["modules"].
         Scans self.config["certs_dir"] for CA and developer certificates.
         Connects to CouchDB using self.config["couch_uri"] and \
@@ -56,7 +56,7 @@ class Parser(object):
         config = copy.deepcopy(config)
         parser_config = config[daemon_name]
 
-        self.sensor_manager = sensor_manager.SensorManager(parser_config)
+        self.loadable_manager = loadable_manager.LoadableManager(config)
 
         self.modules = []
 
@@ -311,7 +311,7 @@ class Parser(object):
     def _filter(self, data, f):
         """
         Load and run a filter from a dictionary specifying type, the
-        relevant callable/code and maybe a config.
+        relevant filter/code and maybe a config.
         Returns the filtered data, or leaves the data untouched
         if the filter could not be run.
         """
@@ -321,7 +321,8 @@ class Parser(object):
 
         try:
             if f["type"] == "normal":
-                return self._normal_filter(data, f)
+                fil = 'filters.' + f['filter']
+                return self.loadable_manager.run(fil, f, data)
             elif f["type"] == "hotfix":
                 return self._hotfix_filter(data, f)
             else:
@@ -329,22 +330,6 @@ class Parser(object):
         except:
             logger.exception("Error while applying filter " + repr(f))
             return rollback
-
-    def _normal_filter(self, data, f):
-        """Load and run a filter specified by a callable."""
-        config = None
-        if "config" in f:
-            config = f["config"]
-
-        fil = dynamicloader.load(f["callable"])
-        assert dynamicloader.iscallable(fil)
-
-        if dynamicloader.hasnumargs(fil, 1):
-            return fil(data)
-        elif dynamicloader.hasnumargs(fil, 2):
-            return fil(data, config)
-        else:
-            raise TypeError("The loaded filter had the wrong number of args")
 
     def _sanity_check_hotfix(self, f):
         """Perform basic sanity checks on **f**"""
@@ -436,7 +421,7 @@ class ParserModule(object):
     def __init__(self, parser):
         """Store the parser reference for later use."""
         self.parser = parser
-        self.sensors = parser.sensor_manager
+        self.loadable_manager = parser.loadable_manager
 
     def pre_parse(self, string):
         """

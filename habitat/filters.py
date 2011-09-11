@@ -22,7 +22,7 @@ with habitat as commonly used pieces of code.
 
 from habitat.utils import filtertools
 
-def semicolons_to_commas(data, config):
+def semicolons_to_commas(config, data):
     """intermediate filter that converts semicolons to commas"""
     data = {"data": data}
     with filtertools.UKHASChecksumFixer("crc16-ccitt", data) as c:
@@ -42,7 +42,7 @@ def _post_singlefield(config):
 
     return (source, destination)
 
-def numeric_scale(data, config):
+def numeric_scale(config, data):
     """post filter that scales a numeric key of data linearly"""
     (source_key, destination_key) = _post_singlefield(config)
     factor = float(config["factor"])
@@ -51,7 +51,7 @@ def numeric_scale(data, config):
     data[destination_key] = source * factor
     return data
 
-def simple_map(data, config):
+def simple_map(config, data):
     """post filter that maps source to destination values based on a dict"""
     (source_key, destination_key) = _post_singlefield(config)
 

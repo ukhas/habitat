@@ -24,28 +24,28 @@ from ...sensors import base
 
 class TestBaseSensors:
     def test_ascii_ints(self):
-        assert base.ascii_int(None, "12") == 12
-        assert base.ascii_int(None, "012") == 12
+        assert base.ascii_int("12") == 12
+        assert base.ascii_int("012") == 12
 
     def test_ascii_ints_with_empty_strings(self):
-        assert base.ascii_int(None, "") == None
+        assert base.ascii_int("") == None
 
     @raises(ValueError)
     def test_ascii_ints_with_invalid_strings(self):
-        base.ascii_int(None, "NOT AN INT")
+        base.ascii_int("NOT AN INT")
 
     def test_ascii_floats(self):
-        assert base.ascii_float(None, "12") == 12.0
-        assert base.ascii_float(None, "12.3") == 12.3
-        assert base.ascii_float(None, "0.1") == 0.1
+        assert base.ascii_float("12") == 12.0
+        assert base.ascii_float("12.3") == 12.3
+        assert base.ascii_float("0.1") == 0.1
     
     def test_ascii_floats_with_empty_strings(self):
-        assert base.ascii_float(None, "") == None
+        assert base.ascii_float("") == None
 
     @raises(ValueError)
     def test_ascii_floats_with_invalid_strings(self):
-        base.ascii_float(None, "NOT A FLOAT")
+        base.ascii_float("NOT A FLOAT")
 
     def test_strings(self):
-        assert base.string(None, "hello") == "hello"
-        assert base.string(None, "123") == "123"
+        assert base.string("hello") == "hello"
+        assert base.string("123") == "123"
