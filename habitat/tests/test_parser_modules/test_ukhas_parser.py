@@ -34,6 +34,7 @@ fake_sensors_config = {
     ]
 }
 
+
 class FakeParser:
     def __init__(self):
         self.loadable_manager = LoadableManager(fake_sensors_config)
@@ -69,6 +70,7 @@ base_config = {
         }
     ]
 }
+
 
 class TestUKHASParser:
     """UKHAS Parser"""
@@ -355,7 +357,7 @@ class TestUKHASParser:
 
         sentence_good_1 = \
             "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681\n"
-        
+
         assert(self.p.parse(sentence_good_1, base_config)
                == self.output_append_sentence(output_good, sentence_good_1))
 

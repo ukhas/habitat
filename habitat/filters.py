@@ -24,6 +24,7 @@ from .utils import filtertools
 
 __all__ = ["semicolons_to_commas", "numeric_scale", "simple_map"]
 
+
 def semicolons_to_commas(config, data):
     """intermediate filter that converts semicolons to commas"""
     data = {"data": data}
@@ -31,6 +32,7 @@ def semicolons_to_commas(config, data):
     with filtertools.UKHASChecksumFixer(checksum, data) as c:
         c["data"] = c["data"].replace(";", ",")
     return c["data"]
+
 
 def _post_singlefield(config):
     source = config["source"]
@@ -45,6 +47,7 @@ def _post_singlefield(config):
 
     return (source, destination)
 
+
 def numeric_scale(config, data):
     """post filter that scales a numeric key of data linearly"""
     (source_key, destination_key) = _post_singlefield(config)
@@ -53,6 +56,7 @@ def numeric_scale(config, data):
     source = float(data[source_key])
     data[destination_key] = source * factor
     return data
+
 
 def simple_map(config, data):
     """post filter that maps source to destination values based on a dict"""

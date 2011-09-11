@@ -74,6 +74,7 @@ del all_tests, expect_tests
 
 logger = logging.getLogger("habitat.utils.dynamicloader")
 
+
 def load(loadable, force_reload=False):
     """
     Attempts to dynamically load *loadable*
@@ -161,6 +162,7 @@ def load(loadable, force_reload=False):
 
     return loadable
 
+
 def fullname(loadable):
     """
     Determines the full name in ``module.module.class`` form
@@ -191,10 +193,12 @@ def fullname(loadable):
 from inspect import isclass, isfunction, isgeneratorfunction
 from __builtin__ import issubclass, hasattr
 
+
 # Some are very simple
 def isstandardfunction(loadable):
     """is the function a normal function (i.e., not a generator)"""
     return isfunction(loadable) and not isgeneratorfunction(loadable)
+
 
 # The following we have to implement ourselves
 def hasnumargs(thing, num):
@@ -222,6 +226,7 @@ def hasnumargs(thing, num):
 
     return args == num
 
+
 def hasmethod(loadable, name):
     """Returns true if *loadable*.*name* is callable """
     try:
@@ -230,6 +235,7 @@ def hasmethod(loadable, name):
         return True
     except:
         return False
+
 
 # Builtin callable() is not good enough since it returns true for any
 # class oboject
@@ -245,6 +251,7 @@ def iscallable(loadable):
         return hasmethod(loadable, "__call__")
     else:
         return inspect.isroutine(loadable)
+
 
 def expectgenerator(error):
     """

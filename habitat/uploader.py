@@ -30,6 +30,7 @@ import base64
 import hashlib
 import couchdbkit
 
+
 class CollisionError(Exception):
     """
     Payload telemetry sha256 hash collision
@@ -39,11 +40,13 @@ class CollisionError(Exception):
     """
     pass
 
+
 class UnmergeableError(Exception):
     """
     Couldn't merge a payload_telemetry CouchDB conflict after many tries
     """
     pass
+
 
 class Uploader(object):
     """

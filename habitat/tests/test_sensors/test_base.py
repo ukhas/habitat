@@ -22,6 +22,7 @@ Tests the base sensor functions
 from nose.tools import raises
 from ...sensors import base
 
+
 class TestBaseSensors:
     def test_ascii_ints(self):
         assert base.ascii_int("12") == 12
@@ -38,7 +39,7 @@ class TestBaseSensors:
         assert base.ascii_float("12") == 12.0
         assert base.ascii_float("12.3") == 12.3
         assert base.ascii_float("0.1") == 0.1
-    
+
     def test_ascii_floats_with_empty_strings(self):
         assert base.ascii_float("") == None
 

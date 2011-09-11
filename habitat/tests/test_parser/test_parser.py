@@ -30,13 +30,16 @@ from nose.tools import assert_raises
 
 from ... import parser
 
+
 class TestParser(object):
     def setup(self):
         self.m = mox.Mox()
         self.mock_module = self.m.CreateMock(parser.ParserModule)
+
         class MockModule(parser.ParserModule):
             def __new__(cls, parser):
                 return self.mock_module
+
         base_path = os.path.split(os.path.abspath(__file__))[0]
         cert_path = os.path.join(base_path, 'certs')
         self.parser_config = {"parser": {"modules": [
@@ -71,7 +74,7 @@ class TestParser(object):
 
     def test_init_doesnt_load_bad_modules(self):
         def try_to_load_module(module):
-            new_config = deepcopy(self.parser_config) 
+            new_config = deepcopy(self.parser_config)
             new_config["parser"]["modules"][0]["class"] = module
             parser.Parser(new_config)
 
@@ -173,7 +176,7 @@ class TestParser(object):
         self.m.ReplayAll()
         self.parser._save_updated_doc(parsed_doc)
         self.m.VerifyAll()
-    
+
     def test_saving_merges_after_conflict(self):
         orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
         parsed_doc = deepcopy(orig_doc)
@@ -190,7 +193,7 @@ class TestParser(object):
         self.m.ReplayAll()
         self.parser._save_updated_doc(parsed_doc)
         self.m.VerifyAll()
-    
+
     def test_saving_quits_after_many_conflicts(self):
         orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
         parsed_doc = deepcopy(orig_doc)
@@ -230,7 +233,7 @@ class TestParser(object):
         assert_raises(ValueError, self.parser._find_config_doc, callsign,
                 time_created)
         self.m.VerifyAll()
-    
+
     def test_doesnt_parse_if_no_callsign_found(self):
         doc = {'data': {}, 'receivers': {'tester': {}}}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
@@ -248,7 +251,8 @@ class TestParser(object):
         self.parser.modules[0]['default_config'] = default
         self.mock_module.pre_parse('test string').AndRaise(ValueError)
         self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.mock_module.parse('test string',default['sentence']).AndReturn({})
+        self.mock_module.parse('test string',
+            default['sentence']).AndReturn({})
         self.m.ReplayAll()
         result = self.parser.parse(doc)
         assert result['data']['_parsed']
@@ -315,7 +319,7 @@ class TestParser(object):
 
     def setup_parse(self, config=None, doc=None):
         if config is None:
-            config = {'payloads': {'callsign': { 'sentence': {}}}}
+            config = {'payloads': {'callsign': {'sentence': {}}}}
             config['_id'] = 'test'
             config['payloads']['callsign']['sentence']['protocol'] = 'Mock'
         payload_config = config['payloads']['callsign']['sentence']
@@ -373,7 +377,7 @@ class TestParser(object):
         self.m.ReplayAll()
         assert self.parser._post_filter(data, config) == 'result'
         self.m.VerifyAll()
-    
+
     def test_filters_must_have_type(self):
         assert self.parser._filter('test data', {}) == 'test data'
 
@@ -448,10 +452,13 @@ class TestParser(object):
         self.m.StubOutWithMock(self.parser, '_verify_certificate')
         self.m.StubOutWithMock(self.parser, '_compile_hotfix')
         f = {'certificate': 'cert', 'type': 'hotfix'}
+
         class OhNoError(Exception):
             pass
+
         def hotfix(data):
             raise OhNoError
+
         env = {'f': hotfix}
         self.parser._sanity_check_hotfix(f)
         self.parser._get_certificate('cert').AndReturn('got_cert')
@@ -464,7 +471,7 @@ class TestParser(object):
     def test_handles_hotfix_syntax_error(self):
         f = {'code': "this isn't python!"}
         assert_raises(ValueError, self.parser._compile_hotfix, f)
-    
+
     def test_handles_invalid_hotfix_code(self):
         f = {'code': 12}
         assert_raises(ValueError, self.parser._compile_hotfix, f)
@@ -500,7 +507,7 @@ class TestParser(object):
     def test_hotfix_doesnt_allow_missing_certificate(self):
         f = {'code': 'bla', 'signature': 'sign here'}
         assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
-    
+
     def test_hotfix_doesnt_allow_missing_code(self):
         f = {'certificate': 'cert.pem', 'signature': 'sign here'}
         assert_raises(ValueError, self.parser._sanity_check_hotfix, f)

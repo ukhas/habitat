@@ -19,6 +19,7 @@
 
 from . import checksums
 
+
 class UKHASChecksumFixer(object):
     """
     A context manager which helps filters modify data that has been

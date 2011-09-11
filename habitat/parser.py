@@ -34,6 +34,7 @@ __all__ = ["Parser", "ParserModule"]
 
 logger = logging.getLogger("habitat.parser")
 
+
 class Parser(object):
     """
     habitat's parser
@@ -284,7 +285,7 @@ class Parser(object):
             for f in module["pre-filters"]:
                 data = self._filter(data, f)
         return data
-    
+
     def _intermediate_filter(self, data, config):
         """
         Apply all the intermediate (between getting the callsign and parsing)
@@ -315,7 +316,7 @@ class Parser(object):
         Returns the filtered data, or leaves the data untouched
         if the filter could not be run.
         """
-        
+
         rollback = data
         data = copy.deepcopy(data)
 
@@ -367,7 +368,7 @@ class Parser(object):
         body = "def f(data):\n"
         env = {}
         try:
-            body += "\n".join("    "+l+"\n" for l in f["code"].split("\n"))
+            body += "\n".join("  " + l + "\n" for l in f["code"].split("\n"))
             code = compile(body, "<filter>", "exec")
             exec code in env
         except (SyntaxError, AttributeError, TypeError):
@@ -379,19 +380,19 @@ class Parser(object):
         authenticity by verifying its certificate, then run if OK."""
         # Check the hotfix has all the right fields
         self._sanity_check_hotfix(f)
-        
+
         # Load requested certificate
         cert = self._get_certificate(f["certificate"])
-        
+
         # Check the certificate and signature are cryptographically okay
         self._verify_certificate(f, cert)
-        
+
         # Compile the hotfix
         env = self._compile_hotfix(f)
 
         logger.debug("Executing a hotfix")
         return env["f"](data)
-    
+
     def _get_certificate(self, certname):
         """Fetch the specified certificate, returning the X509 object.
         Uses an instance cache to prevent too much filesystem I/O."""
@@ -407,6 +408,7 @@ class Parser(object):
             return cert
         else:
             raise ValueError("Certificate could not be loaded.")
+
 
 class ParserModule(object):
     """

@@ -104,6 +104,7 @@ __all__ = ["UKHASParser"]
 checksum_algorithms = [
     "crc16-ccitt", "xor", "fletcher-16", "fletcher-16-256", "none"]
 
+
 class UKHASParser(ParserModule):
     """The UKHAS Parser Module"""
 

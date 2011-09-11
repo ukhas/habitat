@@ -24,6 +24,7 @@ from time import strptime
 
 __all__ = ["time", "coordinate"]
 
+
 def time(data):
     """Parses time in ``HH:MM:SS`` format"""
 
@@ -44,6 +45,7 @@ def time(data):
     if len(data) == 8 or len(data) == 6:
         parsed_data["second"] = t.tm_sec
     return parsed_data
+
 
 def coordinate(config, data):
     """

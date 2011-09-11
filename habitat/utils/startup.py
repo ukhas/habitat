@@ -23,6 +23,7 @@ import yaml
 
 logger = logging.getLogger("habitat.utils.startup")
 
+
 def load_config():
     """
     loads the habitat config
@@ -43,6 +44,7 @@ def load_config():
 
     return config
 
+
 def _get_logging_level(config, key):
     if key not in config:
         return None
@@ -54,10 +56,11 @@ def _get_logging_level(config, key):
     else:
         return getattr(logging, value)
 
+
 class null_logger(logging.Handler):
     """a python logging handler that discards log messages silently"""
-    def emit(self, record):
-        pass
+    pass
+
 
 def setup_logging(config, daemon_name):
     """
@@ -105,6 +108,7 @@ def setup_logging(config, daemon_name):
         root_logger.addHandler(null_logger())
 
     logger.info("Log initalised")
+
 
 def main(main_class):
     """
