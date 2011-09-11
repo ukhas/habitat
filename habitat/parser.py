@@ -321,8 +321,7 @@ class Parser(object):
 
         try:
             if f["type"] == "normal":
-                config = f['config'] if 'config' in f else None
-                return self.loadable_manager.run(f['filter'], config, data)
+                return self.loadable_manager.run(f['filter'], f, data)
             elif f["type"] == "hotfix":
                 return self._hotfix_filter(data, f)
             else:
