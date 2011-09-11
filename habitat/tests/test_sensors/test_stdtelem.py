@@ -61,11 +61,11 @@ class TestStdtelem:
 
     def test_valid_times(self):
         for i in times:
-            assert stdtelem.time(None, i[0]) == self.expected_time_output(i)
+            assert stdtelem.time(i[0]) == self.expected_time_output(i)
 
     @raises(ValueError)
     def check_invalid_time(self, s):
-        stdtelem.time(None, s)
+        stdtelem.time(s)
 
     def test_invalid_times(self):
         for i in invalid_times:
