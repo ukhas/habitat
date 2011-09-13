@@ -26,10 +26,11 @@ logger = logging.getLogger("habitat.utils.startup")
 
 def load_config():
     """
-    loads the habitat config
+    Loads the habitat config.
 
-    If a single argument is provided (sys.argv) then that yml file is used,
-    otherwise './habitat.yml' is used.
+    The path to the configuration YAML file can be specified as the single
+    command line argument (read from ``sys.argv[1]``) or will default to
+    ``./habitat.yml``.
     """
 
     if len(sys.argv) == 2:
@@ -58,7 +59,7 @@ def _get_logging_level(config, key):
 
 
 class null_logger(logging.Handler):
-    """a python logging handler that discards log messages silently"""
+    """A python logging handler that discards log messages silently."""
     pass
 
 
@@ -67,8 +68,8 @@ def setup_logging(config, daemon_name):
     **setup_logging** initalises the :py:mod:`Python logging module <logging>`.
 
     It will initalise the 'habitat' logger and creates one, two, or no
-    Handlers, depending on the values provided for *log_file_level* and
-    *log_stderr_level* in **config**.
+    Handlers, depending on the values provided for ``log_file_level`` and
+    ``log_stderr_level`` in *config*.
     """
 
     formatstring = "[%(asctime)s] %(levelname)s %(name)s %(threadName)s: " + \
@@ -112,9 +113,9 @@ def setup_logging(config, daemon_name):
 
 def main(main_class):
     """
-    main function for habitat daemons. Loads config, sets up logging, and runs
+    Main function for habitat daemons. Loads config, sets up logging, and runs.
 
-    *main_class.__name__.lower()* will be used as the config sub section
+    ``main_class.__name__.lower()`` will be used as the config sub section
     and passed as *daemon_name*.
 
     *main_class* specifies a class from which an object will be created.

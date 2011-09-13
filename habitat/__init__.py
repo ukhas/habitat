@@ -16,10 +16,14 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-habitat is a web application for tracking the flight path of high altitude
+The top level habitat package.
+
+habitat is an application for tracking the flight path of high altitude
 balloons, relying on a network of users with radios sending in received
 telemetry strings which are parsed into position information and displayed
 on maps.
+
+See http://habitat.habhub.org for more information.
 
 .. autosummary::
     :toctree: habitat

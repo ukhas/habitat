@@ -16,7 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The parser interprets incoming telemetry strings into useful telemetry data.
+Interpret incoming telemetry strings into useful telemetry data.
 """
 
 import base64
@@ -32,24 +32,30 @@ from .utils import dynamicloader
 
 logger = logging.getLogger("habitat.parser")
 
+r_all__ = ['Parser']
+
 
 class Parser(object):
     """
     habitat's parser
 
-    Parser takes arbitrary newly uploaded payload telemetry and attempts to use
-    ParserModules to turn this telemetry into useful data, which is then saved
-    back to the database.
+    :class:`Parser` takes arbitrary newly uploaded payload telemetry and
+    attempts to use each loaded :class:`ParserModule` to turn this telemetry
+    into useful data, which is then saved back to the database.
     """
 
     def __init__(self, config, daemon_name="parser"):
         """
-        Uses config[daemon_name] as self.config (defaults to 'parser').
-        Loads a LoadableManager, passing it config.
-        Loads modules from self.config["modules"].
-        Scans self.config["certs_dir"] for CA and developer certificates.
-        Connects to CouchDB using self.config["couch_uri"] and \
-            config["couch_db"].
+        On construction, it will:
+
+        * Use ``config[daemon_name]`` as ``self.config`` (defaults to
+          'parser').
+        * Load a :class:`habitat.loadable_manager.LoadableManager`, passing it
+          *config*.
+        * Load modules from ``self.config["modules"]``.
+        * Scan ``self.config["certs_dir"]`` for CA and developer certificates.
+        * Connects to CouchDB using ``self.config["couch_uri"]`` and
+          ``config["couch_db"]``.
         """
 
         config = copy.deepcopy(config)
@@ -108,11 +114,7 @@ class Parser(object):
     def parse(self, doc):
         """
         Attempts to parse telemetry information out of a new telemetry
-        document.
-
-        Parameters:
-            doc:
-                An unparsed payload telemetry document.
+        document *doc*.
 
         This function attempts to determine which of the loaded parser
         modules should be used to parse the message, and which config
@@ -150,16 +152,16 @@ class Parser(object):
 
         These fields may include:
 
-        * _protocol which gives the parser module name that was used to
+        * ``_protocol`` which gives the parser module name that was used to
           decode this message
-        * _used_default_config is a boolean value set to True if a
+        * ``_used_default_config`` is a boolean value set to True if a
           default configuration was used for the module as no specific
           configuration could be found and not included otherwise
 
         From the UKHAS parser module in particular:
 
-        * _sentence gives the ASCII sentence from the UKHAS parser
-        * _extra_data from the UKHAS parser, where the sentence contained
+        * ``_sentence`` gives the ASCII sentence from the UKHAS parser
+        * ``_extra_data`` from the UKHAS parser, where the sentence contained
           more data than the UKHAS parser was configured for
 
         Parser modules should be wary when outputting field names with
@@ -410,32 +412,30 @@ class Parser(object):
 
 class ParserModule(object):
     """
+    Base class for real ParserModules to inherit from.
+
     **ParserModules** are classes which turn radio strings into useful data.
-
-    ParserModules
-
-    * can be given various configuration parameters.
-    * should probably inherit from **ParserModule**.
-
+    They do not have to inherit from :class:`ParserModule`, but can if they
+    want. They must implement :meth:`pre_parse` and :meth:`parse` as described
+    below.
     """
     def __init__(self, parser):
-        """Store the parser reference for later use."""
         self.parser = parser
         self.loadable_manager = parser.loadable_manager
 
     def pre_parse(self, string):
         """
-        Go though a string and attempt to extract a callsign, returning
+        Go though *string* and attempt to extract a callsign, returning
         it as a string. If no callsign could be extracted, a
-        :py:exc:`ValueError <exceptions.ValueError>` is raised.
+        :exc:`ValueError <exceptions.ValueError>` is raised.
         """
         raise ValueError()
 
     def parse(self, string, config):
         """
-        Go through a string which has been identified as the format this
+        Go through *string* which has been identified as the format this
         parser module should be able to parse, extracting the data as per
-        the information in the config parameter, which is the ``sentence``
-        dictionary extracted from the payload's configuration document.
+        the information in *config*, which is the ``sentence`` dictionary
+        extracted from the payload's configuration document.
         """
         raise ValueError()

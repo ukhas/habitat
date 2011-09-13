@@ -26,19 +26,43 @@ def crc16_ccitt(data):
     Calculate the CRC16 CCITT checksum of *data*.
 
     (CRC16 CCITT: start 0xFFFF, poly 0x1021)
+
+    Returns an upper case, zero-filled hex string with no prefix such as
+    ``0A1B``.
+
+    >>> crc16_ccitt("hello,world")
+    'E408'
     """
     crc16 = crcmod.predefined.mkCrcFun('crc-ccitt-false')
     return hex(crc16(data))[2:].upper().zfill(4)
 
 
 def xor(data):
-    """Calculate the XOR checksum of *data*."""
+    """
+    Calculate the XOR checksum of *data*.
+
+    Returns an upper case, zero-filled hex string with no prefix such as
+    ``01``.
+
+    >>> xor("hello,world")
+    '2C'
+    """
     numbers = map(ord, data)
     return hex(reduce(op_xor, numbers))[2:].upper().zfill(2)
 
 
 def fletcher_16(data, modulus=255):
-    """Calculate the Fletcher-16 checksum of *data*, default modulus 255."""
+    """
+    Calculate the Fletcher-16 checksum of *data*, default modulus 255.
+
+    Returns an upper case, zero-filled hex string with no prefix such as
+    ``0A1B``.
+
+    >>> fletcher_16("hello,world")
+    '6C62'
+    >>> fletcher_16("hello,world", 256)
+    '6848'
+    """
     numbers = map(ord, data)
     a = b = 0
     for number in numbers:

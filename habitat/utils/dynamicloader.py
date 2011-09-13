@@ -21,20 +21,20 @@ A generic dynamic python module loader.
 The main function to call is load(). In addition, several functions
 to quickly test the loaded object for certain conditions are provided:
 
-* **isclass**
-* **isfunction**
-* **isgeneratorfunction**
-* **isstandardfunction** (``isfunction and not isgeneratorfunction``)
-* **iscallable**
-* **issubclass**
-* **hasnumargs**
-* **hasmethod**
-* **hasattr**
+* :func:`isclass`
+* :func:`isfunction`
+* :func:`isgeneratorfunction`
+* :func:`isstandardfunction` (``isfunction and not isgeneratorfunction``)
+* :func:`iscallable`
+* :func:`issubclass`
+* :func:`hasnumargs`
+* :func:`hasmethod`
+* :func:`hasattr`
 
-Further to that, functions expectisclass, expectisfunction, e.t.c, are
-provided which are identical to the above except they raise either a
-ValueError or a TypeError where the original function would have
-returned false.
+Further to that, functions :func:`expectisclass`, :func:`expectisfunction`,
+etc., are provided which are identical to the above except they raise either a
+ValueError or a TypeError where the original function would have returned
+``False``.
 
 Example use::
 
@@ -43,16 +43,16 @@ Example use::
         expectisstandardfunction(loadable)
         expecthasattr(loadable, 2)
 
-If you use expectiscallable note that you may get either a function
-or a class, an object of which is callable (ie. the class has
+If you use :func:`expectiscallable` note that you may get either a function
+or a class, an object of which is callable (i.e., the class has
 ``__call__(self, ...))``. In that case you may need to create an object::
 
     if isclass(loadable):
         loadable = loadable()
 
-Of course if you've used expectisclass then you will be creating an object
-anyway. Note that classes are technically "callable" in that calling them
-creates objects. expectiscallable ignores this.
+Of course if you've used :func:`expectisclass` then you will be creating an
+object anyway. Note that classes are technically "callable" in that calling
+them creates objects. :func:`expectiscallable` ignores this.
 
 A lot of the provided tests are imported straight from inspect and are
 therefore not documented here. The ones implemented as a part of this
@@ -195,12 +195,12 @@ def isstandardfunction(loadable):
 # The following we have to implement ourselves
 def hasnumargs(thing, num):
     """
-    Returns true if thing has num arguments.
+    Returns true if *thing* has *num* arguments.
 
-    If thing is a function, the positional arguments are simply counted up.
-    If thing is a method, the positional arguments are counted up and one
+    If *thing* is a function, the positional arguments are simply counted up.
+    If *thing* is a method, the positional arguments are counted up and one
     is subtracted in order to account for ``method(self, ...)``
-    If thing is a class, the positional arguments of ``cls.__call__`` are
+    If *thing* is a class, the positional arguments of ``cls.__call__`` are
     counted up and one is subtracted (self), giving the number of arguments
     a callable object created from that class would have.
     """
@@ -220,7 +220,7 @@ def hasnumargs(thing, num):
 
 
 def hasmethod(loadable, name):
-    """Returns true if *loadable*.*name* is callable """
+    """Returns true if *loadable.name* is callable """
     try:
         expecthasattr(loadable, name)
         expectiscallable(getattr(loadable, name))

@@ -1,3 +1,5 @@
+.. _ukhas-parser-config:
+
 ==========================
 UKHAS Parser Configuration
 ==========================

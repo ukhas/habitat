@@ -16,7 +16,9 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The uploader is a client for end users that pushes documents into a couchdb
+Python interface to document insertion into CouchDB.
+
+The uploader is a client for end users that pushes documents into a CouchDB
 database where they can be used directly by the web client or picked up
 by a daemon for further processing.
 
@@ -31,17 +33,22 @@ import couchdbkit
 
 class CollisionError(Exception):
     """
-    Payload telemetry sha256 hash collision
+    Payload telemetry sha256 hash collision.
 
-    Raised if two strings (in payload_telemetry docs) have the same
+    Raised if two strings (in ``payload_telemetry`` docs) have the same
     sha256 hash yet are different.
+
+    Odds you will ever see this error: approximately one in one hundred and
+    sixteen quattuorvigintillion (about a thousand times more likely than
+    selecting one particular atom at random out of all the atoms in the
+    universe).
     """
     pass
 
 
 class UnmergeableError(Exception):
     """
-    Couldn't merge a payload_telemetry CouchDB conflict after many tries
+    Couldn't merge a ``payload_telemetry`` CouchDB conflict after many tries.
     """
     pass
 
@@ -52,10 +59,11 @@ class Uploader(object):
 
     This class is intended for use by a listener.
 
-    After having created an Uploader object, call payload_telemetry,
-    listener_telemetry or listener_info in any order. It is however
-    recommended that listener_info and listener_telemetry are called once
-    before any other uploads
+    After having created an :class:`Uploader` object, call
+    :meth:`payload_telemetry`, :meth:`listener_telemetry` or
+    :meth:`listener_info` in any order. It is however recommended that
+    :meth:`listener_info` and :meth:`listener_telemetry` are called once before
+    any other uploads
 
     See the CouchDB schema for more information, both on
     validation/restrictions and data formats.
@@ -74,17 +82,17 @@ class Uploader(object):
 
     def listener_telemetry(self, data, time_created=None):
         """
-        Upload a listener_telemetry doc. The doc_id is returned
+        Upload a ``listener_telemetry`` doc. The ``doc_id`` is returned
 
-        A listener_telemetry doc contains information about the listener's
+        A ``listener_telemetry`` doc contains information about the listener's
         current location, be it a rough stationary location or a constant
         feed of GPS points. In the former case, you may only need to call
         this function once, at startup. In the latter, you might want to
         call it constantly.
 
         The format of the document produced is described elsewhere (TODO?);
-        the actual document will be constructed by the Uploader.
-        **data** must be a dict and should typically look something like
+        the actual document will be constructed by :class:`Uploader`.
+        *data* must be a dict and should typically look something like
         this::
 
             data = {
@@ -98,11 +106,12 @@ class Uploader(object):
                 "altitude": 12
             }
 
-        Time is the GPS time for this point, latitude and longitude are in
-        decimal degrees, and altitude is in metres.
+        ``time`` is the GPS time for this point, ``latitude`` and ``longitude``
+        are in decimal degrees, and ``altitude`` is in metres.
 
-        Validation will be performed by the CouchDB server. **data** must not
-        contain the key ''callsign'', since that is added by the Uploader.
+        Validation will be performed by the CouchDB server. *data* must not
+        contain the key ``callsign`` as that is added by
+        :class:`Uploader`.
         """
         return self._listener_doc(data, "listener_telemetry", time_created)
 
@@ -114,8 +123,8 @@ class Uploader(object):
         about a listener.
 
         The format of the document produced is described elsewhere (TODO?);
-        the actual document will be constructed by the Uploader.
-        **data** must be a dict and should typically look something like
+        the actual document will be constructed by ``Uploader``.
+        *data* must be a dict and should typically look something like
         this::
 
             data = {
@@ -125,8 +134,8 @@ class Uploader(object):
                 "antenna": "9el 434MHz Yagi"
             }
 
-        **data** must not contain the key **callsign**, since that is added
-        by the Uploader.
+        *data* must not contain the key ``callsign`` as that is added by
+        :class:`Uploader`.
         """
         return self._listener_doc(data, "listener_info", time_created)
 
@@ -157,15 +166,15 @@ class Uploader(object):
 
     def payload_telemetry(self, string, metadata, time_created=None):
         """
-        Create or add to the payload_telemetry document for `string`
+        Create or add to the ``payload_telemetry`` document for *string*.
 
-        This function attempts to create a new payload_telemetry document
+        This function attempts to create a new ``payload_telemetry`` document
         for the provided string (a new document, with one receiver: you).
         If the document already exists in the database it instead downloads
         it, adds you to the list of receivers, and reuploads.
 
-        **metadata** can contain extra information about your receipt of
-        **string**. Nothing has been standardised yet (TODO), but here's an
+        *metadata* can contain extra information about your receipt of
+        *string*. Nothing has been standardised yet (TODO), but here's an
         example of what you might be able to do in the future::
 
             metadata = {
@@ -173,9 +182,9 @@ class Uploader(object):
                 "signal_strength": 5
             }
 
-        **metadata** must not contain the keys **time_created**,
-        **time_uploaded**, **latest_listener_info** or
-        **latest_listener_telemetry**. These are added by the Uploader.
+        *metadata* must not contain the keys ``time_created``,
+        ``time_uploaded``, ``latest_listener_info`` or
+        ``latest_listener_telemetry``. These are added by :class:`Uploader`.
         """
 
         if time_created is None:

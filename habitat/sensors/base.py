@@ -16,26 +16,30 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Basic sensor functions
+Basic sensor functions.
+
+These sensors cover simple ASCII representations of numbers and strings.
 """
 
 __all__ = ["ascii_int", "ascii_float", "string"]
 
 
 def ascii_int(data):
-    """parse a string to an integer, or None if the string is empty"""
-    if data == '':
-        return None
-    return int(data)
+    """
+    Parse *data* to an integer, or return ``None`` if the string is empty.
+    """
+    return int(data) if data != '' else None
 
 
 def ascii_float(data):
-    """parse a string to a float, or None if the string is empty"""
-    if data == '':
-        return None
-    return float(data)
+    """
+    Parse *data* to a float, or return ``None`` if the string is empty.
+    """
+    return float(data) if data != '' else None
 
 
 def string(data):
-    """null sensor; just returns the data as a string"""
+    """
+    Returns *data* as a string.
+    """
     return str(data)
