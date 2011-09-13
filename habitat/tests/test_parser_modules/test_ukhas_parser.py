@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Adam Greig
+# Copyright 2010, 2011 (C) Adam Greig
 #
 # This file is part of habitat.
 #

@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Adam Greig, Daniel Richman
+# Copyright 2010, 2011 (C) Adam Greig, Daniel Richman
 #
 # This file is part of habitat.
 #
