@@ -27,7 +27,8 @@ __all__ = ["semicolons_to_commas", "numeric_scale", "simple_map"]
 def semicolons_to_commas(config, data):
     """intermediate filter that converts semicolons to commas"""
     data = {"data": data}
-    with filtertools.UKHASChecksumFixer("crc16-ccitt", data) as c:
+    checksum = config['checksum'] if 'checksum' in config else 'crc16-ccitt'
+    with filtertools.UKHASChecksumFixer(checksum, data) as c:
         c["data"] = c["data"].replace(";", ",")
     return c["data"]
 
