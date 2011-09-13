@@ -99,8 +99,6 @@ from string import hexdigits
 from ..parser import ParserModule
 from ..utils import checksums
 
-__all__ = ["UKHASParser"]
-
 checksum_algorithms = [
     "crc16-ccitt", "xor", "fletcher-16", "fletcher-16-256", "none"]
 

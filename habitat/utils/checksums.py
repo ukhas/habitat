@@ -20,8 +20,6 @@
 import crcmod
 from operator import xor as op_xor
 
-__all__ = ["crc16_ccitt", "xor", "fletcher_16"]
-
 
 def crc16_ccitt(data):
     """

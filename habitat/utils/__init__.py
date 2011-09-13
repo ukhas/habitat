@@ -27,4 +27,7 @@ Various utilities for general use by ``habitat``.
     habitat.utils.startup
 """
 
-__all__ = ["checksums", "dynamicloader", "filtertools", "startup"]
+from . import checksums
+from . import dynamicloader
+from . import filtertools
+from . import startup

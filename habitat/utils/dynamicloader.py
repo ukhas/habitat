@@ -64,14 +64,6 @@ import functools
 import inspect
 import logging
 
-all_tests = ["isclass", "isfunction", "isgeneratorfunction",
-             "isstandardfunction", "iscallable", "issubclass",
-             "hasnumargs", "hasmethod", "hasattr"]
-expect_tests = ["expect" + test for test in all_tests]
-
-__all__ = ["load", "fullname"] + all_tests + expect_tests
-del all_tests, expect_tests
-
 logger = logging.getLogger("habitat.utils.dynamicloader")
 
 

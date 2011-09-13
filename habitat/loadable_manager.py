@@ -66,8 +66,6 @@ should return a suitably modified form of data, optionally using anything from
 
 from .utils import dynamicloader
 
-__all__ = ["LoadableManager"]
-
 
 class LoadableManager:
     """The main Loadable Manager class"""

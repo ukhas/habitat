@@ -39,5 +39,10 @@ __authors__ = "Adam Greig, Daniel Richman"
 __short_copyright__ = "2010, 2011 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-__all__ = ["filters", "parser", "parser_modules", "loadable_manager",
-           "sensors", "uploader", "utils"]
+from . import filters
+from . import parser
+from . import parser_modules
+from . import loadable_manager
+from . import sensors
+from . import uploader
+from . import utils
