@@ -19,7 +19,7 @@
 Tests common filters
 """
 
-import habitat.filters as f
+from .. import filters as f
 
 class TestFilters:
     def test_semicolons_to_commas(self):

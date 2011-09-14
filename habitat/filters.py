@@ -20,7 +20,7 @@ Filters that might be applied to incoming payload telemetry which are supplied
 with habitat as commonly used pieces of code.
 """
 
-from habitat.utils import filtertools
+from .utils import filtertools
 
 __all__ = ["semicolons_to_commas", "numeric_scale", "simple_map"]
 
