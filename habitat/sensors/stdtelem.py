@@ -29,15 +29,19 @@ def time(data):
 
     if len(data) == 8:
         t = strptime(data, "%H:%M:%S")
+    elif len(data) == 6:
+        t = strptime(data, "%H%M%S")
     elif len(data) == 5:
         t = strptime(data, "%H:%M")
+    elif len(data) == 4:
+        t = strptime(data, "%H%M")
     else:
         raise ValueError("Invalid time value.")
 
     parsed_data = {}
     parsed_data["hour"] = t.tm_hour
     parsed_data["minute"] = t.tm_min
-    if len(data) == 8:
+    if len(data) == 8 or len(data) == 6:
         parsed_data["second"] = t.tm_sec
     return parsed_data
 
@@ -53,9 +57,10 @@ def coordinate(config, data):
         raise ValueError("Coordinate format missing")
     coordinate_format = config["format"]
 
-    if coordinate_format == "dd.dddd":
+    left, right = coordinate_format.split(".")
+    if left[-1] == "d" and right[-1] == "d":
         return float(data)
-    elif coordinate_format == "ddmm.mm":
+    elif left[0] == "d" and left[-1] == "m" and right[-1] == "m":
         first, second = data.split(".")
         degrees = float(first[:-2])
         minutes = float(first[-2:] + "." + second)
