@@ -40,6 +40,10 @@ def semicolons_to_commas(config, data):
     All semicolons in the string are replaced with colons and the checksum is
     updated; ``crc16-ccitt`` is assumed by default but can be overwritten with
     ``config["checksum"]``.
+
+    >>> semicolons_to_commas({}, '$$testpayload,1,2,3;4;5;6*8A24')
+    '$$testpayload,1,2,3,4,5,6*888F'
+    
     """
     data = {"data": data}
     checksum = config['checksum'] if 'checksum' in config else 'crc16-ccitt'
@@ -69,6 +73,16 @@ def numeric_scale(config, data):
     ``data[config["source"]]`` is multiplied by ``config["factor"]`` and
     written back to ``data[config["destination"]]`` if it exists, or
     ``data[config["source"]]`` if not.
+
+    >>> config = {"source": "key", "factor": 2.0}
+    >>> data = {"key": "4", "other": "data"}
+    >>> numeric_scale(config, data) == {'key': 8.0, 'other': 'data'}
+    True
+    >>> config["destination"] = "result"
+    >>> numeric_scale(config, data) == {'key': 8.0, 'result': 16.0, 'other':
+    ...     'data'}
+    ...
+    True
     """
     (source_key, destination_key) = _post_singlefield(config)
     factor = float(config["factor"])
@@ -82,12 +96,18 @@ def simple_map(config, data):
     """
     Post filter that maps source to destination values based on a dictionary.
 
-    ``data[config["source"]]`` is used as a lookup key in ``config["map"]`` and the
-    resulting value is written to ``data[config["destination"]]`` if it exists,
-    or ``data[config["source"]]`` if not.
+    ``data[config["source"]]`` is used as a lookup key in ``config["map"]`` and
+    the resulting value is written to ``data[config["destination"]]`` if it
+    exists, or ``data[config["source"]]`` if not.
 
     A :exc:`ValueError <exceptions.ValueError>` is raised if ``config["map"]``
     is not a dictionary or does not contain the value read from *data*.
+    >>> config = {"source": "key", "destination": "result", "map":
+    ...     {1: 'a', 2: 'b'}}
+    ...
+    >>> data = {"key": 2}
+    >>> simple_map(config, data) == {'key': 2, 'result': 'b'}
+    True
     """
     (source_key, destination_key) = _post_singlefield(config)
 
