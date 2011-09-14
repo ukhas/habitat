@@ -20,14 +20,15 @@ Filters that might be applied to incoming payload telemetry which are supplied
 with habitat as commonly used pieces of code.
 """
 
-from habitat.utils import filtertools
+from .utils import filtertools
 
 __all__ = ["semicolons_to_commas", "numeric_scale", "simple_map"]
 
 def semicolons_to_commas(config, data):
     """intermediate filter that converts semicolons to commas"""
     data = {"data": data}
-    with filtertools.UKHASChecksumFixer("crc16-ccitt", data) as c:
+    checksum = config['checksum'] if 'checksum' in config else 'crc16-ccitt'
+    with filtertools.UKHASChecksumFixer(checksum, data) as c:
         c["data"] = c["data"].replace(";", ",")
     return c["data"]
 

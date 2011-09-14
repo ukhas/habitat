@@ -19,13 +19,19 @@
 Tests common filters
 """
 
-import habitat.filters as f
+from .. import filters as f
 
 class TestFilters:
     def test_semicolons_to_commas(self):
         data = "$$testpayload,1,2,3;4;5;6*8A24"
         fixed = f.semicolons_to_commas({}, data)
         assert fixed == "$$testpayload,1,2,3,4,5,6*888F"
+
+    def test_semicolons_to_commas_with_other_checksum(self):
+        data = "$$testpayload,1,2,3;4;5;6*68"
+        config = {'checksum': 'xor'}
+        fixed = f.semicolons_to_commas(config, data)
+        assert fixed == "$$testpayload,1,2,3,4,5,6*7F"
 
     def test_numeric_scale(self):
         config = {"source": "key", "factor": (1.0/7.0)}
