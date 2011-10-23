@@ -387,7 +387,7 @@ class Parser(object):
         self._verify_certificate(f, cert)
         
         # Compile the hotfix
-        env = self._compile_hotfix(self, f)
+        env = self._compile_hotfix(f)
 
         logger.debug("Executing a hotfix")
         return env["f"](data)
