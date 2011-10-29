@@ -110,6 +110,25 @@ class UKHASParser(ParserModule):
     string_exp = re.compile("^[\\x20-\\x7E]+$")
     callsign_exp = re.compile("^[a-zA-Z0-9/_\\-]+$")
 
+    def _remove_delimiters(self, string):
+        """
+        Check the string starts with $$, ends with * and a checksum.
+
+        Verify that the string is at least long enough to not trip up later,
+        which means 8 characters.
+
+        Returns the string with '$$' and '\\n' removed.
+        """
+
+        if len(string) < 8:
+            raise ValueError("String is less than 7 characters.")
+        if string[:2] != "$$":
+            raise ValueError("String does not start `$$'.")
+        if string[-1] != "\n":
+            raise ValueError("String does not end with '\\n'")
+
+        return string[2:-1]
+
     def _split_checksum(self, string):
         """
         Splits off a two or four digit checksum from the end of the string.
@@ -134,7 +153,6 @@ class UKHASParser(ParserModule):
         fields were found.
         """
 
-        string = string[2:]
         string, checksum = self._split_checksum(string)
         fields = string.split(",")
         if len(fields) < 2:
@@ -143,20 +161,13 @@ class UKHASParser(ParserModule):
 
     def _verify_basic_format(self, string):
         """
-        Check the string starts with $$, ends with * and a checksum.
-
-        Verify that the string is at least long enough to not trip up later,
-        which means 7 characters.
+        Checks the string for non ascii chars, the checksum for non hex digits
 
         Raises :py:exc:`ValueError <exceptions.ValueError>` on error.
         """
         if not self.string_exp.search(string):
             raise ValueError("String contains characters that are not "
                              "printable ASCII.")
-        if len(string) < 7:
-            raise ValueError("String is less than 7 characters.")
-        if string[:2] != "$$":
-            raise ValueError("String does not start `$$'.")
         string, checksum = self._split_checksum(string)
         if checksum:
             for letter in checksum:
@@ -243,12 +254,13 @@ class UKHASParser(ParserModule):
         :py:exc:`ValueError <exceptions.ValueError>` is raised.
         """
 
+        string = self._remove_delimiters(string)
         self._verify_basic_format(string)
         fields = self._extract_fields(string)
         self._verify_callsign(fields[0])
         return fields[0]
 
-    def parse(self, string, config):
+    def parse(self, orig_string, config):
         """
         Parse the message, extracting processed field data.
 
@@ -265,13 +277,14 @@ class UKHASParser(ParserModule):
         :py:exc:`ValueError <exceptions.ValueError>` is raised on invalid
         messages. Return a dict of name:data.
         """
+        string = self._remove_delimiters(orig_string)
         self._verify_config(config)
         self._verify_basic_format(string)
         fields = self._extract_fields(string)
-        strippedstring, checksum = self._split_checksum(string[2:])
+        strippedstring, checksum = self._split_checksum(string)
         self._verify_checksum(strippedstring, checksum, config["checksum"])
         self._verify_callsign(fields[0])
-        output = {"payload": fields[0], "_sentence": string}
+        output = {"payload": fields[0], "_sentence": orig_string}
         for field_num in range(len(fields) - 1):
             try:
                 field = fields[field_num + 1]
