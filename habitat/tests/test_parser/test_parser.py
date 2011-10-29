@@ -437,7 +437,7 @@ class TestParser(object):
         self.parser._sanity_check_hotfix(f)
         self.parser._get_certificate('cert').AndReturn('got_cert')
         self.parser._verify_certificate(f, 'got_cert')
-        self.parser._compile_hotfix(self.parser, f).AndReturn(env)
+        self.parser._compile_hotfix(f).AndReturn(env)
         self.m.ReplayAll()
         assert self.parser._hotfix_filter({}, f) == 'hotfix ran'
         self.m.VerifyAll()
@@ -456,7 +456,7 @@ class TestParser(object):
         self.parser._sanity_check_hotfix(f)
         self.parser._get_certificate('cert').AndReturn('got_cert')
         self.parser._verify_certificate(f, 'got_cert')
-        self.parser._compile_hotfix(self.parser, f).AndReturn(env)
+        self.parser._compile_hotfix(f).AndReturn(env)
         self.m.ReplayAll()
         assert self.parser._filter('unfiltered', f) == 'unfiltered'
         self.m.VerifyAll()
