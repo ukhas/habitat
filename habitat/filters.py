@@ -43,7 +43,6 @@ def semicolons_to_commas(config, data):
 
     >>> semicolons_to_commas({}, '$$testpayload,1,2,3;4;5;6*8A24')
     '$$testpayload,1,2,3,4,5,6*888F'
-    
     """
     data = {"data": data}
     checksum = config['checksum'] if 'checksum' in config else 'crc16-ccitt'
