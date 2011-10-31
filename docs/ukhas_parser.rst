@@ -48,22 +48,22 @@ For example, a configuration for the above typical sentence might be:
             "checksum": "crc16-ccitt",
             "fields": [
                 {
-                    "name": "message_count",
-                    "type": "int"
+                    "name": "count",
+                    "sensor": "base.ascii_int"
                 }, {
                     "name": "time",
-                    "type": "time"
+                    "sensor": "stdtelem.time"
                 }, {
                     "name": "latitude",
-                    "type": "coordinate",
+                    "sensor": "stdtelem.coordinate",
                     "format": "dd.dddd"
                 }, {
                     "name": "longitude",
-                    "type": "coordinate",
+                    "sensor": "stdtelem.coordinate",
                     "format": "dd.dddd"
                 }, {
                     "name": "altitude",
-                    "type": "int"
+                    "sensor": "base.ascii_int"
                 }
             ]
         },
