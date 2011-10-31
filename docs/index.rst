@@ -11,6 +11,7 @@ Contents:
    configuration
    database/index
    filters
+   certs
    ukhas_parser
    habitat
 

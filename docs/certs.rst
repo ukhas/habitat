@@ -1,12 +1,13 @@
-Habitat Certificates
-====================
+============
+Certificates
+============
 
-This folder contains x509 certificate files which are used to verify the
-authenticity of hotfix code.
+The certificates folder contains x509 certificate files which are used to
+verify the authenticity of hotfix code.
 
 As hotfix code is run live from the CouchDB database, habitat uses certificates
 to check that the code can be trusted. The habitat developers maintain a
-certificate authority, whose certificate is included here as
+certificate authority, whose certificate is included as
 `ca/habitat_ca_cert.pem`, which is used to sign code-signing certificates.
 
 Hotfix code then has its SHA-256 digest signed by the developer's private key,
@@ -19,10 +20,10 @@ certificate filename found in the `certs` folder.
 Generating a Private Key
 ------------------------
 
-```bash
-$ openssl genrsa -des3 4096 > private.pem
-$ openssl req -new -key private.pem -out req.csr
-```
+.. code-block:: bash
+
+    $ openssl genrsa -des3 4096 > private.pem
+    $ openssl req -new -key private.pem -out req.csr
 
 Now send req.csr to us and we can sign it with the habitat CA and give you the
 signed certificate.
@@ -36,10 +37,10 @@ gnomint.
 Signing Code
 ------------
 
-```bash
-$ vi my_hotfix_code.py
-$ habitat/bin/sign_hotfix my_hotfix_code.py ~/my_rsa_key.pem
-```
+.. code-block:: bash
+
+    $ vi my_hotfix_code.py
+    $ habitat/bin/sign_hotfix my_hotfix_code.py ~/my_rsa_key.pem
 
 The printed result is a JSON object which can be placed into the filters list
 on a flight document.
