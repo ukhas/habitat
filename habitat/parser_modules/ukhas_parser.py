@@ -72,10 +72,11 @@ class UKHASParser(ParserModule):
 
         It:
 
-         - Verifies that the string is at least long enough to not trip up later,
+         - Verifies that the string is long enough to not trip up later,
          - which means 8 characters.
          - Checks the string starts with $$, ends with * and a checksum.
-         - Checks the string for non ascii chars, the checksum for non hex digits
+         - Checks the string for non ascii chars
+         - Checks the checksum for non hex digits
 
         It then returns (string, checksum) with delimiters '$$' '*' and '\\n'
         discarded.

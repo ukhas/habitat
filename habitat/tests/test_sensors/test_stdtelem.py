@@ -23,8 +23,8 @@ from nose.tools import raises
 from ...sensors import stdtelem
 
 
-
 class TestStdtelem:
+
     def expected_time_output(self, t):
         r = {"hour": t[1], "minute": t[2]}
         if t[3] != None:

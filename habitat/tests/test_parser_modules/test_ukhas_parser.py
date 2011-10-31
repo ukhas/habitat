@@ -332,7 +332,8 @@ class TestUKHASParser:
         config_minutes["fields"][3]["format"] = "ddmm.mm"
         config_minutes["checksum"] = "none"
 
-        sentence_bad_minutes = "$$habitat,1,00:00:00,087.123,0000.00,0,0.0,hab\n"
+        sentence_bad_minutes = \
+            "$$habitat,1,00:00:00,087.123,0000.00,0,0.0,hab\n"
 
         assert_raises(ValueError, self.p.parse, sentence_bad_minutes,
                 config_minutes)
