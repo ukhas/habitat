@@ -32,7 +32,7 @@ from .utils import dynamicloader
 
 logger = logging.getLogger("habitat.parser")
 
-r_all__ = ['Parser']
+__all__ = ['Parser']
 
 
 class Parser(object):
