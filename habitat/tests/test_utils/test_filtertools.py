@@ -17,6 +17,7 @@
 
 from ...utils import filtertools
 
+
 class TestUKHASChecksumFixer:
     """UKHAS Checksum Fixer"""
     def test_leaves_bad_data(self):

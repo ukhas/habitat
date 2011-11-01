@@ -87,27 +87,27 @@
                 "fields": [
                     {
                         "name": "message_count",
-                        "type": "base.ascii_int"
+                        "sensor": "base.ascii_int"
                     }, {
                         "name": "time",
-                        "type": "stdtelem.time"
+                        "sensor": "stdtelem.time"
                     }, {
                         "name": "latitude",
-                        "type": "stdtelem.coordinate",
+                        "sensor": "stdtelem.coordinate",
                         "format": "dd.dddd"
                     }, {
                         "name": "longitude",
-                        "type": "stdtelem.coordinate",
+                        "sensor": "stdtelem.coordinate",
                         "format": "dd.dddd"
                     }, {
                         "name": "altitude",
-                        "type": "base.ascii_int"
+                        "sensor": "base.ascii_int"
                     }, {
                         "name": "speed",
-                        "type": "base.ascii_float"
+                        "sensor": "base.ascii_float"
                     }, {
                         "name": "internal_temperature",
-                        "type": "base.ascii_float"
+                        "sensor": "base.ascii_float"
                     }
                 ]
             },

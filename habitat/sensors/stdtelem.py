@@ -24,8 +24,15 @@ from time import strptime
 
 __all__ = ["time", "coordinate"]
 
+
 def time(data):
-    """Parses time in ``HH:MM:SS`` format"""
+    """
+    Parse the time, returning a dictionary representation.
+
+    Accepted formats include ``HH:MM:SS``, ``HHMMSS``, ``HH:MM`` and ``HHMM``.
+
+    The returned dictionary contains keys ``hour``, ``minute`` and ``second``.
+    """
 
     if len(data) == 8:
         t = strptime(data, "%H:%M:%S")
@@ -45,12 +52,17 @@ def time(data):
         parsed_data["second"] = t.tm_sec
     return parsed_data
 
+
 def coordinate(config, data):
     """
-    Parses ascii latitude or longitude into a decimal-degrees float
+    Parses ASCII latitude or longitude into a decimal-degrees float.
 
-    ``config["format"]`` dictates what format the input is in.
-    Latitude and longitude can be either ``ddmm.mm`` or ``dd.dddd``.
+    Either decimal degrees or degrees with decimal minutes are accepted
+    (degrees, minutes and seconds are not currently supported).
+
+    The format is specified in ``config["format"]`` and can look like either
+    ``dd.dddd`` or ``ddmm.mmmm``, with one to three leading ``d`` characters
+    and one to six trailing ``d`` or ``m`` characters.
     """
 
     if "format" not in config:

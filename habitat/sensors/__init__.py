@@ -25,7 +25,5 @@ Sensor function libraries.
     habitat.sensors.stdtelem
 """
 
-__all__ = ["base", "stdtelem"]
-
 from . import base
 from . import stdtelem

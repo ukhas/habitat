@@ -9,6 +9,7 @@ habitat.utils.dynamicloader
 
    .. autosummary::
    
+      expectgenerator
       expecthasattr
       expecthasmethod
       expecthasnumargs

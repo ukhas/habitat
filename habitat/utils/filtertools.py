@@ -19,19 +19,29 @@
 
 from . import checksums
 
+
 class UKHASChecksumFixer(object):
     """
     A context manager which helps filters modify data that has been
-    checksummed. Tell it what the original protocol was and pass a dict
-    containing the data to be mangled in the 'data' key, then use the
-    assigned value after entry as a string ignoring its checksum and modify
-    it as you please. On exit, if the orignal checksum was valid a new
-    and valid checksum will be written to the modified data, otherwise
-    the original sentence is placed back into the dict.
+    checksummed.
+
+    Specify the protocl in use with *protocol* and pass in the string being
+    modified as ``data["data"]``, then use the return value as a dictionary
+    whose ``data`` key you can modify as you desire. On exit, the checksum of
+    that string is then updated if the original string's checksum was valid.
+
+    If the original checksum was invalid, the original string is output
+    instead.
+
+    >>> data = {"data": "$$hello,world*E408"}
+    >>> with UKHASChecksumFixer('crc16-ccitt', data) as fixer:
+    ...     fixer["data"] = "$$hi,there,world*E408"
+    ...
+    >>> fixer["data"]
+    '$$hi,there,world*39D3'
     """
 
     def __init__(self, protocol, data):
-        """Store the original data and our protocol"""
         self.original_data = data["data"]
         self.data = data
         self.protocol = protocol

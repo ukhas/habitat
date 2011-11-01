@@ -10,6 +10,7 @@ habitat.sensors.stdtelem
    .. autosummary::
    
       coordinate
+      strptime
       time
    
    
