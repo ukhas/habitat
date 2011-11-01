@@ -50,7 +50,6 @@ this case the message should not include a terminating ``*``.
 """
 
 import re
-from string import hexdigits
 
 from ..parser import ParserModule
 from ..utils import checksums

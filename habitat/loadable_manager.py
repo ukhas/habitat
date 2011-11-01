@@ -31,8 +31,8 @@ document.
 Configuration
 =============
 
-:mod:`loadable_manager` reads its configuration data from the config argument
-to :meth:`LoadableManager.__init__`, which is typically parsed from the
+*loadable_manager* reads its configuration data from the config argument
+to *LoadableManager.__init__*, which is typically parsed from the
 configuration YAML file in the following format::
 
     loadables:
@@ -45,7 +45,7 @@ configuration YAML file in the following format::
 it should begin either ``sensors`` or ``filters`` for use by the respective
 parts of habitat, which prepend the relevant prefix themselves.
 
-For example, to use the filter :meth:`habitat.filters.semicolons_to_colons` in
+For example, to use the filter :meth:`habitat.filters.semicolons_to_commas` in
 a flight document, having configured as above, you would specify::
 
     "filters": {
@@ -53,7 +53,7 @@ a flight document, having configured as above, you would specify::
             [
                 {
                     "type": "normal",
-                    "filter": "common.semicolons_to_colons"
+                    "filter": "common.semicolons_to_commas"
                 }
             ]
         }
@@ -62,7 +62,7 @@ a flight document, having configured as above, you would specify::
 Sensor Functions
 ================
 
-One of the major uses of :mod:`loadable_manager` (and historically its only
+One of the major uses of *loadable_manager* (and historically its only
 use) is sensor functions, used by parser modules to convert input data into
 usable Python data formats. See :mod:`habitat.sensors` for some sensors
 included with habitat, but you may also want to write your own for a specific
@@ -81,7 +81,7 @@ database.
 Filter Functions
 ================
 
-Another use for the :mod:`loadable_manager` is filters that are applied against
+Another use for the *loadable_manager* is filters that are applied against
 incoming telemetry strings. Which filters to use is specified in a payload's
 flight document, either as user-specified (but signed) hotfix code or a
 loadable function name, as with sensors.
