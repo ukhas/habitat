@@ -62,7 +62,8 @@ payload_telemetry_doc = {
         "TESTCALL": {
             "time_created": 1234,
             "time_uploaded": 1234,
-            "frequency": 434075000, # TODO: this ought to be in the schema/docs
+            # TODO: this ought to be in the schema/docs
+            "frequency": 434075000,
             "misc": "Hi"
         }
     }
@@ -92,6 +93,7 @@ payload_telemetry_doc_existing_collision["data"]["_raw"] = "cGluZWFwcGxlcw=="
 
 payload_telemetry_doc_id = "cf4511bba32c4273a13d8f2e39501a96" \
                            "9ec664a4dc5c67bc556b514410087309"
+
 
 class TestUploaderSetup(object):
     def setup(self):
@@ -130,6 +132,7 @@ class TestUploaderSetup(object):
         u = uploader.Uploader("TESTER")
 
         self.mocker.VerifyAll()
+
 
 class TestUploader(object):
     def setup(self):
@@ -180,7 +183,7 @@ class TestUploader(object):
         self.fake_db.save_doc(telemetry_time_doc) \
                 .WithSideEffects(self.save_doc)
         uploader.time.time().AndReturn(1290.1)
-        self.fake_db.save_doc(info_time_doc).WithSideEffects(self.save_doc) 
+        self.fake_db.save_doc(info_time_doc).WithSideEffects(self.save_doc)
         self.mocker.ReplayAll()
 
         self.uploader.listener_telemetry(telemetry_data, time_created=1232)
@@ -217,7 +220,7 @@ class TestUploader(object):
         del doc_metadata["latest_listener_telemetry"]
         del doc_metadata["latest_listener_info"]
 
-        try :
+        try:
             assert doc == payload_telemetry_doc
             assert self.docs[listener_telemetry_id]["type"] == \
                     "listener_telemetry"
@@ -232,7 +235,7 @@ class TestUploader(object):
 
         uploader.time.time().AndReturn(1234.0)
         uploader.time.time().AndReturn(1234.0)
-        self.fake_db.__setitem__(payload_telemetry_doc_id, 
+        self.fake_db.__setitem__(payload_telemetry_doc_id,
                                  mox.Func(self.ptlm_with_listener_docs))
         self.mocker.ReplayAll()
 

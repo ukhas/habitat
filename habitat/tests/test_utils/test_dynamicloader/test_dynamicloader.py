@@ -36,6 +36,7 @@ from .example_module import AClass
 unimp_a_name = "unimp.dynamicloadunimp_a"
 unimp_b_name = "unimp.dynamicloadunimp_b"
 
+
 class ReloadableModuleWriter:
     def __init__(self, tempdir, modname, itemname):
         components = [modname, itemname]
@@ -67,6 +68,7 @@ class ReloadableModuleWriter:
             f.write(code)
 
         os.utime(self.filename, (newtime, newtime))
+
 
 class TestLoad:
     """dynamicloader.load():"""
@@ -278,6 +280,7 @@ class TestLoad:
         asdf_2c_object = asdf_2c()
         assert asdf_2c_object.test == 2
 
+
 class TestFullname:
     def test_fullname(self):
         lm = example_module
@@ -299,6 +302,7 @@ class TestFullname:
     @raises(TypeError)
     def test_fullname_rejects_garbage(self):
         dynamicloader.fullname(1234)
+
 
 class TestInspectors:
     def test_isclass(self):

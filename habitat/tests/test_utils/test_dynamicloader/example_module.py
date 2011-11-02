@@ -19,18 +19,23 @@
 Mock classes to load in test_dynamicloader.py
 """
 
+
 class Parent:
     pass
+
 
 class Parent2:
     pass
 
+
 def afunction():
     pass
+
 
 class AClass(Parent, Parent2):
     anattr = "asdf"
     afunc = afunction
+
 
 class BClass:
     def __init__():
@@ -39,22 +44,28 @@ class BClass:
     def a_method(self):
         pass
 
+
 class CClass(AClass):
     def __call__(self, argb, argc, **kwords):
         pass
 
+
 class DClass(CClass):
     pass
+
 
 def AFunction():
     return 412314
 
+
 def BFunction(arg, argz, argx):
     pass
+
 
 def GFunction():
     yield "Hello"
     yield "World"
+
 
 AFunction.afuncattr = None
 

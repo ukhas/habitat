@@ -21,6 +21,7 @@ Tests common filters
 
 from .. import filters as f
 
+
 class TestFilters:
     def test_semicolons_to_commas(self):
         data = "$$testpayload,1,2,3;4;5;6*8A24"
@@ -34,7 +35,7 @@ class TestFilters:
         assert fixed == "$$testpayload,1,2,3,4,5,6*7F"
 
     def test_numeric_scale(self):
-        config = {"source": "key", "factor": (1.0/7.0)}
+        config = {"source": "key", "factor": (1.0 / 7.0)}
         data = {"key": 49, "something": True}
         fixed = f.numeric_scale(config, data)
         assert fixed == {"key": 7, "something": True}

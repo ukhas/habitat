@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Adam Greig
+# Copyright 2010, 2011 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -33,6 +33,7 @@ fake_sensors_config = {
         {"name": "sensors.stdtelem", "class": "habitat.sensors.stdtelem"}
     ]
 }
+
 
 class FakeParser:
     def __init__(self):
@@ -69,6 +70,7 @@ base_config = {
         }
     ]
 }
+
 
 class TestUKHASParser:
     """UKHAS Parser"""
@@ -330,7 +332,8 @@ class TestUKHASParser:
         config_minutes["fields"][3]["format"] = "ddmm.mm"
         config_minutes["checksum"] = "none"
 
-        sentence_bad_minutes = "$$habitat,1,00:00:00,087.123,0000.00,0,0.0,hab\n"
+        sentence_bad_minutes = \
+            "$$habitat,1,00:00:00,087.123,0000.00,0,0.0,hab\n"
 
         assert_raises(ValueError, self.p.parse, sentence_bad_minutes,
                 config_minutes)
@@ -355,7 +358,7 @@ class TestUKHASParser:
 
         sentence_good_1 = \
             "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681\n"
-        
+
         assert(self.p.parse(sentence_good_1, base_config)
                == self.output_append_sentence(output_good, sentence_good_1))
 

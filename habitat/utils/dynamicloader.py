@@ -21,20 +21,20 @@ A generic dynamic python module loader.
 The main function to call is load(). In addition, several functions
 to quickly test the loaded object for certain conditions are provided:
 
-* **isclass**
-* **isfunction**
-* **isgeneratorfunction**
-* **isstandardfunction** (``isfunction and not isgeneratorfunction``)
-* **iscallable**
-* **issubclass**
-* **hasnumargs**
-* **hasmethod**
-* **hasattr**
+* :func:`isclass`
+* :func:`isfunction`
+* :func:`isgeneratorfunction`
+* :func:`isstandardfunction` (``isfunction and not isgeneratorfunction``)
+* :func:`iscallable`
+* :func:`issubclass`
+* :func:`hasnumargs`
+* :func:`hasmethod`
+* :func:`hasattr`
 
-Further to that, functions expectisclass, expectisfunction, e.t.c, are
-provided which are identical to the above except they raise either a
-ValueError or a TypeError where the original function would have
-returned false.
+Further to that, functions :func:`expectisclass`, :func:`expectisfunction`,
+etc., are provided which are identical to the above except they raise either a
+ValueError or a TypeError where the original function would have returned
+``False``.
 
 Example use::
 
@@ -43,16 +43,16 @@ Example use::
         expectisstandardfunction(loadable)
         expecthasattr(loadable, 2)
 
-If you use expectiscallable note that you may get either a function
-or a class, an object of which is callable (ie. the class has
+If you use :func:`expectiscallable` note that you may get either a function
+or a class, an object of which is callable (i.e., the class has
 ``__call__(self, ...))``. In that case you may need to create an object::
 
     if isclass(loadable):
         loadable = loadable()
 
-Of course if you've used expectisclass then you will be creating an object
-anyway. Note that classes are technically "callable" in that calling them
-creates objects. expectiscallable ignores this.
+Of course if you've used :func:`expectisclass` then you will be creating an
+object anyway. Note that classes are technically "callable" in that calling
+them creates objects. :func:`expectiscallable` ignores this.
 
 A lot of the provided tests are imported straight from inspect and are
 therefore not documented here. The ones implemented as a part of this
@@ -62,17 +62,11 @@ module are.
 import sys
 import functools
 import inspect
+import __builtin__
 import logging
 
-all_tests = ["isclass", "isfunction", "isgeneratorfunction",
-             "isstandardfunction", "iscallable", "issubclass",
-             "hasnumargs", "hasmethod", "hasattr"]
-expect_tests = ["expect" + test for test in all_tests]
-
-__all__ = ["load", "fullname"] + all_tests + expect_tests
-del all_tests, expect_tests
-
 logger = logging.getLogger("habitat.utils.dynamicloader")
+
 
 def load(loadable, force_reload=False):
     """
@@ -161,6 +155,7 @@ def load(loadable, force_reload=False):
 
     return loadable
 
+
 def fullname(loadable):
     """
     Determines the full name in ``module.module.class`` form
@@ -187,24 +182,49 @@ def fullname(loadable):
     else:
         raise TypeError("loadable isn't class, function, or module")
 
-# A large number of the functions we need can just be imported
-from inspect import isclass, isfunction, isgeneratorfunction
-from __builtin__ import issubclass, hasattr
+
+# Quite a few of the functions we need are provided by Python.
+# To keep sphinx happy, we need to explicitly define them here
+def isclass(thing):
+    """is *thing* a class?"""
+    return inspect.isclass(thing)
+
+
+def isfunction(thing):
+    """is *thing* a function? (either normal or generator)"""
+    return inspect.isfunction(thing)
+
+
+def isgeneratorfunction(thing):
+    """is *thing* a generator function?"""
+    return inspect.isgeneratorfunction(thing)
+
+
+def issubclass(thing, the_other_thing):
+    """is *thing* a subclass of *the other thing*?"""
+    return __builtin__.issubclass(thing, the_other_thing)
+
+
+def hasattr(thing, attr):
+    """does *thing* have an attribute named *attr*?"""
+    return __builtin__.hasattr(thing, attr)
+
 
 # Some are very simple
-def isstandardfunction(loadable):
-    """is the function a normal function (i.e., not a generator)"""
-    return isfunction(loadable) and not isgeneratorfunction(loadable)
+def isstandardfunction(thing):
+    """is *thing* a normal function (i.e., not a generator)"""
+    return isfunction(thing) and not isgeneratorfunction(thing)
+
 
 # The following we have to implement ourselves
 def hasnumargs(thing, num):
     """
-    Returns true if thing has num arguments.
+    does *thing* have *num* arguments?
 
-    If thing is a function, the positional arguments are simply counted up.
-    If thing is a method, the positional arguments are counted up and one
+    If *thing* is a function, the positional arguments are simply counted up.
+    If *thing* is a method, the positional arguments are counted up and one
     is subtracted in order to account for ``method(self, ...)``
-    If thing is a class, the positional arguments of ``cls.__call__`` are
+    If *thing* is a class, the positional arguments of ``cls.__call__`` are
     counted up and one is subtracted (self), giving the number of arguments
     a callable object created from that class would have.
     """
@@ -222,8 +242,9 @@ def hasnumargs(thing, num):
 
     return args == num
 
+
 def hasmethod(loadable, name):
-    """Returns true if *loadable*.*name* is callable """
+    """is *loadable.name* callable?"""
     try:
         expecthasattr(loadable, name)
         expectiscallable(getattr(loadable, name))
@@ -231,11 +252,12 @@ def hasmethod(loadable, name):
     except:
         return False
 
+
 # Builtin callable() is not good enough since it returns true for any
 # class oboject
 def iscallable(loadable):
     """
-    Returns true if *loadable* is a method, function or callable class.
+    is *loadable* a method, function or callable class?
 
     For *loadable* to be a callable class, an object created from it must
     be callable (i.e., it has a ``__call__`` method)
@@ -246,7 +268,8 @@ def iscallable(loadable):
     else:
         return inspect.isroutine(loadable)
 
-def expectgenerator(error):
+
+def _expectify(error):
     """
     Generate an expect function decorator, which will wrap a function and \
     raise error rather than return false.
@@ -261,22 +284,22 @@ def expectgenerator(error):
 
     return decorator
 
-expectisclass = expectgenerator(
+expectisclass = _expectify(
         TypeError("Not a class"))(isclass)
-expectisfunction = expectgenerator(
+expectisfunction = _expectify(
         TypeError("Not a function"))(isfunction)
-expectisgeneratorfunction = expectgenerator(
+expectisgeneratorfunction = _expectify(
         TypeError("Not a generator function"))(isgeneratorfunction)
-expectisstandardfunction = expectgenerator(
+expectisstandardfunction = _expectify(
         TypeError("Not a standard function"))(isstandardfunction)
 
-expectiscallable = expectgenerator(
+expectiscallable = _expectify(
         TypeError("Not callable"))(iscallable)
-expectissubclass = expectgenerator(
+expectissubclass = _expectify(
         TypeError("Not a correct subclass"))(issubclass)
-expecthasnumargs = expectgenerator(
+expecthasnumargs = _expectify(
         TypeError("Incorrect number of args"))(hasnumargs)
-expecthasmethod = expectgenerator(
+expecthasmethod = _expectify(
         TypeError("Does not have a required method"))(hasmethod)
-expecthasattr = expectgenerator(
+expecthasattr = _expectify(
         TypeError("Does not have a required attribute"))(hasattr)
