@@ -13,7 +13,6 @@ habitat.parser_modules.ukhas_parser
 
    .. autosummary::
    
-      ParserModule
       UKHASParser
    
    
