@@ -115,7 +115,54 @@ the ``*``.
 Field Names
 -----------
 
-Field names may be any string that does not start with an underscore.
+Field names may be any string that does not start with an underscore. It is
+recommended that they follow the basic pattern of
+``prefix[_suffix[_suffix[...]]]`` to aid presentation: for example,
+``temperature_internal`` and ``temperature_external`` could then be grouped
+together automatically by a user interface.
+
+In addition, several common field names have been standardised on, and their
+use is strongly encouraged:
+
+.. list-table::
+    :header-rows: 1
+
+    * - **Field**
+      - **Name To Use**
+      - **Notes**
+    * - **Sentence ID** (aka count, message count, sequence number)
+      - ``sentence_id``
+      -
+    * - **Time**
+      - ``time``
+      -
+    * - **Latitude**
+      - ``latitude``
+      -
+    * - **Longitude**
+      - ``longitude``
+      -
+    * - **Altitude**
+      - ``altitude``
+      -
+    * - **Temperature**
+      - ``temperature``
+      - Should specify a suffix, such as ``_internal`` or ``_external``
+    * - **Satellites In View**
+      - ``satellites``
+      -
+    * - **Battery Voltage**
+      - ``battery``
+      - Suffixes allowable, e.g., ``_backup``, ``_cutdown``, but without the
+        suffix it is treated as the main battery voltage
+    * - **Pressure**
+      - ``pressure``
+      -
+
+Standard user interfaces will use title case to render these names, so
+``flight_mode`` would become ``Flight Mode`` and so on. Some exceptions may be
+made in the case of the common field names specified above.
+
 
 Field Types
 -----------
@@ -146,6 +193,14 @@ is used to define how the coordinate should be parsed. Options are:
   should be transmitted as ``0212.3``.
 
 In both cases, the number can be prefixed by a space or + or - sign.
+
+Units
+-----
+
+Received data may use any convenient unit, however it is strongly recommended
+that filters (see below) be used to convert the incoming data into SI units.
+These then allow for standardisation and ease of display on user interface
+layers.
 
 Filters
 -------
