@@ -143,7 +143,7 @@ use is strongly encouraged:
       - ``longitude``
       -
     * - **Altitude**
-      - ``altitude`
+      - ``altitude``
       -
     * - **Temperature**
       - ``temperature``
