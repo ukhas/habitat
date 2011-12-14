@@ -130,6 +130,9 @@ use is strongly encouraged:
     * - **Field**
       - **Name To Use**
       - **Notes**
+    * - **Sentence ID** (aka count, message count, sequence number)
+      - ``sentence_id``
+      -
     * - **Time**
       - ``time``
       -
@@ -139,8 +142,8 @@ use is strongly encouraged:
     * - **Longitude**
       - ``longitude``
       -
-    * - **Sentence ID** (aka count, message count, sequence number)
-      - ``sentence_id``
+    * - **Altitude**
+      - ``altitude`
       -
     * - **Temperature**
       - ``temperature``
