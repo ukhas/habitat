@@ -132,32 +132,40 @@ use is strongly encouraged:
       - **Notes**
     * - **Sentence ID** (aka count, message count, sequence number)
       - ``sentence_id``
-      -
+      - An increasing integer
     * - **Time**
       - ``time``
-      -
+      - Something like HH:MM:SS or HHMMSS or HHMM or HH:MM.
     * - **Latitude**
       - ``latitude``
-      -
+      - Will be converted to decimal degrees based on *format* field.
     * - **Longitude**
       - ``longitude``
-      -
+      - Will be converted to decimal degrees based on *format* field.
     * - **Altitude**
       - ``altitude``
-      -
+      - In, or converted to, metres.
     * - **Temperature**
       - ``temperature``
-      - Should specify a suffix, such as ``_internal`` or ``_external``
+      - Should specify a suffix, such as ``_internal`` or ``_external``. In or
+        converted to degrees Celsius.
     * - **Satellites In View**
       - ``satellites``
       -
     * - **Battery Voltage**
       - ``battery``
       - Suffixes allowable, e.g., ``_backup``, ``_cutdown``, but without the
-        suffix it is treated as the main battery voltage
+        suffix it is treated as the main battery voltage. In volts.
     * - **Pressure**
       - ``pressure``
-      -
+      - Suffixes allowable, e.g., ``_balloon``. Should be in or converted to
+        Pa.
+    * - **Speed**
+      - ``speed``
+      - For speed over the ground. Should be converted to m/s (SI units).
+    * - **Ascent Rate**
+      - ``ascentrate``
+      - For vertical speed. Should be m/s.
 
 Standard user interfaces will use title case to render these names, so
 ``flight_mode`` would become ``Flight Mode`` and so on. Some exceptions may be
