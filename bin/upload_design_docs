@@ -16,6 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Upload all the design docs in habitat/couchdb/_design to the database specified
+on the command line. You may have to be a database administrator to do this;
+specify user credentials in the database URI.
+"""
+
 import sys
 import os.path
 import couchdbkit
@@ -29,7 +35,6 @@ db = server[sys.argv[2]]
 
 path = os.path.abspath(__file__)
 path = os.path.split(path)[0]
-#path = os.path.join(path, "..", component, "_design")
 path = os.path.join(path, "..", "couchdb", "_design")
 
 if not os.path.isdir(path):
