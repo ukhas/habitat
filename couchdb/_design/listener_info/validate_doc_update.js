@@ -6,19 +6,19 @@ function(newDoc, oldDoc, userCtx) {
         return userCtx.roles.indexOf(role) >= 0;
     }
 
-    if(oldDoc && !user_id('admin')) {
+    if(oldDoc && !user_is('admin')) {
         throw({unauthorized:
                 "Only administrators may edit listener_info docs."});
     }
 
-    function required(field, type) {
-        if(!newDoc[field]) {
-            message = "Document must have a `" + field + "` field.";
+    function required(field, type, inside=newDoc) {
+        if(!inside[field]) {
+            message = "Must have a `" + field + "` field.";
             throw({forbidden: message});
         }
-        if(type && typeof(newDoc[field]) != type) {
+        if(type && typeof(inside[field]) != type) {
             message = "Wrong type for `" + field + "` ("
-            message += typeof(newDoc[field]) + "), should be " + type + ".";
+            message += typeof(inside[field]) + "), should be " + type + ".";
             throw({forbidden: message});
         }
     }
@@ -28,16 +28,10 @@ function(newDoc, oldDoc, userCtx) {
 
     if(newDoc['time_created'] >= newDoc['time_uploaded']) {
         throw({forbidden:
-                "Document cannot be created after it was uploaded."});
+                "Document creation date is after upload date."});
     }
 
-    required('data', object);
+    required('data', 'object');
     
-    if(!newDoc['data']['callsign']) {
-        throw({forbidden: "`data` must contain at least `callsign`."});
-    }
-
-    if(typeof(newDoc['data']['callsign'] != 'string') {
-        throw({forbidden: "`callsign` must be a string."});
-    }
+    required('callsign', 'string', newDoc['data']);
 }
