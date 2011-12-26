@@ -11,9 +11,16 @@ function(newDoc, oldDoc, userCtx) {
             "Only administrators may edit listener_telemetry docs."});
     }
 
-    function required(field, type, inside=newDoc) {
+    function required(field, type, inside=newDoc, inside_name=null) {
         if(!inside[field]) {
-            message = "Must have a `" + field + "` field.";
+            message = "Must have a `" + field + "` field";
+            if(inside_name != null) {
+                message += " inside " + inside_name + ".";
+            } else if(inside != newDoc) {
+                message += " inside unknown container (FIXME).";
+            } else {
+                message += " at the top level.";
+            }
             throw({forbidden: message});
         }
         if(type && typeof(inside[field]) != type) {
@@ -33,11 +40,11 @@ function(newDoc, oldDoc, userCtx) {
 
     required('data', 'object');
 
-    required('callsign', 'string', newDoc['data']);
-    required('latitude', 'number', newDoc['data']);
-    required('longitude', 'number', newDoc['data']);
-    required('time', 'object', newDoc['data']);
-    required('hour', 'number', newDoc['data']['time']);
-    required('minute', 'number', newDoc['data']['time']);
-    required('second', 'number', newDoc['data']['time']);
+    required('callsign', 'string', newDoc['data'], 'data');
+    required('latitude', 'number', newDoc['data'], 'data');
+    required('longitude', 'number', newDoc['data'], 'data');
+    required('time', 'object', newDoc['data'], 'data');
+    required('hour', 'number', newDoc['data']['time'], 'data.time');
+    required('minute', 'number', newDoc['data']['time'], 'data.time');
+    required('second', 'number', newDoc['data']['time'], 'data.time');
 }

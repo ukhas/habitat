@@ -11,9 +11,16 @@ function(newDoc, oldDoc, userCtx) {
                 "Only administrators may edit listener_info docs."});
     }
 
-    function required(field, type, inside=newDoc) {
+    function required(field, type, inside=newDoc, inside_name=null) {
         if(!inside[field]) {
-            message = "Must have a `" + field + "` field.";
+            message = "Must have a `" + field + "` field";
+            if(inside_name != null) {
+                message += " inside " + inside_name + ".";
+            } else if(inside != newDoc) {
+                message += " inside unknown container (FIXME).";
+            } else {
+                message += " at the top level.";
+            }
             throw({forbidden: message});
         }
         if(type && typeof(inside[field]) != type) {
@@ -33,5 +40,5 @@ function(newDoc, oldDoc, userCtx) {
 
     required('data', 'object');
     
-    required('callsign', 'string', newDoc['data']);
+    required('callsign', 'string', newDoc['data'], 'data');
 }
