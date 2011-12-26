@@ -17,8 +17,8 @@ function(newDoc, oldDoc, userCtx) {
             throw({forbidden: message});
         }
         if(type && typeof(inside[field]) != type) {
-            message = "Wrong type for `" + field + "` ("
-            message += typeof(inside[field]) + "), should be " + type + ".";
+            message = "Wrong type for `" + field + "` (is "
+            message += typeof(inside[field]) + ", should be " + type + ").";
             throw({forbidden: message});
         }
     }
