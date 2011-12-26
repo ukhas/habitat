@@ -11,25 +11,21 @@ function(newDoc, oldDoc, userCtx) {
                 "Only administrators may edit listener_info docs."});
     }
 
-    function required(field, type, inside_path=null) {
+    function required(path, type) {
         inside = newDoc;
-        inside_name = "Top level"
-        if(inside_path != null) {
-            inside_name = inside_path;
-            parts = inside_path.split(".");
-            for(index in parts) {
-                inside = inside[parts[index]];
-            }
+        parts = path.split(".");
+        field = parts[0];
+        parents = parts.slice(0, -1)
+        for(index in parents) {
+            inside = inside[parents[index]];
         }
         if(!inside[field]) {
-            message = inside_name + " must contain a `" + field + "` field.";
-            throw({forbidden: message});
+            forbidden("Missing required field '" + path + "'.");
         }
         if(type && typeof(inside[field]) != type) {
-            message = "In " + inside_name + ", `" + field + "` field has ";
-            message += "type " + typeof(inside[field]) + " but must be ";
-            message += type + ".";
-            throw({forbidden: message});
+            message = "Field '" + path + "' has type " + typeof(inside[field]);
+            message += " but must be " + type + ".";
+            forbidden(message);
         }
     }
 
@@ -43,5 +39,5 @@ function(newDoc, oldDoc, userCtx) {
 
     required('data', 'object');
     
-    required('callsign', 'string', 'data');
+    required('data.callsign', 'string');
 }
