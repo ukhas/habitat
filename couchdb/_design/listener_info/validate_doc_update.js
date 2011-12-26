@@ -11,21 +11,24 @@ function(newDoc, oldDoc, userCtx) {
                 "Only administrators may edit listener_info docs."});
     }
 
-    function required(field, type, inside=newDoc, inside_name=null) {
-        if(!inside[field]) {
-            message = "Must have a `" + field + "` field";
-            if(inside_name != null) {
-                message += " inside " + inside_name + ".";
-            } else if(inside != newDoc) {
-                message += " inside unknown container (FIXME).";
-            } else {
-                message += " at the top level.";
+    function required(field, type, inside_path=null) {
+        inside = newDoc;
+        inside_name = "Top level"
+        if(inside_path != null) {
+            inside_name = inside_path;
+            parts = inside_path.split(".");
+            for(index in parts) {
+                inside = inside[parts[index]];
             }
+        }
+        if(!inside[field]) {
+            message = inside_name + " must contain a `" + field + "` field.";
             throw({forbidden: message});
         }
         if(type && typeof(inside[field]) != type) {
-            message = "Wrong type for `" + field + "` (is "
-            message += typeof(inside[field]) + ", should be " + type + ").";
+            message = "In " + inside_name + ", `" + field + "` field has ";
+            message += "type " + typeof(inside[field]) + " but must be ";
+            message += type + ".";
             throw({forbidden: message});
         }
     }
@@ -40,5 +43,5 @@ function(newDoc, oldDoc, userCtx) {
 
     required('data', 'object');
     
-    required('callsign', 'string', newDoc['data'], 'data');
+    required('callsign', 'string', 'data');
 }
