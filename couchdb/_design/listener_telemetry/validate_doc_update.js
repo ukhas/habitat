@@ -1,6 +1,6 @@
 /* Copyright 2010 Adam Greig; Licensed under the GNU GPL v3, see LICENSE */
 function(newDoc, oldDoc, userCtx) {
-    if(newDoc.type != "listener_telem") return;
+    if(newDoc.type != "listener_telemetry") return;
     
     function user_is(role) {
         return userCtx.roles.indexOf(role) >= 0;
@@ -8,7 +8,7 @@ function(newDoc, oldDoc, userCtx) {
 
     if(oldDoc && !user_is('admin')) {
         throw({unauthorized:
-            "Only administrators may edit listener_telem docs."});
+            "Only administrators may edit listener_telemetry docs."});
     }
 
     function required(field, type, inside=newDoc) {
