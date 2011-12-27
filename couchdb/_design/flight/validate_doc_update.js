@@ -41,7 +41,7 @@ function(newDoc, oldDoc, userCtx) {
         parts = path.split(".");
         field = parts[0];
         parents = parts.slice(0, -1)
-        for(index in parents) {
+        for(var index in parents) {
             inside = inside[parents[index]];
         }
         if(!inside[field]) {
@@ -84,7 +84,7 @@ function(newDoc, oldDoc, userCtx) {
 
     required('payloads', 'object');
 
-    for(callsign in newDoc['payloads']) {
+    for(var callsign in newDoc['payloads']) {
         base = "payloads." + callsign;
         required(base+'.radio', 'object');
         required(base+'.radio.frequency', 'number');
@@ -118,7 +118,7 @@ function(newDoc, oldDoc, userCtx) {
             required(base+'.sentence.fields', 'array');
             fields = sentence['fields']
 
-            for(index in fields) {
+            for(var index in fields) {
                 fbase = base+".sentence.fields."+index;
                 // P.S. oh, wow, Javascript. I can't believe you can
                 // >>> array = [1, 2, 3];
@@ -151,11 +151,11 @@ function(newDoc, oldDoc, userCtx) {
                 }
             }
             filtertypes = ['intermediate', 'post'];
-            for(index in filtertypes) {
+            for(var index in filtertypes) {
                 filtertype = filtertypes[index];
                 if(filters[filtertype]) {
                     required(base+'.filters.'+filtertype, 'array');
-                    for(index in filters[filtertype]) {
+                    for(var index in filters[filtertype]) {
                         valid_filter(base+'.filters.'+filtertype+'.'+index,
                                      filters[filtertype][index]);
                     }
@@ -166,7 +166,7 @@ function(newDoc, oldDoc, userCtx) {
         if(newDoc['payloads'][callsign]['chasers']) {
             required(base+'.chasers', 'array');
             chasers = newDoc['payloads'][callsign]['chasers'];
-            for(index in chasers) {
+            for(var index in chasers) {
                 required(base+'.chasers.'+index, 'string');
             }
         }
