@@ -1,5 +1,7 @@
 /* Copyright 2010, 2011 Adam Greig; Licensed under the GNU GPL v3, see LICENSE */
 function(doc) {
+    // flights sorted by payload, then end time.
+
     if(doc.type == "flight") {
         var payload;
         for(payload in doc.payloads) {
