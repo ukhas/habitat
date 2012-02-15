@@ -19,54 +19,51 @@
 Unit tests for the view function utilities
 """
 
-import mox
-
 from nose.tools import assert_raises
 from couch_named_python import Unauthorized, Forbidden
 
 from ...views import utils
 
-class TestViewUtils(object):
-    def test_must_be_admin(self):
-        nonadmin = {'roles': ['not an admin']}
-        noroles = {'noroles': True}
-        oddroles = {'roles': 12}
-        admin = {'roles': ['admin']}
-        alsoadmin = {'roles': ['lowly', 'admin']}
+def test_must_be_admin():
+    nonadmin = {'roles': ['not an admin']}
+    noroles = {'noroles': True}
+    oddroles = {'roles': 12}
+    admin = {'roles': ['admin']}
+    alsoadmin = {'roles': ['lowly', 'admin']}
 
-        assert_raises(Unauthorized, utils.must_be_admin, nonadmin)
-        assert_raises(Unauthorized, utils.must_be_admin, noroles)
-        assert_raises(Unauthorized, utils.must_be_admin, oddroles)
-        
-        utils.must_be_admin(admin)
-        utils.must_be_admin(alsoadmin)
+    assert_raises(Unauthorized, utils.must_be_admin, nonadmin)
+    assert_raises(Unauthorized, utils.must_be_admin, noroles)
+    assert_raises(Unauthorized, utils.must_be_admin, oddroles)
+    
+    utils.must_be_admin(admin)
+    utils.must_be_admin(alsoadmin)
 
-    def test_validate_doc(self):
-        schema = {
-            "type": "object",
-            "additionalProperties": False,
-            "required": True,
-            "properties": {
-                "test": {
-                    "type": "string",
-                    "required": True
-                },
-                "opt": {
-                    "type": "number"
-                }
+def test_validate_doc():
+    schema = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": True,
+        "properties": {
+            "test": {
+                "type": "string",
+                "required": True
+            },
+            "opt": {
+                "type": "number"
             }
         }
+    }
 
-        ok = {"test": "hello"}
-        wopt = {"test": "hi", "opt": 123}
-        bad = {"not test": "hello"}
-        badopt = {"test": "hey", "opt": "oh no a string"}
-        multibad = {"not test": "hello", "opt": "not a number"}
-        extras = {"test": "heya", "opt": 123, "extra": "not allowed!"}
+    ok = {"test": "hello"}
+    wopt = {"test": "hi", "opt": 123}
+    bad = {"not test": "hello"}
+    badopt = {"test": "hey", "opt": "oh no a string"}
+    multibad = {"not test": "hello", "opt": "not a number"}
+    extras = {"test": "heya", "opt": 123, "extra": "not allowed!"}
 
-        utils.validate_doc(ok, schema)
-        utils.validate_doc(wopt, schema)
-        assert_raises(Forbidden, utils.validate_doc, bad, schema)
-        assert_raises(Forbidden, utils.validate_doc, badopt, schema)
-        assert_raises(Forbidden, utils.validate_doc, multibad, schema)
-        assert_raises(Forbidden, utils.validate_doc, extras, schema)
+    utils.validate_doc(ok, schema)
+    utils.validate_doc(wopt, schema)
+    assert_raises(Forbidden, utils.validate_doc, bad, schema)
+    assert_raises(Forbidden, utils.validate_doc, badopt, schema)
+    assert_raises(Forbidden, utils.validate_doc, multibad, schema)
+    assert_raises(Forbidden, utils.validate_doc, extras, schema)
