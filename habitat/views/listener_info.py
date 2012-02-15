@@ -60,3 +60,7 @@ def validate(new, old, userctx, secobj):
     if old:
         must_be_admin(userctx)
     validate_doc(new, schema)
+
+def time_created_callsign_map(doc):
+    if 'type' in doc and doc['type'] == "listener_info":
+        yield (doc['time_created'], doc['data']['callsign']), None
