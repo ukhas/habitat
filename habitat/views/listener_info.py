@@ -57,11 +57,10 @@ schema = {
 }
 
 def validate(new, old, userctx, secobj):
-    if new['type'] != 'listener_info':
-        return
-    if old:
-        must_be_admin(userctx)
-    validate_doc(new, schema)
+    if new['type'] == 'listener_info':
+        if old:
+            must_be_admin(userctx)
+        validate_doc(new, schema)
 
 def time_created_callsign_map(doc):
     if 'type' in doc and doc['type'] == "listener_info":
