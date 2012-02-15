@@ -63,6 +63,6 @@ def validate(new, old, userctx, secobj):
         validate_doc(new, schema)
 
 def time_created_callsign_map(doc):
-    if 'type' in doc and doc['type'] == "listener_info":
+    if doc['type'] == "listener_info":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (tc, doc['data']['callsign']), None
