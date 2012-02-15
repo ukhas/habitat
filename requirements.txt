@@ -4,3 +4,5 @@ crcmod==1.7
 ipaddr==2.1.10
 PyYAML==3.10
 jsonschema==0.2
+couch-named-python==0.1dev
+python-dateutil==1.5

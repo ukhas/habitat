@@ -20,7 +20,7 @@ Provide the view functions for listener_info documents, including
 validation functions.
 """
 
-from .utils import must_be_admin, validate_doc
+from .utils import rfc3339_to_timestamp, must_be_admin, validate_doc
 
 schema = {
     "title": "Listener Info Document",
@@ -57,10 +57,13 @@ schema = {
 }
 
 def validate(new, old, userctx, secobj):
+    if 'type' not in new or new['type'] != 'listener_info':
+        return
     if old:
         must_be_admin(userctx)
     validate_doc(new, schema)
 
 def time_created_callsign_map(doc):
     if 'type' in doc and doc['type'] == "listener_info":
-        yield (doc['time_created'], doc['data']['callsign']), None
+        tc = rfc3339_to_timestamp(doc['time_created'])
+        yield (tc, doc['data']['callsign']), None

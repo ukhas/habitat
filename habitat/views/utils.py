@@ -21,8 +21,28 @@ Shared utility functions for views.
 
 from couch_named_python import Unauthorized, Forbidden
 from jsonschema import ValidationError, validate
+from dateutil.parser import parse
+from dateutil.tz import tzutc
+from calendar import timegm
+
+def rfc3339_to_datetime(datestring):
+    """Convert an RFC3339 date-time string to a datetime"""
+    return parse(datestring)
+
+def rfc3339_to_utc_datetime(datestring):
+    """Convert an RFC3339 date-time string to a UTC datetime"""
+    return rfc3339_to_datetime(datestring).astimezone(tzutc())
+
+def rfc3339_to_timestamp(datestring):
+    """Convert an RFC3339 date-time string to a UTC UNIX timestamp"""
+    return timegm(rfc3339_to_utc_datetime(datestring).utctimetuple())
+
+def datetime_to_timestamp(dt):
+    """Convert a datetime object to a UTC UNIX timestamp"""
+    return timegm(dt.utctimetuple())
 
 def must_be_admin(user):
+    """Raise Unauthorized if the user is not an admin"""
     try:
         if 'admin' not in user['roles']:
             raise Unauthorized("Only administrators may edit this document.")
@@ -30,6 +50,7 @@ def must_be_admin(user):
         raise Unauthorized("Only administrators may edit this document.")
 
 def validate_doc(data, schema):
+    """Validate *data* against *schema*, raising descriptive errors"""
     try:
         validate(data, schema, unknown_property="skip", stop_on_error=False)
     except ValidationError as e:
