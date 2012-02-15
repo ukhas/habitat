@@ -57,7 +57,7 @@ schema = {
 }
 
 def validate(new, old, userctx, secobj):
-    if 'type' not in new or new['type'] != 'listener_info':
+    if new['type'] != 'listener_info':
         return
     if old:
         must_be_admin(userctx)
