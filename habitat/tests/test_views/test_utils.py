@@ -40,3 +40,33 @@ class TestViewUtils(object):
         
         utils.must_be_admin(admin)
         utils.must_be_admin(alsoadmin)
+
+    def test_validate_doc(self):
+        schema = {
+            "type": "object",
+            "additionalProperties": False,
+            "required": True,
+            "properties": {
+                "test": {
+                    "type": "string",
+                    "required": True
+                },
+                "opt": {
+                    "type": "number"
+                }
+            }
+        }
+
+        ok = {"test": "hello"}
+        wopt = {"test": "hi", "opt": 123}
+        bad = {"not test": "hello"}
+        badopt = {"test": "hey", "opt": "oh no a string"}
+        multibad = {"not test": "hello", "opt": "not a number"}
+        extras = {"test": "heya", "opt": 123, "extra": "not allowed!"}
+
+        utils.validate_doc(ok, schema)
+        utils.validate_doc(wopt, schema)
+        assert_raises(Forbidden, utils.validate_doc, bad, schema)
+        assert_raises(Forbidden, utils.validate_doc, badopt, schema)
+        assert_raises(Forbidden, utils.validate_doc, multibad, schema)
+        assert_raises(Forbidden, utils.validate_doc, extras, schema)

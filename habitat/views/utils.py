@@ -33,5 +33,5 @@ def validate_doc(data, schema):
     try:
         validate(data, schema, unknown_property="skip", stop_on_error=False)
     except ValidationError as e:
-         out = ", ".join(["Validation errors: "]+sorted(e.errors))
-         raise Forbidden(out)
+        out = "Validation errors: " + "; ".join(sorted(e.errors))
+        raise Forbidden(out)
