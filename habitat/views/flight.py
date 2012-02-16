@@ -297,14 +297,17 @@ def validate(new, old, userctx, secobj):
         validate_doc(new, schema)
 
 def end_map(doc):
+    """Map by flight window end date."""
     if doc['type'] == "flight":
         yield rfc3339_to_timestamp(doc['end']), None
 
 def launch_time_map(doc):
+    """Map by flight launch time."""
     if doc['type'] == "flight":
         yield doc['launch']['time'], None
 
 def payload_end_map(doc):
+    """Map by payload and then flight window end date."""
     if doc['type'] == "flight":
         for payload in doc['payloads']:
             yield (payload, rfc3339_to_timestamp(doc['end'])), None
