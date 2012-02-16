@@ -29,6 +29,14 @@ schema = {
     "additionalProperties": False,
     "required": True,
     "properties": {
+        "_id": {
+            "type": "string",
+            "required": False
+        },
+        "_rev": {
+            "type": "string",
+            "required": False
+        },
         "type": {
             "type": "string",
             "pattern": "^listener_telemetry$",

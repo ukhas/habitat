@@ -28,6 +28,14 @@ schema = {
     "type": "object",
     "required": True,
     "properties": {
+        "_id": {
+            "type": "string",
+            "required": False
+        },
+        "_rev": {
+            "type": "string",
+            "required": False
+        },
         "type": {
             "type": "string",
             "pattern": "^payload_telemetry$",
