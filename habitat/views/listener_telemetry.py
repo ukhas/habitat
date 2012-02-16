@@ -22,67 +22,18 @@ Contains schema validation and a view by creation time and callsign.
 """
 
 from .utils import rfc3339_to_timestamp, must_be_admin, validate_doc
+from .utils import read_json_schema
 
-schema = {
-    "title": "Listener Telemetry Document",
-    "type": "object",
-    "additionalProperties": False,
-    "required": True,
-    "properties": {
-        "_id": {
-            "type": "string",
-            "required": False
-        },
-        "_rev": {
-            "type": "string",
-            "required": False
-        },
-        "type": {
-            "type": "string",
-            "pattern": "^listener_telemetry$",
-            "required": True
-        },
-        "time_created": {
-            "type": "string",
-            "format": "date-time",
-            "required": True
-        },
-        "time_uploaded": {
-            "type": "string",
-            "format": "date-time",
-            "required": True
-        },
-        "data": {
-            "type": "object",
-            "required": True,
-            "additionalProperties": False,
-            "properties": {
-                "callsign": {
-                    "type": "string",
-                    "required": True
-                },
-                "latitude": {
-                    "type": "number",
-                    "required": True
-                },
-                "longitude": {
-                    "type": "number",
-                    "required": True
-                },
-                "altitude": {
-                    "type": "number",
-                    "required": False
-                }
-            }
-        }
-    }
-}
+schema = None
 
 def validate(new, old, userctx, secobj):
     """
     Only allow admins to edit/delete and validate the document against the
     schema for listener_telemetry documents.
     """
+    global schema
+    if not schema:
+        schema = read_json_schema("listener_telemetry.json")
     if new['type'] == "listener_telemetry":
         if old:
             must_be_admin(userctx)

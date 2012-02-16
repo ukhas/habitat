@@ -1,0 +1,68 @@
+{
+    "title": "Payload Telemetry Document",
+    "type": "object",
+    "required": true,
+    "properties": {
+        "_id": {
+            "type": "string",
+            "required": false
+        },
+        "_rev": {
+            "type": "string",
+            "required": false
+        },
+        "type": {
+            "type": "string",
+            "pattern": "^payload_telemetry$",
+            "required": true
+        },
+        "estimated_time_created": {
+            "type": "string",
+            "format": "date-time",
+            "required": false
+        },
+        "data": {
+            "type": "object",
+            "required": true,
+            "additionalProperties": true,
+            "properties": {
+                "_raw": {
+                    "type": "string",
+                    "required": true
+                }
+            }
+        },
+        "receivers": {
+            "type": "object",
+            "required": true,
+            "additionalProperties": false,
+            "patternProperties": {
+                "^[A-Za-z0-9]{1,50}$": {
+                    "type": "object",
+                    "required": true,
+                    "additionalProperties": false,
+                    "properties": {
+                        "time_created": {
+                            "type": "string",
+                            "format": "date-time",
+                            "required": true
+                        },
+                        "time_uploaded": {
+                            "type": "string",
+                            "format": "date-time",
+                            "required": true
+                        },
+                        "latest_telemtry": {
+                            "type": "string",
+                            "required": false
+                        },
+                        "latest_info": {
+                            "type": "string",
+                            "required": false
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

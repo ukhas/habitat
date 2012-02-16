@@ -1,0 +1,54 @@
+{
+    "title": "Listener Telemetry Document",
+    "type": "object",
+    "additionalProperties": false,
+    "required": true,
+    "properties": {
+        "_id": {
+            "type": "string",
+            "required": false
+        },
+        "_rev": {
+            "type": "string",
+            "required": false
+        },
+        "type": {
+            "type": "string",
+            "pattern": "^listener_telemetry$",
+            "required": true
+        },
+        "time_created": {
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "time_uploaded": {
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "data": {
+            "type": "object",
+            "required": true,
+            "additionalProperties": false,
+            "properties": {
+                "callsign": {
+                    "type": "string",
+                    "required": true
+                },
+                "latitude": {
+                    "type": "number",
+                    "required": true
+                },
+                "longitude": {
+                    "type": "number",
+                    "required": true
+                },
+                "altitude": {
+                    "type": "number",
+                    "required": false
+                }
+            }
+        }
+    }
+}

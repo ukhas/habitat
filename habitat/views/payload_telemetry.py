@@ -21,81 +21,17 @@ Contains schema validation and a view by flight, payload and received time.
 """
 
 import math
-from .utils import rfc3339_to_timestamp, validate_doc
+from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
 
-schema = {
-    "title": "Payload Telemetry Document",
-    "type": "object",
-    "required": True,
-    "properties": {
-        "_id": {
-            "type": "string",
-            "required": False
-        },
-        "_rev": {
-            "type": "string",
-            "required": False
-        },
-        "type": {
-            "type": "string",
-            "pattern": "^payload_telemetry$",
-            "required": True
-        },
-        "estimated_time_created": {
-            "type": "string",
-            "format": "date-time",
-            "required": False
-        },
-        "data": {
-            "type": "object",
-            "required": True,
-            "additionalProperties": True,
-            "properties": {
-                "_raw": {
-                    "type": "string",
-                    "required": True
-                }
-            }
-        },
-        "receivers": {
-            "type": "object",
-            "required": True,
-            "additionalProperties": False,
-            "patternProperties": {
-                "^[A-Za-z0-9]{1,50}$": {
-                    "type": "object",
-                    "required": True,
-                    "additionalProperties": False,
-                    "properties": {
-                        "time_created": {
-                            "type": "string",
-                            "format": "date-time",
-                            "required": True
-                        },
-                        "time_uploaded": {
-                            "type": "string",
-                            "format": "date-time",
-                            "required": True
-                        },
-                        "latest_telemtry": {
-                            "type": "string",
-                            "required": False
-                        },
-                        "latest_info": {
-                            "type": "string",
-                            "required": False
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+schema = None
 
 def validate(new, old, userctx, secobj):
     """
     Validate this payload_telemetry document against the schema.
     """
+    global schema
+    if not schema:
+        schema = read_json_schema("payload_telemetry.json")
     if new['type'] == "payload_telemetry":
         validate_doc(new, schema)
 

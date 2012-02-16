@@ -1,0 +1,271 @@
+{
+    "title": "Flight Document",
+    "type": "object",
+    "additionalProperties": false,
+    "required": true,
+    "properties": {
+        "_id": {
+            "type": "string",
+            "required": false
+        },
+        "_rev": {
+            "type": "string",
+            "required": false
+        },
+        "type": {
+            "type": "string",
+            "pattern": "^flight$",
+            "required": true
+        },
+        "start": {
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "end": {
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "name": {
+            "type": "string",
+            "required": true
+        },
+        "launch": {
+            "type": "object",
+            "required": true,
+            "additionalProperties": false,
+            "properties": {
+                "time": {
+                    "type": "string",
+                    "format": "date-time",
+                    "required": true
+                },
+                "timezone": {
+                    "type": "string",
+                    "required": true
+                },
+                "location": {
+                    "type": "object",
+                    "required": true,
+                    "additionalProperties": false,
+                    "properties": {
+                        "latitude": {
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90,
+                            "required": true
+                        },
+                        "longitude": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180,
+                            "required": true
+                        }
+                    }
+                }
+            }
+        },
+        "metadata": {
+            "type": "object",
+            "required": false,
+            "additionalProperties": true,
+            "properties": {
+                "location": {
+                    "type": "string",
+                    "required": false
+                },
+                "project": {
+                    "type": "string",
+                    "required": false
+                },
+                "group": {
+                    "type": "string",
+                    "required": false
+                }
+            }
+        },
+        "payloads": {
+            "type": "object",
+            "required": true,
+            "additionalProperties": false,
+            "patternProperties": {
+                "^[A-Za-z0-9]{1,20}$": {
+                    "type": "object",
+                    "required": true,
+                    "additionalProperties": false,
+                    "properties": {
+                        "radio": {
+                            "type": "object",
+                            "additionalProperties": true,
+                            "required": true,
+                            "properties": {
+                                "frequency": {
+                                    "type": "number",
+                                    "required": true
+                                },
+                                "mode": {
+                                    "type": "string",
+                                    "required": true
+                                }
+                            }
+                        },
+                        "telemetry": {
+                            "type": "object",
+                            "additionalProperties": true,
+                            "required": true,
+                            "properties": {
+                                "modulation": {
+                                    "type": "string",
+                                    "required": true
+                                },
+                                "shift": {
+                                    "type": "number",
+                                    "required": false
+                                },
+                                "encoding": {
+                                    "type": "string",
+                                    "required": false
+                                },
+                                "baud": {
+                                    "type": "number",
+                                    "required": false
+                                },
+                                "parity": {
+                                    "type": "string",
+                                    "required": false
+                                },
+                                "stop": {
+                                    "type": "number",
+                                    "required": false
+                                }
+                            }
+                        },
+                        "sentence": {
+                            "type": "object",
+                            "required": true,
+                            "additionalProperties": false,
+                            "properties": {
+                                "protocol": {
+                                    "type": "string",
+                                    "required": true
+                                },
+                                "checksum": {
+                                    "type": "string",
+                                    "required": false
+                                },
+                                "fields": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "name": {
+                                                "type": "string",
+                                                "required": true
+                                            },
+                                            "sensor": {
+                                                "type": "string",
+                                                "required": true
+                                            },
+                                            "format": {
+                                                "type": "string",
+                                                "required": false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "filters": {
+                            "type": "object",
+                            "required": false,
+                            "additionalProperties": false,
+                            "properties": {
+                                "intermediate": {
+                                    "type": "array",
+                                    "required": false,
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "required": true,
+                                                "enum": ["normal", "hotfix"]
+                                            },
+                                            "callable": {
+                                                "type": "string",
+                                                "required": false
+                                            },
+                                            "config": {
+                                                "type": "object",
+                                                "required": false,
+                                                "additionalProperties": true
+                                            },
+                                            "code": {
+                                                "type": "string",
+                                                "required": false
+                                            },
+                                            "signature": {
+                                                "type": "string",
+                                                "required": false
+                                            },
+                                            "certificate": {
+                                                "type": "string",
+                                                "required": false
+                                            }
+                                        }
+                                    }
+                                },
+                                "post": {
+                                    "type": "array",
+                                    "required": false,
+                                    "items": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                            "type": {
+                                                "type": "string",
+                                                "required": true,
+                                                "enum": ["normal", "hotfix"]
+                                            },
+                                            "callable": {
+                                                "type": "string",
+                                                "required": false
+                                            },
+                                            "config": {
+                                                "type": "object",
+                                                "required": false,
+                                                "additionalProperties": true
+                                            },
+                                            "code": {
+                                                "type": "string",
+                                                "required": false
+                                            },
+                                            "signature": {
+                                                "type": "string",
+                                                "required": false
+                                            },
+                                            "certificate": {
+                                                "type": "string",
+                                                "required": false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "chasers": {
+                            "type": "array",
+                            "required": false,
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

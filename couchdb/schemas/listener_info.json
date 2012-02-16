@@ -1,0 +1,42 @@
+{
+    "title": "Listener Info Document",
+    "type": "object",
+    "additionalProperties": false,
+    "required": true,
+    "properties": {
+        "_id": {
+            "type": "string",
+            "required": false
+        },
+        "_rev": {
+            "type": "string",
+            "required": false
+        },
+        "type": {
+            "type": "string",
+            "pattern": "^listener_info$",
+            "required": true
+        },
+        "time_created": {
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "time_uploaded": {
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "data": {
+            "type": "object",
+            "required": true,
+            "additionalProperties": true,
+            "properties": {
+                "callsign": {
+                    "type": "string",
+                    "required": true
+                }
+            }
+        }
+    }
+}

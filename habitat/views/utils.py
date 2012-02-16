@@ -19,11 +19,22 @@
 Shared utility functions for views.
 """
 
+import os
+import json
+import inspect
+
 from couch_named_python import Unauthorized, Forbidden
 from jsonschema import ValidationError, validate
 from dateutil.parser import parse
 from dateutil.tz import tzutc
 from calendar import timegm
+
+def read_json_schema(schemaname):
+    mypath = os.path.dirname(inspect.getfile(inspect.currentframe()))
+    path = os.path.join(mypath, "..", "..", "couchdb", "schemas", schemaname)
+    with open(path) as f:
+        schema = json.load(f)
+    return schema
 
 def rfc3339_to_datetime(datestring):
     """Convert an RFC3339 date-time string to a datetime"""
