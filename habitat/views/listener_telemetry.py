@@ -16,7 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Provide view and validation functions for listener_telemetry documents.
+Design document for Listener Telemetry docs providing validation and views.
 """
 
 from .utils import rfc3339_to_timestamp, must_be_admin, validate_doc

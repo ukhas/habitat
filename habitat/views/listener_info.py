@@ -16,8 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Provide the view functions for listener_info documents, including
-validation functions.
+Design document covering Listener Info docs including validation and views.
 """
 
 from .utils import rfc3339_to_timestamp, must_be_admin, validate_doc
