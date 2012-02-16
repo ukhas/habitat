@@ -64,25 +64,6 @@ schema = {
                 "altitude": {
                     "type": "number",
                     "required": False
-                },
-                "time": {
-                    "type": "object",
-                    "required": True,
-                    "additionalProperties": False,
-                    "properties": {
-                        "hour": {
-                            "type": "number",
-                            "required": True
-                        },
-                        "minute": {
-                            "type": "number",
-                            "required": True
-                        },
-                        "second": {
-                            "type": "number",
-                            "required": True
-                        }
-                    }
                 }
             }
         }
