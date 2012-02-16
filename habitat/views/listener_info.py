@@ -16,7 +16,9 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Design document covering Listener Info docs including validation and views.
+Functions for the listener_info design document.
+
+Contains schema validation and a view by creation time and callsign.
 """
 
 from .utils import rfc3339_to_timestamp, must_be_admin, validate_doc
@@ -57,12 +59,17 @@ schema = {
 }
 
 def validate(new, old, userctx, secobj):
+    """
+    Only allow admins to edit/delete and validate the document against the
+    schema for listener_info documents.
+    """
     if new['type'] == "listener_info":
         if old:
             must_be_admin(userctx)
         validate_doc(new, schema)
 
 def time_created_callsign_map(doc):
+    """Emit time_created and callsign."""
     if doc['type'] == "listener_info":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (tc, doc['data']['callsign']), None

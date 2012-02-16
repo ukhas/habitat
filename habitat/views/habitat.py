@@ -16,7 +16,9 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Core habitat design document, mostly involving all-doc validation.
+Functions for the core habitat design document.
+
+Contains a validation function that applies to every document.
 """
 
 from couch_named_python import Forbidden

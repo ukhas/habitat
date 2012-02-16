@@ -15,17 +15,14 @@
 # You should have received a copy of the GNU General Public License
 
 """
-Functions for the spacenearus design document.
+Functions for the parser design document.
 
-Contains a filter to select parsed payload telemetry and all listener
-telemetry.
+Contains a filter to select unparsed payload_telemetry.
 """
 
-def spacenear_filter(doc, req):
-    """Select parsed payload_telemetry and all listener_telemetry documents."""
-    if doc['type'] == "listener_telemetry":
-        return True
+def unparsed_filter(doc, req):
+    """Only select unparsed payload_telemetry documents."""
     if doc['type'] == "payload_telemetry":
-        if 'data' in doc and '_parsed' in doc['data']:
+        if 'data' in doc and '_parsed' not in doc['data']:
             return True
     return False
