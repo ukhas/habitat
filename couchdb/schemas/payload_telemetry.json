@@ -1,62 +1,85 @@
 {
     "title": "Payload Telemetry Document",
+    "description": "Stores data transmitted by payloads, either as-yet-unparsed or parsed.",
     "type": "object",
     "required": true,
     "properties": {
         "_id": {
+            "title": "CouchDB Document ID",
             "type": "string",
             "required": false
         },
         "_rev": {
+            "title": "CouchDB Document Revision Number",
             "type": "string",
             "required": false
         },
         "type": {
+            "title": "Document Type",
+            "description": "Indicates that this is a payload telemetry document. Should be 'payload_telemetry'.",
             "type": "string",
             "pattern": "^payload_telemetry$",
             "required": true
         },
         "estimated_time_created": {
+            "title": "Estimated Time Created",
+            "description": "An approximation of when this document was created based on the times each listener heard it, as an RFC3339 string.",
             "type": "string",
             "format": "date-time",
             "required": false
         },
         "data": {
+            "title": "Data",
+            "description": "All the data about this transmission, including the raw transmitted data and any parsing results.",
             "type": "object",
             "required": true,
             "additionalProperties": true,
             "properties": {
                 "_raw": {
+                    "title": "Raw Data",
+                    "description": "The raw transmitted data, as a base64 string.",
                     "type": "string",
                     "required": true
                 }
             }
         },
         "receivers": {
+            "title": "Telemetry Receivers",
+            "description": "The listeners who received this telemetry and when they received it.",
             "type": "object",
             "required": true,
             "additionalProperties": false,
             "patternProperties": {
                 "^[A-Za-z0-9]{1,50}$": {
+                    "title": "Receiver",
+                    "description": "Information about one receiver of this telemetry.",
                     "type": "object",
                     "required": true,
                     "additionalProperties": false,
                     "properties": {
                         "time_created": {
+                            "title": "Time Created",
+                            "description": "The time, as an RFC3339 string, when the receiver created this document.",
                             "type": "string",
                             "format": "date-time",
                             "required": true
                         },
                         "time_uploaded": {
+                            "title": "Time Uploaded",
+                            "description": "The time, as an RFC3339 string, when the receiver uploaded this document to the database.",
                             "type": "string",
                             "format": "date-time",
                             "required": true
                         },
                         "latest_telemtry": {
+                            "title": "Receiver Latest Telemtry",
+                            "description": "A CouchDB document ID for this receiver's most recent listener_telemetry document.",
                             "type": "string",
                             "required": false
                         },
                         "latest_info": {
+                            "title": "Receiver Latest Info",
+                            "description": "A CouchDB document ID for this receiver's most recent listener_info document.",
                             "type": "string",
                             "required": false
                         }
