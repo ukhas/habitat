@@ -31,7 +31,7 @@ schema = {
     "properties": {
         "type": {
             "type": "string",
-            "pattern": "listener_info",
+            "pattern": "^listener_info$",
             "required": True
         },
         "time_created": {
