@@ -16,21 +16,20 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Provide the view functions for listener_info documents, including
-validation functions.
+Provide view and validation functions for listener_telemetry documents.
 """
 
 from .utils import rfc3339_to_timestamp, must_be_admin, validate_doc
 
 schema = {
-    "title": "Listener Info Document",
+    "title": "Listener Telemetry Document",
     "type": "object",
     "additionalProperties": False,
     "required": True,
     "properties": {
         "type": {
             "type": "string",
-            "pattern": "listener_info",
+            "pattern": "listener_telemetry",
             "required": True
         },
         "time_created": {
@@ -46,11 +45,42 @@ schema = {
         "data": {
             "type": "object",
             "required": True,
-            "additionalProperties": True,
+            "additionalProperties": False,
             "properties": {
                 "callsign": {
                     "type": "string",
                     "required": True
+                },
+                "latitude": {
+                    "type": "number",
+                    "required": True
+                },
+                "longitude": {
+                    "type": "number",
+                    "required": True
+                },
+                "altitude": {
+                    "type": "number",
+                    "required": False
+                },
+                "time": {
+                    "type": "object",
+                    "required": True,
+                    "additionalProperties": False,
+                    "properties": {
+                        "hour": {
+                            "type": "number",
+                            "required": True
+                        },
+                        "minute": {
+                            "type": "number",
+                            "required": True
+                        },
+                        "second": {
+                            "type": "number",
+                            "required": True
+                        }
+                    }
                 }
             }
         }
@@ -58,12 +88,12 @@ schema = {
 }
 
 def validate(new, old, userctx, secobj):
-    if new['type'] == "listener_info":
+    if new['type'] == "listener_telemetry":
         if old:
             must_be_admin(userctx)
         validate_doc(new, schema)
 
 def time_created_callsign_map(doc):
-    if doc['type'] == "listener_info":
+    if doc['type'] == "listener_telemetry":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (tc, doc['data']['callsign']), None
