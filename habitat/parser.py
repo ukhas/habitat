@@ -26,6 +26,8 @@ import M2Crypto
 import os
 import couchdbkit
 import copy
+import re
+import json
 
 from . import loadable_manager
 from .utils import dynamicloader
@@ -43,6 +45,8 @@ class Parser(object):
     attempts to use each loaded :class:`ParserModule` to turn this telemetry
     into useful data, which is then saved back to the database.
     """
+
+    ascii_exp = re.compile("^[\\x20-\\x7E]+$")
 
     def __init__(self, config, daemon_name="parser"):
         """
@@ -177,6 +181,16 @@ class Parser(object):
             return None
         raw_data = base64.b64decode(original_data)
 
+        if self.ascii_exp.search(raw_data):
+            debug_type = 'ascii'
+            debug_data = raw_data
+        else:
+            debug_type = 'b64'
+            debug_data = original_data
+
+        logger.info("Parsing '{id}'; data: [{type}] {data!r}"\
+                .format(id=doc["_id"], data=debug_data, type=debug_type))
+
         # TODO these two chunks below are ripe for refactoring
         # Try using real configs
         for module in self.modules:
@@ -228,10 +242,10 @@ class Parser(object):
             doc['data'].update(data)
             logger.info("{module} parsed data from {callsign} succesfully" \
                 .format(module=module["name"], callsign=callsign))
+            logger.debug("parsed data: " + json.dumps(data))
             return doc
         else:
-            logger.info("Unable to parse any data from '{d}'" \
-                .format(d=original_data))
+            logger.info("All attempts to parse failed")
             return None
 
     def _save_updated_doc(self, doc, attempts=0):
@@ -243,7 +257,8 @@ class Parser(object):
         latest = self.db[doc['_id']]
         latest['data'].update(doc['data'])
         try:
-            logger.info("saving doc: {0}".format(doc))
+            # from the parser's debug output the id will be clear.
+            logger.debug("attempt {0} to save telemetry doc".format(attempts))
             self.db.save_doc(latest)
         except couchdbkit.exceptions.ResourceConflict:
             attempts += 1

@@ -235,7 +235,7 @@ class TestParser(object):
         self.m.VerifyAll()
 
     def test_doesnt_parse_if_no_callsign_found(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
         self.mock_module.pre_parse('test string').AndRaise(ValueError)
@@ -244,7 +244,7 @@ class TestParser(object):
         self.m.VerifyAll()
 
     def test_uses_default_config(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
         default = {'sentence': {'protocol': 'Mock'}}
@@ -260,7 +260,7 @@ class TestParser(object):
         self.m.VerifyAll()
 
     def test_doesnt_parse_if_no_config(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
         self.m.StubOutWithMock(self.parser, '_find_config_doc')
@@ -272,7 +272,7 @@ class TestParser(object):
         self.m.VerifyAll()
 
     def test_doesnt_parse_if_bad_config(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
         config = {'payloads': {'callsign': {'messed': 'up'}}, '_id': 'test'}
@@ -284,7 +284,7 @@ class TestParser(object):
         self.m.VerifyAll()
 
     def test_doesnt_parse_if_wrong_config_protocol(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
         config = {'payloads': {'callsign': {'sentence': {'protocol': 'Fake'}}}}
@@ -297,7 +297,7 @@ class TestParser(object):
         self.m.VerifyAll()
 
     def test_parses(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
         config = {'payloads': {'callsign': {'sentence': {'protocol': 'Mock'}}}}
@@ -324,7 +324,7 @@ class TestParser(object):
             config['payloads']['callsign']['sentence']['protocol'] = 'Mock'
         payload_config = config['payloads']['callsign']['sentence']
         if doc is None:
-            doc = {'data': {}, 'receivers': {'tester': {}}}
+            doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'test_id'}
             doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
             doc['receivers']['tester']['time_created'] = 123
         self.m.StubOutWithMock(self.parser, '_find_config_doc')
