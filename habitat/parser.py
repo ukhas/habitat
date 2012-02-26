@@ -240,7 +240,7 @@ class Parser(object):
 
         if type(data) is dict:
             doc['data'].update(data)
-            logger.info("{module} parsed data from {callsign} succesfully" \
+            logger.info("{module} parsed data from {callsign} successfully" \
                 .format(module=module["name"], callsign=callsign))
             logger.debug("Parsed data: " + json.dumps(data))
             return doc
@@ -258,13 +258,17 @@ class Parser(object):
         latest['data'].update(doc['data'])
         try:
             self.db.save_doc(latest)
+            logger.debug("Saved doc {0} successfully".format(doc["_id"]))
         except couchdbkit.exceptions.ResourceConflict:
             attempts += 1
             if attempts >= 30:
-                err = "Could not save telemetry doc after 30 conflicts."
+                err = "Could not save doc {0} after {1} conflicts." \
+                        .format(doc["_id"], attempts)
                 logger.error(err)
                 raise RuntimeError(err)
             else:
+                logger.debug("Save conflict, trying again (#{0})" \
+                    .format(attempts))
                 self._save_updated_doc(doc, attempts)
 
     def _find_config_doc(self, callsign, time_created):
