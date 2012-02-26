@@ -208,7 +208,7 @@ class Parser(object):
                     data["_parsed"] = True
                     break
             except (ValueError, KeyError) as e:
-                err = "Exception occured while attempting to parse: "
+                err = "Exception occurred while attempting to parse: "
                 err += "'{e}' from {module}".format(module=module['name'], e=e)
                 logger.debug(err)
                 continue
@@ -233,7 +233,7 @@ class Parser(object):
                     logger.info("Using a default configuration document")
                     break
                 except (ValueError, KeyError) as e:
-                    err = "Exception occured while attempting to parse "
+                    err = "Exception occurred while attempting to parse "
                     err += "using default config: '{e}' from {module}"
                     logger.debug(err.format(module=module['name'], e=e))
                     continue
