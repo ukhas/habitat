@@ -188,7 +188,7 @@ class Parser(object):
             debug_type = 'b64'
             debug_data = original_data
 
-        logger.info("Parsing '{id}'; data: [{type}] {data!r}"\
+        logger.info("Parsing [{type}] {data!r} ({id})"\
                 .format(id=doc["_id"], data=debug_data, type=debug_type))
 
         # TODO these two chunks below are ripe for refactoring
@@ -242,7 +242,7 @@ class Parser(object):
             doc['data'].update(data)
             logger.info("{module} parsed data from {callsign} succesfully" \
                 .format(module=module["name"], callsign=callsign))
-            logger.debug("parsed data: " + json.dumps(data))
+            logger.debug("Parsed data: " + json.dumps(data))
             return doc
         else:
             logger.info("All attempts to parse failed")
@@ -257,8 +257,6 @@ class Parser(object):
         latest = self.db[doc['_id']]
         latest['data'].update(doc['data'])
         try:
-            # from the parser's debug output the id will be clear.
-            logger.debug("attempt {0} to save telemetry doc".format(attempts))
             self.db.save_doc(latest)
         except couchdbkit.exceptions.ResourceConflict:
             attempts += 1
