@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Daniel Richman
+# Copyright 2011, 2012 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -20,8 +20,10 @@ Tests for the uploader module
 """
 
 import mox
+import sys
 import copy
 import uuid
+import threading
 
 import couchdbkit
 
@@ -332,5 +334,169 @@ class TestUploader(object):
             pass
         else:
             raise AssertionError("Did not raise UnmergeableError")
+
+        self.mocker.VerifyAll()
+
+    def test_flights(self):
+        uploader.time.time().AndReturn(1912)
+        self.fake_db.view("uploader_v1/flights", include_docs=True,
+                          startkey=1912).AndReturn([
+            {"doc": {"item": 1}, "key": 1, "value": "moo"},
+            {"doc": {"item": "frog"}, "key": 2, "value": "moo"},
+            {"doc": {"item": "cow"}, "key": 3, "value": "moo"},
+            {"doc": {"item": 1900}, "key": 4, "value": "moo"},
+            {"doc": {"item": False}, "key": 5, "value": "moo"}
+        ])
+
+        self.mocker.ReplayAll()
+
+        results = self.uploader.flights()
+        assert results == [{"item": 1}, {"item": "frog"}, {"item": "cow"},
+                           {"item": 1900}, {"item": False}]
+
+        self.mocker.VerifyAll()
+
+
+class MyUploaderThread(uploader.UploaderThread):
+    def __init__(self):
+        super(MyUploaderThread, self).__init__()
+        self.thread_error = False
+
+    def log(self, msg):
+        print msg
+
+    def caught_exception(self):
+        raise
+
+    def run(self):
+        try:
+            super(MyUploaderThread, self).run()
+        except:
+            self.thread_error = True
+            raise
+
+class TestUploaderThread(object):
+    def setup(self):
+        self.mocker = mox.Mox()
+
+        self.fake_uploader = self.mocker.CreateMock(uploader.Uploader)
+        self.uploader_class = uploader.Uploader
+        self.mocker.StubOutWithMock(uploader, "Uploader")
+
+        self.uthr = MyUploaderThread()
+        assert not self.uthr.is_alive()
+        self.uthr.start()
+
+        uploader.Uploader("CALL1").AndReturn(self.fake_uploader)
+
+        self.mocker.ReplayAll()
+        self.uthr.settings("CALL1")
+        self.uthr._queue.join()
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
+
+    def teardown(self):
+        self.uthr.join()
+        self.mocker.UnsetStubs()
+        assert not self.uthr.thread_error
+
+    def test_changes_settings(self):
+        self.fake_uploader.payload_telemetry("blah")
+
+        fake_two = self.mocker.CreateMock(self.uploader_class)
+        uploader.Uploader("CALL2", "url", couch_db="db").AndReturn(fake_two)
+        fake_two.payload_telemetry("whatever")
+
+        self.mocker.ReplayAll()
+
+        self.uthr.payload_telemetry("blah")
+        self.uthr.settings("CALL2", "url", couch_db="db")
+        self.uthr.payload_telemetry("whatever")
+
+        self.uthr.join()
+        self.mocker.VerifyAll()
+
+    def test_reset(self):
+        self.mocker.StubOutWithMock(self.uthr, "caught_exception")
+
+        def check_exception():
+            (exc_type, exc_value, discard_tb) = sys.exc_info()
+            assert exc_type == ValueError
+            assert str(exc_value) == "Uploader settings were not initialised"
+
+        self.uthr.caught_exception().WithSideEffects(check_exception)
+
+        self.mocker.ReplayAll()
+        self.uthr.reset()
+
+        self.uthr.allow_exceptions = True
+        self.uthr.listener_telemetry({"blah": "blah"})
+
+        self.uthr.join()
+        self.mocker.VerifyAll()
+
+    def test_nonblocking(self):
+        delay_event = threading.Event()
+
+        def delay(x):
+            delay_event.wait()
+
+        self.fake_uploader.payload_telemetry("meh").WithSideEffects(delay)
+        self.fake_uploader.listener_telemetry("blah")
+        self.fake_uploader.listener_info("boo")
+        self.fake_uploader.flights()
+
+        self.mocker.ReplayAll()
+
+        self.uthr.payload_telemetry("meh")
+        self.uthr.listener_telemetry("blah")
+        self.uthr.listener_info("boo")
+        self.uthr.flights()
+
+        delay_event.set()
+
+        self.uthr.join()
+        self.mocker.VerifyAll()
+
+    def test_uploads(self):
+        fcns = ["payload_telemetry", "listener_telemetry", "listener_info"]
+        n = 1
+
+        for i in fcns:
+            getattr(self.fake_uploader, i)(*["arglist", n])
+            n += 1
+
+        self.mocker.ReplayAll()
+
+        n = 1
+        for i in fcns:
+            getattr(self.uthr, i)(*["arglist", n])
+            n += 1
+
+        self.uthr.join()
+        self.mocker.VerifyAll()
+
+    def test_flights(self):
+        self.mocker.StubOutWithMock(self.uthr, "got_flights")
+
+        delay_event = threading.Event()
+        def delay(x):
+            delay_event.wait()
+
+        def check(x):
+            assert delay_event.is_set()
+
+        self.fake_uploader.payload_telemetry("delayme").WithSideEffects(delay)
+        self.fake_uploader.flights().AndReturn(["item1", "item2", "item3"])
+        self.uthr.got_flights(["item1", "item2", "item3"])\
+                .WithSideEffects(check)
+
+        self.mocker.ReplayAll()
+
+        self.uthr.payload_telemetry("delayme")
+        self.uthr.flights()
+
+        delay_event.set()
+        self.uthr.join()
 
         self.mocker.VerifyAll()

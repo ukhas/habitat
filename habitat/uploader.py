@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Daniel Richman
+# Copyright 2011, 2012 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -24,12 +24,15 @@ by a daemon for further processing.
 
 """
 
+import sys
 import time
 import copy
 import base64
 import hashlib
 import couchdbkit
 import threading
+import Queue
+import traceback
 
 
 class CollisionError(Exception):
@@ -64,7 +67,9 @@ class Uploader(object):
     :meth:`payload_telemetry`, :meth:`listener_telemetry` or
     :meth:`listener_info` in any order. It is however recommended that
     :meth:`listener_info` and :meth:`listener_telemetry` are called once before
-    any other uploads
+    any other uploads.
+
+    :meth:`flights` returns a list of current flight documents.
 
     See the CouchDB schema for more information, both on
     validation/restrictions and data formats.
@@ -167,7 +172,7 @@ class Uploader(object):
         thing["time_uploaded"] = int(round(time.time()))
         thing["time_created"] = int(round(time_created))
 
-    def payload_telemetry(self, string, metadata, time_created=None):
+    def payload_telemetry(self, string, metadata=None, time_created=None):
         """
         Create or add to the ``payload_telemetry`` document for *string*.
 
@@ -189,6 +194,9 @@ class Uploader(object):
         ``time_uploaded``, ``latest_listener_info`` or
         ``latest_listener_telemetry``. These are added by :class:`Uploader`.
         """
+
+        if metadata is None:
+            metadata = {}
 
         if time_created is None:
             time_created = time.time()
@@ -241,3 +249,192 @@ class Uploader(object):
 
         doc["receivers"][self._callsign] = receiver_info
         return doc
+
+    def flights(self):
+        """Return a list of current flight documents"""
+
+        results = []
+        for row in self._db.view("uploader_v1/flights", include_docs=True,
+                                 startkey=int(time.time())):
+            results.append(row["doc"])
+
+        return results
+
+
+class UploaderThread(threading.Thread):
+    """
+    An easy wrapper around :class:`Uploader` to make a non blocking Uploader
+
+    After creating an UploaderThread object, call :meth:`start` to create 
+    a thread. Then, call :meth:`settings` to initialise the underlying
+    :class:`Uploader`. You may then call any of the 4 action methods from
+    :class:`Uploader` with exactly the same arguments. Note however, that
+    they do not return anything (see below for flights() returning).
+
+    Several methods may be overridden in the UploaderThread. They are:
+
+     - :meth:`log`
+     - :meth:`warning`
+     - :meth:`saved_id`
+     - :meth:`initialised`
+     - :meth:`reset_done`
+     - :meth:`caught_exception`
+     - :meth:`got_flights`
+
+    Please note that these must all be thread safe.
+
+    If initialisation fails (bad arguments or similar), a warning will be
+    emitted but the UploaderThread will continue to exist. Further calls
+    will just emit warnings and do nothing until a successful
+    :meth:`settings` call is made.
+
+    The :meth:`reset` method destroys the underlying Uploader. Calls will
+    emit warnings in the same fashion as a failed initialisation.
+    """
+    
+    def __init__(self):
+        super(UploaderThread, self).__init__(name="habitat UploaderThread")
+        self._queue = Queue.Queue()
+        self._sent_shutdown = False
+        self._sent_shutdown_lock = threading.Lock()
+
+        # For use by run() only
+        self._uploader = None
+
+    def start(self):
+        """Start the background UploaderThread"""
+        super(UploaderThread, self).start()
+
+    def _do_queue(self, item):
+        self.log("Queuing " + self._describe(item))
+        self._queue.put(item)
+
+    def join(self):
+        """Asks the background thread to exit, and then blocks until it has"""
+        with self._sent_shutdown_lock:
+            if not self._sent_shutdown:
+                self._sent_shutdown = True
+                self._do_queue(None)
+
+        super(UploaderThread, self).join()
+
+    def settings(self, *args, **kwargs):
+        """See :class:`Uploader`'s initialiser"""
+        self._do_queue(("init", args, kwargs))
+
+    def reset(self):
+        """Destroys the Uploader object, disabling uploads."""
+        self._do_queue(("reset", None, None))
+
+    def payload_telemetry(self, *args, **kwargs):
+        """See :meth:`Uploader.payload_telemetry`"""
+        self._do_queue(("payload_telemetry", args, kwargs))
+
+    def listener_telemetry(self, *args, **kwargs):
+        """See :meth:`Uploader.listener_telemetry`"""
+        self._do_queue(("listener_telemetry", args, kwargs))
+
+    def listener_info(self, *args, **kwargs):
+        """See :meth:`Uploader.listener_info`"""
+        self._do_queue(("listener_info", args, kwargs))
+
+    def flights(self):
+        """
+        See :meth:`Uploader.flights`.
+        
+        Flight data is passed to the :meth:`got_flights` like a callback.
+        """
+        self._do_queue(("flights", [], {}))
+
+    def log(self, msg):
+        """Log a generic string message"""
+        raise NotImplementedError
+
+    def warning(self, msg):
+        """Alike log, but more important"""
+        self.log("Warning: " + msg)
+
+    def saved_id(self, doc_type, doc_id):
+        """Called when a document is succesfully saved to couch"""
+        self.log("Saved {0} doc: {1}".format(doc_type, doc_id))
+
+    def initialised(self):
+        """Called immiediately after successful Uploader initialisation"""
+        self.log("Initialised Uploader")
+
+    def reset_done(self):
+        """Called immediately after resetting the Uploader object"""
+        self.log("Settings reset")
+
+    def caught_exception(self):
+        """Called when the Uploader throws an exception"""
+        (exc_type, exc_value, discard_tb) = sys.exc_info()
+        exc_tb = traceback.format_exception_only(exc_type, exc_value)
+        info = exc_tb[-1].strip()
+        self.warning("Caught " + info)
+
+    def got_flights(self, flights):
+        """
+        Called after a successful flights download, with the data.
+
+        Downloads are initiated by calling :meth:`flights`
+        """
+        self.log("Default action: got_flights; discarding")
+    
+    def _describe(self, queue_item):
+        if queue_item is None:
+            return "Shutdown"
+        
+        (func, args, kwargs) = queue_item
+
+        if func is "reset":
+            return "del Uploader";
+
+        if func is "init":
+            func = "Uploader"
+        else:
+            func = "Uploader." + func
+
+        if args is not None:
+            args = [repr(a) for a in args]
+            args += ["{0}={1!r}".format(k, kwargs[k]) for k in kwargs]
+        else:
+            args = ""
+
+        return "{0}({1})".format(func, ', '.join(args))
+
+    def run(self):
+        self.log("Started")
+
+        while True:
+            item = self._queue.get()
+
+            self.log("Running " + self._describe(item))
+
+            if item is None:
+                break
+
+            (func, args, kwargs) = item
+
+            try:
+                if func not in ["init", "reset"] and self._uploader is None:
+                    raise ValueError("Uploader settings were not initialised")
+
+                if func == "init":
+                    self._uploader = Uploader(*args, **kwargs)
+                    self.initialised()
+                elif func == "reset":
+                    self._uploader = None
+                    self.reset_done()
+                elif func == "flights":
+                    r = self._uploader.flights(*args, **kwargs)
+                    self.got_flights(r)
+                else:
+                    f = getattr(self._uploader, func)
+                    r = f(*args, **kwargs)
+                    self.saved_id(func, r)
+
+            except:
+                self.caught_exception()
+
+            self._queue.task_done()
