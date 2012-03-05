@@ -29,6 +29,7 @@ import copy
 import base64
 import hashlib
 import couchdbkit
+import threading
 
 
 class CollisionError(Exception):
@@ -73,6 +74,7 @@ class Uploader(object):
                        couch_uri="http://habhub.org/",
                        couch_db="habitat",
                        max_merge_attempts=20):
+        self._lock = threading.RLock()
         self._callsign = callsign
         self._latest = {}
         self._max_merge_attempts = max_merge_attempts
@@ -157,7 +159,8 @@ class Uploader(object):
         self._db.save_doc(doc)
 
         doc_id = doc["_id"]
-        self._latest[doc_type] = doc_id
+        with self._lock:
+            self._latest[doc_type] = doc_id
         return doc_id
 
     def _set_time(self, thing, time_created):
@@ -196,9 +199,11 @@ class Uploader(object):
 
         receiver_info = copy.deepcopy(metadata)
 
-        for doc_type in ["listener_telemetry", "listener_info"]:
-            if doc_type in self._latest:
-                receiver_info["latest_" + doc_type] = self._latest[doc_type]
+        with self._lock:
+            for doc_type in ["listener_telemetry", "listener_info"]:
+                if doc_type in self._latest:
+                    receiver_info["latest_" + doc_type] = \
+                            self._latest[doc_type]
 
         doc_id = hashlib.sha256(base64.b64encode(string)).hexdigest()
 
