@@ -500,3 +500,37 @@ class TestUploaderThread(object):
         self.uthr.join()
 
         self.mocker.VerifyAll()
+
+
+# Mox-esque class that is 'equal' to another string if the value it is
+# initialised is contained in that string; used to avoid writing out the
+# large extractor log messages in the tests
+class EqualIfIn:
+    def __init__(self, test):
+        self.test = test
+    def __eq__(self, rhs):
+        return isinstance(rhs, basestring) and self.test.lower() in rhs.lower()
+    def __repr__(self):
+        return "<EqIn " + repr(self.test) + ">"
+
+
+class TestExtractorManager(object):
+    pass
+
+
+class TestUKHASExtractor(object):
+    def setup(self):
+        self.mocker = mox.Mox()
+        self.uplr = self.mocker.CreateMock(uploader.Uploader)
+        self.mgr = uploader.ExtractorManager(self.uplr)
+        self.ukhas_extractor = uploader.UKHASExtractor()
+        self.mgr.add(self.ukhas_extractor)
+
+        self.mocker.StubOutWithMock(self.mgr, "status")
+        self.mocker.StubOutWithMock(self.mgr, "data")
+
+    def teardown(self):
+        self.mocker.UnsetStubs()
+
+    def test_pass(self):
+        pass
