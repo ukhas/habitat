@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
+# XXX Please be aware of stdin buffering! This will cause bad things to
+# happen to the 'estimated received time'!
+
 import sys
 from optparse import OptionParser
 import logging
