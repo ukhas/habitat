@@ -33,6 +33,10 @@ import couchdbkit
 import threading
 import Queue
 import traceback
+import json
+import logging
+
+logger = logging.getLogger("habitat.uploader")
 
 
 class CollisionError(Exception):
@@ -293,7 +297,7 @@ class UploaderThread(threading.Thread):
     The :meth:`reset` method destroys the underlying Uploader. Calls will
     emit warnings in the same fashion as a failed initialisation.
     """
-    
+
     def __init__(self):
         super(UploaderThread, self).__init__(name="habitat UploaderThread")
         self._queue = Queue.Queue()
@@ -308,7 +312,7 @@ class UploaderThread(threading.Thread):
         super(UploaderThread, self).start()
 
     def _do_queue(self, item):
-        self.log("Queuing " + self._describe(item))
+        self.debug("Queuing " + self._describe(item))
         self._queue.put(item)
 
     def join(self):
@@ -348,13 +352,17 @@ class UploaderThread(threading.Thread):
         """
         self._do_queue(("flights", [], {}))
 
+    def debug(self, msg):
+        """Log a debug message"""
+        logger.debug(msg)
+
     def log(self, msg):
         """Log a generic string message"""
-        raise NotImplementedError
+        logger.info(msg)
 
     def warning(self, msg):
         """Alike log, but more important"""
-        self.log("Warning: " + msg)
+        logger.warn(msg)
 
     def saved_id(self, doc_type, doc_id):
         """Called when a document is succesfully saved to couch"""
@@ -362,11 +370,11 @@ class UploaderThread(threading.Thread):
 
     def initialised(self):
         """Called immiediately after successful Uploader initialisation"""
-        self.log("Initialised Uploader")
+        self.debug("Initialised Uploader")
 
     def reset_done(self):
         """Called immediately after resetting the Uploader object"""
-        self.log("Settings reset")
+        self.debug("Settings reset")
 
     def caught_exception(self):
         """Called when the Uploader throws an exception"""
@@ -381,7 +389,7 @@ class UploaderThread(threading.Thread):
 
         Downloads are initiated by calling :meth:`flights`
         """
-        self.log("Default action: got_flights; discarding")
+        self.debug("Default action: got_flights; discarding")
     
     def _describe(self, queue_item):
         if queue_item is None:
@@ -406,12 +414,12 @@ class UploaderThread(threading.Thread):
         return "{0}({1})".format(func, ', '.join(args))
 
     def run(self):
-        self.log("Started")
+        self.debug("Started")
 
         while True:
             item = self._queue.get()
 
-            self.log("Running " + self._describe(item))
+            self.debug("Running " + self._describe(item))
 
             if item is None:
                 break
@@ -502,11 +510,11 @@ class ExtractorManager(object):
 
     def status(self, msg):
         """Logging method, called by Extractors when something happens"""
-        return NotImplementedError
+        logger.info(msg)
 
     def data(self, d):
         """Called by Extractors if they are able to parse extracted data"""
-        return NotImplementedError
+        logger.debug("Extractor gave us provisional parse: " + json.dumps(d))
 
 
 class Extractor(object):
@@ -555,22 +563,20 @@ class UKHASExtractor(Extractor):
             self.garbage_count = 0
             self.extracting = True
 
-            self.manager.status("UKHAS Extractor: found start delimiter")
+            self.manager.status("UKHAS: found start delimiter")
 
         elif self.extracting and b == '\n':
             self.buffer += b
             self.manager.uploader.payload_telemetry(self.buffer)
 
-            self.manager.status("UKHAS Extractor: extracted string")
+            self.manager.status("UKHAS: extracted string")
 
             try:
                 # TODO self.manager.data(self.crude_parse(self.buffer))
                 raise ValueError("crude parse doesn't exist yet")
 
             except (ValueError, KeyError) as e:
-                self.manager.status("UKHAS Extractor: crude parse failed: " +
-                                    str(e))
-
+                self.manager.status("UKHAS: crude parse failed: " + str(e))
                 self.manager.data({"_sentence": self.buffer})
 
             self.buffer = None
@@ -589,7 +595,7 @@ class UKHASExtractor(Extractor):
 
             # Sane limits to avoid uploading tonnes of garbage
             if len(self.buffer) > 1000 or self.garbage_count > 16:
-                self.manager.status("UKHAS Extractor: giving up")
+                self.manager.status("UKHAS: giving up")
 
                 self.buffer = None
                 self.extracting = False

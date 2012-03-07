@@ -1,0 +1,83 @@
+#!/usr/bin/python
+# Copyright 2012 (C) Daniel Richman
+#
+# This file is part of habitat.
+#
+# habitat is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# habitat is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with habitat.  If not, see <http://www.gnu.org/licenses/>.
+
+import sys
+from optparse import OptionParser
+import logging
+
+logger = logging.getLogger()
+
+try:
+    import habitat
+except ImportError:
+    # Find habitat, assuming we're in the habitat git repo.
+    from os.path import abspath, split, join
+    sys.path.append(join(split(abspath(__file__))[0], '..'))
+    import habitat
+
+from habitat import uploader
+
+oparser = OptionParser("usage: %prog [options] CALLSIGN")
+oparser.add_option("-u", "--couch-uri", dest="couch_uri",
+                   help="Couch URI to use (http://server:port/)",
+                   metavar="URI", default="http://habhub.org/")
+oparser.add_option("-n", "--couch-db", dest="couch_db",
+                   help="Couch DB to use", metavar="DB",
+                   default="habitat")
+oparser.add_option("-q", "--quiet", dest="log_level", action="store_const",
+                   const=logging.WARN, default=logging.INFO,
+                   help="Produce less noise")
+oparser.add_option("-d", "--debug", dest="log_level", action="store_const",
+                   const=logging.DEBUG, help="Enable debug logging")
+oparser.add_option("-b", "--baudot", dest="baudot", action="store_true",
+                   default=False, help="Enable baudot # hack")
+oparser.add_option("-a", "--async", dest="async", action="store_true",
+                   default=False, help="Enable asynchronous uploading")
+
+(options, args) = oparser.parse_args()
+
+if len(args) != 1:
+    oparser.error("Expected one positional argument")
+
+callsign = args[0]
+uploader_opts = [callsign, options.couch_uri, options.couch_db]
+
+logging.basicConfig(level=options.log_level,
+                    format="%(levelname)-5s %(message)s")
+logging.getLogger("restkit").setLevel(logging.WARNING)
+logger.debug("Starting up")
+
+if options.async:
+    u = uploader.UploaderThread()
+    u.start()
+    u.settings(*uploader_opts)
+else:
+    u = uploader.Uploader(*uploader_opts)
+
+emgr = uploader.ExtractorManager(u)
+emgr.add(uploader.UKHASExtractor())
+
+while True:
+    b = sys.stdin.read(1)
+    if len(b) != 1:
+        break
+    emgr.push(b, baudot_hack=options.baudot)
+
+if options.async:
+    logger.info("Waiting for uploads to complete...")
+    u.join()
