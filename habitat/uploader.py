@@ -79,6 +79,8 @@ class Uploader(object):
                        couch_uri="http://habhub.org/",
                        couch_db="habitat",
                        max_merge_attempts=20):
+        # NB: update default options in /bin/uploader
+
         self._lock = threading.RLock()
         self._callsign = callsign
         self._latest = {}
@@ -456,9 +458,6 @@ class ExtractorManager(object):
     to call the ExtractorManager from more than one thread.
     """
 
-    PUSH_NONE = 0x0
-    PUSH_BAUDOT_HACK = 0x1
-
     def __init__(self, uploader):
         """uploader: an :class:`Uploader` or :class:`UploaderThread` object"""
         self.uploader = uploader
@@ -469,23 +468,24 @@ class ExtractorManager(object):
         self._extractors.append(extractor)
         extractor.manager = self
 
-    def push(self, b, flags=PUSH_NONE):
+    def push(self, b, **kwargs):
         """
         Push a received byte of data, b, to all extractors.
 
         b must be of type str (i.e., ascii, not unicode) and of length 1.
 
-        The optional argument flags provides additional information about
-        the data. The only flag, currently, is
-        ExtractorManager.PUSH_BAUDOT_HACK. This is used when decoding baudot,
-        which doesn't support the '*' character, as the UKHASExtractor needs
-        to know to replace all '#' characters with '*'s.
+        Any kwargs are passed to extractors. The only useful kwarg at the
+        moment is the boolean "baudot hack".
+
+        baudot_hack is set to True when decoding baudot, which doesn't support
+        the '*' character, as the UKHASExtractor needs to know to replace all
+        '#' characters with '*'s.
         """
 
-        assert len(b) == 0 and isinstance(b, str)
+        assert len(b) == 1 and isinstance(b, str)
 
         for e in self._extractors:
-            e.push(b, flags)
+            e.push(b, **kwargs)
 
     def skipped(self, n):
         """
@@ -529,7 +529,7 @@ class Extractor(object):
     def __init__(self):
         self.manager = None
 
-    def push(self, b, flags):
+    def push(self, b, **kwargs):
         """see :meth:`ExtractorManager.push`"""
         raise NotImplementedError
 
@@ -546,12 +546,12 @@ class UKHASExtractor(Extractor):
         self.garbage_count = 0
         self.extracting = False
 
-    def push(self, b, flags):
+    def push(self, b, **kwargs):
         if b == '\r':
             b = '\n'
 
         if self.last == '$' and b == '$':
-            self.buffer = b
+            self.buffer = self.last + b
             self.garbage_count = 0
             self.extracting = True
 
@@ -565,24 +565,25 @@ class UKHASExtractor(Extractor):
 
             try:
                 # TODO self.manager.data(self.crude_parse(self.buffer))
-                pass
+                raise ValueError("crude parse doesn't exist yet")
+
             except (ValueError, KeyError) as e:
                 self.manager.status("UKHAS Extractor: crude parse failed: " +
                                     str(e))
 
-                self.manager.data()
+                self.manager.data({"_sentence": self.buffer})
 
             self.buffer = None
             self.extracting = False
 
         elif self.extracting:
-            if flags & ExtractorManager.PUSH_BAUDOT_HACK and b == '#':
+            if "baudot_hack" in kwargs and kwargs["baudot_hack"] and b == '#':
                 # baudot doesn't support '*', we use '#'
                 b = '*'
 
             self.buffer += b
 
-            if b < 0x20 or b > 0x7E:
+            if ord(b) < 0x20 or ord(b) > 0x7E:
                 # Non ascii chars
                 self.garbage_count += 1
 

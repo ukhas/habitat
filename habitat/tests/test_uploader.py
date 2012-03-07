@@ -502,9 +502,9 @@ class TestUploaderThread(object):
         self.mocker.VerifyAll()
 
 
-# Mox-esque class that is 'equal' to another string if the value it is
-# initialised is contained in that string; used to avoid writing out the
-# large extractor log messages in the tests
+# Class that is 'equal' to another string if the value it is initialised is
+# contained in that string; used to avoid writing out the large extractor log
+# messages in the tests.
 class EqualIfIn:
     def __init__(self, test):
         self.test = test
@@ -515,7 +515,64 @@ class EqualIfIn:
 
 
 class TestExtractorManager(object):
-    pass
+    def setup(self):
+        self.mocker = mox.Mox()
+
+    def teardown(self):
+        self.mocker.UnsetStubs()
+
+    def test_add_push_skip(self):
+        uplr = self.mocker.CreateMock(uploader.Uploader)
+        mgr = uploader.ExtractorManager(uplr)
+
+        self.mocker.ReplayAll()
+
+        assert mgr.uploader == uplr
+
+        for char in "$$a,string\n":
+            mgr.push(char)
+
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
+
+        extr = self.mocker.CreateMock(uploader.Extractor)
+        extr.push("a")
+        extr.push("b", baudot_hack=True)
+        extr.skipped(100)
+        extr.push("c", some_future_kwarg=True)
+
+        self.mocker.ReplayAll()
+
+        mgr.add(extr)
+        assert extr.manager == mgr
+
+        mgr.push("a")
+        mgr.push("b", baudot_hack=True)
+        mgr.skipped(100)
+        mgr.push("c", some_future_kwarg=True)
+
+        self.mocker.VerifyAll()
+
+    def test_kwargs_future_proof(self):
+        mgr = uploader.ExtractorManager(None)
+        mgr.add(uploader.UKHASExtractor())
+        mgr.push("a", some_unknown_kwarg=5) # should be ignored w/o error
+
+
+# Usage: with MoxSilence(self.mocker): ensures that no mock calls happen
+# inside block.
+class MoxSilence(object):
+    def __init__(self, mocker):
+        self.mocker = mocker
+
+    def __enter__(self):
+        self.mocker.ResetAll()
+        self.mocker.ReplayAll()
+        return self
+
+    def __exit__(self, *args):
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
 
 
 class TestUKHASExtractor(object):
@@ -532,5 +589,120 @@ class TestUKHASExtractor(object):
     def teardown(self):
         self.mocker.UnsetStubs()
 
-    def test_pass(self):
-        pass
+    def push(self, string):
+        for char in string:
+            self.mgr.push(char)
+
+    def expect_extraction_of(self, string):
+        self.uplr.payload_telemetry(string)
+        self.mgr.status(EqualIfIn("extracted"))
+        self.mgr.status(EqualIfIn("parse failed"))
+        self.mgr.data({"_sentence": string})
+
+    def check_newline_no_upload(self):
+        with MoxSilence(self.mocker):
+            self.push("\n")
+
+    def test_finds_start_delimiter(self):
+        with MoxSilence(self.mocker):
+            # expect no method calls:
+            self.mgr.push("$")
+
+        # now expect calls after second $
+        self.mgr.status(EqualIfIn("start delim"))
+        self.mocker.ReplayAll()
+        self.mgr.push("$")
+        self.mocker.VerifyAll()
+
+    def test_extracts(self):
+        s = "$$a,simple,test*00\n"
+        self.mgr.status(EqualIfIn("start delim"))
+        self.expect_extraction_of(s)
+        self.mocker.ReplayAll()
+
+        self.push(s)
+        self.mocker.VerifyAll()
+
+    def test_can_restart(self):
+        # no calls
+        with MoxSilence(self.mocker):
+            self.push("this is some garbage just to mess things up")
+
+        # check $$ produces start delim
+        self.mgr.status(EqualIfIn("start delim"))
+        self.mocker.ReplayAll()
+
+        self.push("$$")
+
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
+
+        # check more delimiters restarts
+        self.mgr.status(EqualIfIn("start delim"))
+        self.mgr.status(EqualIfIn("start delim"))
+        self.mocker.ReplayAll()
+
+        self.push("garbage: after seeing the delimiter, we lose signal.")
+        self.push("some extra $s to con$fuse it $")
+        self.push("$$")
+        self.push("helloworld")
+
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
+
+        # extract string
+        self.expect_extraction_of("$$helloworld\n")
+
+        self.mocker.ReplayAll()
+        self.push("\n")
+        self.mocker.VerifyAll()
+
+    def test_gives_up_after_1k(self):
+        self.mgr.status(EqualIfIn("start delim"))
+        self.mgr.status(EqualIfIn("giving up"))
+
+        self.mocker.ReplayAll()
+        self.push("$$")
+        self.push("a" * 1022)
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
+
+        self.check_newline_no_upload()
+        # Check it still works:
+        self.test_extracts()
+
+    def test_gives_up_after_16skipped(self):
+        self.mgr.status(EqualIfIn("start delim"))
+        self.mgr.status(EqualIfIn("giving up"))
+
+        self.mocker.ReplayAll()
+        self.push("$$")
+        self.mgr.skipped(17)
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
+
+        self.check_newline_no_upload()
+        self.test_extracts()
+
+    def test_gives_up_after_16garbage(self):
+        self.mgr.status(EqualIfIn("start delim"))
+        self.mgr.status(EqualIfIn("giving up"))
+
+        self.mocker.ReplayAll()
+        self.push("$$some,legit,data")
+        self.push("\t some printable data" * 17)
+        self.mocker.VerifyAll()
+        self.mocker.ResetAll()
+
+        self.check_newline_no_upload()
+        self.test_extracts()
+
+    def test_skipped(self):
+        self.mgr.status(EqualIfIn("start delim"))
+        self.expect_extraction_of("$$some\0\0\0\0\0data\n")
+        self.mocker.ReplayAll()
+
+        self.push("$$some")
+        self.mgr.skipped(5)
+        self.push("data\n")
+        self.mocker.VerifyAll()
