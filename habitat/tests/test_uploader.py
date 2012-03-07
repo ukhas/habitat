@@ -125,7 +125,7 @@ class TestUploaderSetup(object):
     def test_connects_to_default_couch(self):
         fake_server = self.mocker.CreateMock(couchdbkit.Server)
 
-        uploader.couchdbkit.Server("http://habhub.org/") \
+        uploader.couchdbkit.Server("http://habitat.habhub.org/") \
                 .AndReturn(fake_server)
         fake_server.__getitem__("habitat")
 

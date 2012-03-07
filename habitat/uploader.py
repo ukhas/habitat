@@ -80,7 +80,7 @@ class Uploader(object):
     """
 
     def __init__(self, callsign,
-                       couch_uri="http://habhub.org/",
+                       couch_uri="http://habitat.habhub.org/",
                        couch_db="habitat",
                        max_merge_attempts=20):
         # NB: update default options in /bin/uploader

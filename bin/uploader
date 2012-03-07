@@ -38,7 +38,7 @@ from habitat import uploader
 oparser = OptionParser("usage: %prog [options] CALLSIGN")
 oparser.add_option("-u", "--couch-uri", dest="couch_uri",
                    help="Couch URI to use (http://server:port/)",
-                   metavar="URI", default="http://habhub.org/")
+                   metavar="URI", default="http://habitat.habhub.org/")
 oparser.add_option("-n", "--couch-db", dest="couch_db",
                    help="Couch DB to use", metavar="DB",
                    default="habitat")
