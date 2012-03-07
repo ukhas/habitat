@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Daniel Richman
+# Copyright 2011, 2012 (C) Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -24,11 +24,19 @@ by a daemon for further processing.
 
 """
 
+import sys
 import time
 import copy
 import base64
 import hashlib
 import couchdbkit
+import threading
+import Queue
+import traceback
+import json
+import logging
+
+logger = logging.getLogger("habitat.uploader")
 
 
 class CollisionError(Exception):
@@ -63,16 +71,21 @@ class Uploader(object):
     :meth:`payload_telemetry`, :meth:`listener_telemetry` or
     :meth:`listener_info` in any order. It is however recommended that
     :meth:`listener_info` and :meth:`listener_telemetry` are called once before
-    any other uploads
+    any other uploads.
+
+    :meth:`flights` returns a list of current flight documents.
 
     See the CouchDB schema for more information, both on
     validation/restrictions and data formats.
     """
 
     def __init__(self, callsign,
-                       couch_uri="http://habhub.org/",
+                       couch_uri="http://habitat.habhub.org/",
                        couch_db="habitat",
                        max_merge_attempts=20):
+        # NB: update default options in /bin/uploader
+
+        self._lock = threading.RLock()
         self._callsign = callsign
         self._latest = {}
         self._max_merge_attempts = max_merge_attempts
@@ -157,14 +170,15 @@ class Uploader(object):
         self._db.save_doc(doc)
 
         doc_id = doc["_id"]
-        self._latest[doc_type] = doc_id
+        with self._lock:
+            self._latest[doc_type] = doc_id
         return doc_id
 
     def _set_time(self, thing, time_created):
         thing["time_uploaded"] = int(round(time.time()))
         thing["time_created"] = int(round(time_created))
 
-    def payload_telemetry(self, string, metadata, time_created=None):
+    def payload_telemetry(self, string, metadata=None, time_created=None):
         """
         Create or add to the ``payload_telemetry`` document for *string*.
 
@@ -187,6 +201,9 @@ class Uploader(object):
         ``latest_listener_telemetry``. These are added by :class:`Uploader`.
         """
 
+        if metadata is None:
+            metadata = {}
+
         if time_created is None:
             time_created = time.time()
 
@@ -196,9 +213,11 @@ class Uploader(object):
 
         receiver_info = copy.deepcopy(metadata)
 
-        for doc_type in ["listener_telemetry", "listener_info"]:
-            if doc_type in self._latest:
-                receiver_info["latest_" + doc_type] = self._latest[doc_type]
+        with self._lock:
+            for doc_type in ["listener_telemetry", "listener_info"]:
+                if doc_type in self._latest:
+                    receiver_info["latest_" + doc_type] = \
+                            self._latest[doc_type]
 
         doc_id = hashlib.sha256(base64.b64encode(string)).hexdigest()
 
@@ -236,3 +255,353 @@ class Uploader(object):
 
         doc["receivers"][self._callsign] = receiver_info
         return doc
+
+    def flights(self):
+        """Return a list of current flight documents"""
+
+        results = []
+        for row in self._db.view("uploader_v1/flights", include_docs=True,
+                                 startkey=int(time.time())):
+            results.append(row["doc"])
+
+        return results
+
+
+class UploaderThread(threading.Thread):
+    """
+    An easy wrapper around :class:`Uploader` to make a non blocking Uploader
+
+    After creating an UploaderThread object, call :meth:`start` to create 
+    a thread. Then, call :meth:`settings` to initialise the underlying
+    :class:`Uploader`. You may then call any of the 4 action methods from
+    :class:`Uploader` with exactly the same arguments. Note however, that
+    they do not return anything (see below for flights() returning).
+
+    Several methods may be overridden in the UploaderThread. They are:
+
+     - :meth:`log`
+     - :meth:`warning`
+     - :meth:`saved_id`
+     - :meth:`initialised`
+     - :meth:`reset_done`
+     - :meth:`caught_exception`
+     - :meth:`got_flights`
+
+    Please note that these must all be thread safe.
+
+    If initialisation fails (bad arguments or similar), a warning will be
+    emitted but the UploaderThread will continue to exist. Further calls
+    will just emit warnings and do nothing until a successful
+    :meth:`settings` call is made.
+
+    The :meth:`reset` method destroys the underlying Uploader. Calls will
+    emit warnings in the same fashion as a failed initialisation.
+    """
+
+    def __init__(self):
+        super(UploaderThread, self).__init__(name="habitat UploaderThread")
+        self._queue = Queue.Queue()
+        self._sent_shutdown = False
+        self._sent_shutdown_lock = threading.Lock()
+
+        # For use by run() only
+        self._uploader = None
+
+    def start(self):
+        """Start the background UploaderThread"""
+        super(UploaderThread, self).start()
+
+    def _do_queue(self, item):
+        self.debug("Queuing " + self._describe(item))
+        self._queue.put(item)
+
+    def join(self):
+        """Asks the background thread to exit, and then blocks until it has"""
+        with self._sent_shutdown_lock:
+            if not self._sent_shutdown:
+                self._sent_shutdown = True
+                self._do_queue(None)
+
+        super(UploaderThread, self).join()
+
+    def settings(self, *args, **kwargs):
+        """See :class:`Uploader`'s initialiser"""
+        self._do_queue(("init", args, kwargs))
+
+    def reset(self):
+        """Destroys the Uploader object, disabling uploads."""
+        self._do_queue(("reset", None, None))
+
+    def payload_telemetry(self, *args, **kwargs):
+        """See :meth:`Uploader.payload_telemetry`"""
+        self._do_queue(("payload_telemetry", args, kwargs))
+
+    def listener_telemetry(self, *args, **kwargs):
+        """See :meth:`Uploader.listener_telemetry`"""
+        self._do_queue(("listener_telemetry", args, kwargs))
+
+    def listener_info(self, *args, **kwargs):
+        """See :meth:`Uploader.listener_info`"""
+        self._do_queue(("listener_info", args, kwargs))
+
+    def flights(self):
+        """
+        See :meth:`Uploader.flights`.
+        
+        Flight data is passed to the :meth:`got_flights` like a callback.
+        """
+        self._do_queue(("flights", [], {}))
+
+    def debug(self, msg):
+        """Log a debug message"""
+        logger.debug(msg)
+
+    def log(self, msg):
+        """Log a generic string message"""
+        logger.info(msg)
+
+    def warning(self, msg):
+        """Alike log, but more important"""
+        logger.warn(msg)
+
+    def saved_id(self, doc_type, doc_id):
+        """Called when a document is succesfully saved to couch"""
+        self.log("Saved {0} doc: {1}".format(doc_type, doc_id))
+
+    def initialised(self):
+        """Called immiediately after successful Uploader initialisation"""
+        self.debug("Initialised Uploader")
+
+    def reset_done(self):
+        """Called immediately after resetting the Uploader object"""
+        self.debug("Settings reset")
+
+    def caught_exception(self):
+        """Called when the Uploader throws an exception"""
+        (exc_type, exc_value, discard_tb) = sys.exc_info()
+        exc_tb = traceback.format_exception_only(exc_type, exc_value)
+        info = exc_tb[-1].strip()
+        self.warning("Caught " + info)
+
+    def got_flights(self, flights):
+        """
+        Called after a successful flights download, with the data.
+
+        Downloads are initiated by calling :meth:`flights`
+        """
+        self.debug("Default action: got_flights; discarding")
+    
+    def _describe(self, queue_item):
+        if queue_item is None:
+            return "Shutdown"
+        
+        (func, args, kwargs) = queue_item
+
+        if func is "reset":
+            return "del Uploader";
+
+        if func is "init":
+            func = "Uploader"
+        else:
+            func = "Uploader." + func
+
+        if args is not None:
+            args = [repr(a) for a in args]
+            args += ["{0}={1!r}".format(k, kwargs[k]) for k in kwargs]
+        else:
+            args = ""
+
+        return "{0}({1})".format(func, ', '.join(args))
+
+    def run(self):
+        self.debug("Started")
+
+        while True:
+            item = self._queue.get()
+
+            self.debug("Running " + self._describe(item))
+
+            if item is None:
+                break
+
+            (func, args, kwargs) = item
+
+            try:
+                if func not in ["init", "reset"] and self._uploader is None:
+                    raise ValueError("Uploader settings were not initialised")
+
+                if func == "init":
+                    self._uploader = Uploader(*args, **kwargs)
+                    self.initialised()
+                elif func == "reset":
+                    self._uploader = None
+                    self.reset_done()
+                elif func == "flights":
+                    r = self._uploader.flights(*args, **kwargs)
+                    self.got_flights(r)
+                else:
+                    f = getattr(self._uploader, func)
+                    r = f(*args, **kwargs)
+                    self.saved_id(func, r)
+
+            except:
+                self.caught_exception()
+
+            self._queue.task_done()
+
+
+class ExtractorManager(object):
+    """
+    Manage one or more :class:`Extractor` objects, and handle their logging.
+
+    The extractor manager maintains a list of :class:`Extractor` objects.
+    Any :meth:`push` or :meth:`skipped` calls are passed directly to each
+    added Extractor in turn. If any Extractor produces logging output, or
+    parsed data, it is returned to the :meth:`status` and :meth:`data` methods,
+    which the user should override.
+
+    The ExtractorManager also handles thread safety for all Extractors
+    (i.e., it holds a lock while pushing data to each extractor). Your
+    :meth:`status` and :meth:`data` methods should be thread safe if you want
+    to call the ExtractorManager from more than one thread.
+    """
+
+    def __init__(self, uploader):
+        """uploader: an :class:`Uploader` or :class:`UploaderThread` object"""
+        self.uploader = uploader
+        self._extractors = []
+
+    def add(self, extractor):
+        """Add the extractor object to the manager"""
+        self._extractors.append(extractor)
+        extractor.manager = self
+
+    def push(self, b, **kwargs):
+        """
+        Push a received byte of data, b, to all extractors.
+
+        b must be of type str (i.e., ascii, not unicode) and of length 1.
+
+        Any kwargs are passed to extractors. The only useful kwarg at the
+        moment is the boolean "baudot hack".
+
+        baudot_hack is set to True when decoding baudot, which doesn't support
+        the '*' character, as the UKHASExtractor needs to know to replace all
+        '#' characters with '*'s.
+        """
+
+        assert len(b) == 1 and isinstance(b, str)
+
+        for e in self._extractors:
+            e.push(b, **kwargs)
+
+    def skipped(self, n):
+        """
+        Tell all extractors that approximately n undecodable bytes have passed
+
+        This advises extractors that some bytes couldn't be decoded for
+        whatever reason, but were transmitted. This can assist some
+        fixed-size packet formats in recovering from errors if one byte is
+        dropped, say, due to the start bit being flipped. It also causes
+        Extractors to 'give up' after a certain amount of time has passed.
+        """
+        for e in self._extractors:
+            e.skipped(n)
+
+    def status(self, msg):
+        """Logging method, called by Extractors when something happens"""
+        logger.info(msg)
+
+    def data(self, d):
+        """Called by Extractors if they are able to parse extracted data"""
+        logger.debug("Extractor gave us provisional parse: " + json.dumps(d))
+
+
+class Extractor(object):
+    """
+    A base class for an Extractor.
+
+    An extractor is responsible for identifying telemetry in a stream of bytes,
+    and extracting them as standalone strings. This may be by using start/end
+    delimiters, or packet lengths, or whatever. Extracted strings are passed
+    to :meth:`Uploader.payload_telemetry` via the ExtractorManager.
+
+    An extractor may optionally attempt to parse the data it has extracted.
+    This does not affect the upload of extracted data, and offical parsing
+    is done by the habitat server, but may be useful to display in a GUI.
+    It could even be a stripped down parser capable of only a subset of the
+    full protocol, or able to parse the bare minimum only. If it succeeds,
+    the result is passed to :meth:`ExtractorManager.data`.
+    """
+
+    def __init__(self):
+        self.manager = None
+
+    def push(self, b, **kwargs):
+        """see :meth:`ExtractorManager.push`"""
+        raise NotImplementedError
+
+    def skipped(self, n):
+        """see :meth:`ExtractorManager.skipped`"""
+        raise NotImplementedError
+
+
+class UKHASExtractor(Extractor):
+    def __init__(self):
+        super(UKHASExtractor, self).__init__()
+        self.last = None
+        self.buffer = ""
+        self.garbage_count = 0
+        self.extracting = False
+
+    def push(self, b, **kwargs):
+        if b == '\r':
+            b = '\n'
+
+        if self.last == '$' and b == '$':
+            self.buffer = self.last + b
+            self.garbage_count = 0
+            self.extracting = True
+
+            self.manager.status("UKHAS: found start delimiter")
+
+        elif self.extracting and b == '\n':
+            self.buffer += b
+            self.manager.uploader.payload_telemetry(self.buffer)
+
+            self.manager.status("UKHAS: extracted string")
+
+            try:
+                # TODO self.manager.data(self.crude_parse(self.buffer))
+                raise ValueError("crude parse doesn't exist yet")
+
+            except (ValueError, KeyError) as e:
+                self.manager.status("UKHAS: crude parse failed: " + str(e))
+                self.manager.data({"_sentence": self.buffer})
+
+            self.buffer = None
+            self.extracting = False
+
+        elif self.extracting:
+            if "baudot_hack" in kwargs and kwargs["baudot_hack"] and b == '#':
+                # baudot doesn't support '*', we use '#'
+                b = '*'
+
+            self.buffer += b
+
+            if ord(b) < 0x20 or ord(b) > 0x7E:
+                # Non ascii chars
+                self.garbage_count += 1
+
+            # Sane limits to avoid uploading tonnes of garbage
+            if len(self.buffer) > 1000 or self.garbage_count > 16:
+                self.manager.status("UKHAS: giving up")
+
+                self.buffer = None
+                self.extracting = False
+
+        self.last = b
+
+    def skipped(self, n):
+        for i in xrange(n):
+            self.push("\0")
