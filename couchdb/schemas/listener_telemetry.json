@@ -46,7 +46,7 @@
             "description": "Information on the listener's position, including latitude, longitude and altitude.",
             "type": "object",
             "required": true,
-            "additionalProperties": false,
+            "additionalProperties": true,
             "properties": {
                 "callsign": {
                     "title": "Listener Callsign",
