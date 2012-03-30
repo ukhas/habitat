@@ -45,7 +45,7 @@ def end_map(doc):
 def launch_time_map(doc):
     """Map by flight launch time."""
     if doc['type'] == "flight":
-        yield doc['launch']['time'], None
+        yield rfc3339_to_timestamp(doc['launch']['time']), None
 
 def payload_end_map(doc):
     """Map by payload and then flight window end date."""
