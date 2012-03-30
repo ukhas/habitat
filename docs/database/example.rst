@@ -1,12 +1,6 @@
 Example documents
 =================
 
-config_docs.json
-----------------
-
-.. literalinclude:: config_docs.json
-   :language: javascript
-
 flight_docs.json
 ----------------
 
