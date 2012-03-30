@@ -14,6 +14,11 @@
             "type": "string",
             "required": false
         },
+        "_revisions": {
+            "title": "CouchDB Document Revision History",
+            "type": "object",
+            "required": "false"
+        },
         "type": {
             "title": "Document Type",
             "description": "Indicates that this is a payload telemetry document. Should be 'payload_telemetry'.",
@@ -40,6 +45,18 @@
                     "description": "The raw transmitted data, as a base64 string.",
                     "type": "string",
                     "required": true
+                },
+                "_protocol": {
+                    "title": "Protocol",
+                    "description": "The protocol (habitat parser module) used to parse this transmission.",
+                    "type": "string",
+                    "required": false
+                },
+                "_parsed": {
+                    "title": "Parsed",
+                    "description": "Whether this sentence has been parsed by the parser yet or not.",
+                    "type": "boolean",
+                    "required": false
                 }
             }
         },

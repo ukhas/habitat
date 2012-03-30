@@ -15,6 +15,11 @@
             "type": "string",
             "required": false
         },
+        "_revisions": {
+            "title": "CouchDB Document Revision History",
+            "type": "object",
+            "required": "false"
+        },
         "type": {
             "title": "Document Type",
             "description": "Indicates that this is a listener_info document.  Should be set to 'flight'.",
