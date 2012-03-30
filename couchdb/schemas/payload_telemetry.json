@@ -17,7 +17,7 @@
         "_revisions": {
             "title": "CouchDB Document Revision History",
             "type": "object",
-            "required": "false"
+            "required": false
         },
         "type": {
             "title": "Document Type",
