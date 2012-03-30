@@ -34,7 +34,7 @@ def validate(new, old, userctx, secobj):
     global schema
     if not schema:
         schema = read_json_schema("flight.json")
-    if new['type'] == "listener_telemetry":
+    if new['type'] == "flight":
         validate_doc(new, schema)
 
 def end_map(doc):
