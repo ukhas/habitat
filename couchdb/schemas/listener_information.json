@@ -1,5 +1,5 @@
 {
-    "title": "Listener Info Document",
+    "title": "Listener Information Document",
     "description": "Stores generate information about a listener.",
     "type": "object",
     "additionalProperties": false,
@@ -22,9 +22,9 @@
         },
         "type": {
             "title": "Document Type",
-            "description": "Indicates that this is a listener_info document.  Should be set to 'flight'.",
+            "description": "Indicates that this is a listener_information document.  Should be set to 'listener_information'.",
             "type": "string",
-            "pattern": "^listener_info$",
+            "pattern": "^listener_information$",
             "required": true
         },
         "time_created": {
