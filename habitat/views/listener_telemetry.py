@@ -34,13 +34,19 @@ def validate(new, old, userctx, secobj):
     global schema
     if not schema:
         schema = read_json_schema("listener_telemetry.json")
-    if new['type'] == "listener_telemetry":
+    if 'type' in new and new['type'] == "listener_telemetry":
         if old:
             must_be_admin(userctx)
         validate_doc(new, schema)
 
 def time_created_callsign_map(doc):
-    """Emit time_created and callsign."""
-    if doc['type'] == "listener_telemetry":
+    """Emit (time_created, callsign)."""
+    if 'type' in doc and doc['type'] == "listener_telemetry":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (tc, doc['data']['callsign']), None
+
+def callsign_time_created_map(doc):
+    """Emit (callsign, time_created)."""
+    if 'type' in doc and doc['type'] == "listener_telemetry":
+        tc = rfc3339_to_timestamp(doc['time_created'])
+        yield (doc['data']['callsign'], tc), None

@@ -32,12 +32,12 @@ def validate(new, old, userctx, secobj):
     global schema
     if not schema:
         schema = read_json_schema("payload_telemetry.json")
-    if new['type'] == "payload_telemetry":
+    if 'type' in new and new['type'] == "payload_telemetry":
         validate_doc(new, schema)
 
 def flight_payload_estimated_received_time_map(doc):
     """Map by flight, payload, estimated received time."""
-    if doc['type'] != "payload_telemetry":
+    if 'type' not in doc or doc['type'] != "payload_telemetry":
         return
     if 'data' not in doc or '_parsed' not in doc['data']:
         return

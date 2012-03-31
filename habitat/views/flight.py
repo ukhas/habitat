@@ -34,22 +34,22 @@ def validate(new, old, userctx, secobj):
     global schema
     if not schema:
         schema = read_json_schema("flight.json")
-    if new['type'] == "flight":
+    if 'type' in new and new['type'] == "flight":
         validate_doc(new, schema)
 
 def end_map(doc):
     """Map by flight window end date."""
-    if doc['type'] == "flight":
+    if 'type' in doc and doc['type'] == "flight":
         yield rfc3339_to_timestamp(doc['end']), None
 
 def launch_time_map(doc):
     """Map by flight launch time."""
-    if doc['type'] == "flight":
+    if 'type' in doc and doc['type'] == "flight":
         yield rfc3339_to_timestamp(doc['launch']['time']), None
 
 def payload_end_map(doc):
     """Map by payload and then flight window end date."""
-    if doc['type'] == "flight":
+    if 'type' in doc and doc['type'] == "flight":
         for payload in doc['payloads']:
             yield (payload, rfc3339_to_timestamp(doc['end'])), None
 

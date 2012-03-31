@@ -41,8 +41,8 @@ def test_must_be_admin():
     nonadmin = {'roles': ['not an admin']}
     noroles = {'noroles': True}
     oddroles = {'roles': 12}
-    admin = {'roles': ['admin']}
-    alsoadmin = {'roles': ['lowly', 'admin']}
+    admin = {'roles': ['_admin']}
+    alsoadmin = {'roles': ['lowly', '_admin']}
 
     assert_raises(Unauthorized, utils.must_be_admin, nonadmin)
     assert_raises(Unauthorized, utils.must_be_admin, noroles)

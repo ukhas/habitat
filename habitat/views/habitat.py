@@ -23,10 +23,16 @@ Contains a validation function that applies to every document.
 
 from couch_named_python import Forbidden
 
+from .utils import must_be_admin
+
 allowed_types = set(
-    ("flight", "listener_info", "listener_telemetry", "payload_telemetry"))
+    ("flight", "listener_information", "listener_telemetry",
+        "payload_telemetry"))
 
 def validate(new, old, userctx, secobj):
+    if '_deleted' in new:
+        must_be_admin(userctx)
+        return
     if 'type' not in new:
         raise Forbidden("All documents must have a type.")
     if new['type'] not in allowed_types:

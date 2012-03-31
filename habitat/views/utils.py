@@ -55,10 +55,10 @@ def datetime_to_timestamp(dt):
 def must_be_admin(user):
     """Raise Unauthorized if the user is not an admin"""
     try:
-        if 'admin' not in user['roles']:
-            raise Unauthorized("Only administrators may edit this document.")
+        if '_admin' not in user['roles']:
+            raise Unauthorized("Only server administrators may edit this document.")
     except (KeyError, TypeError):
-        raise Unauthorized("Only administrators may edit this document.")
+        raise Unauthorized("Only server administrators may edit this document.")
 
 def validate_doc(data, schema):
     """Validate *data* against *schema*, raising descriptive errors"""

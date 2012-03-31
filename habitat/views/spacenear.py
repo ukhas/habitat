@@ -23,9 +23,9 @@ telemetry.
 
 def spacenear_filter(doc, req):
     """Select parsed payload_telemetry and all listener_telemetry documents."""
-    if doc['type'] == "listener_telemetry":
+    if 'type' in doc and doc['type'] == "listener_telemetry":
         return True
-    if doc['type'] == "payload_telemetry":
+    if 'type' in doc and doc['type'] == "payload_telemetry":
         if 'data' in doc and '_parsed' in doc['data']:
             return True
     return False
