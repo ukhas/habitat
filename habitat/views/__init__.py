@@ -33,7 +33,7 @@ habitat related design documents.
 """
 
 from . import flight
-from . import listener_info
+from . import listener_information
 from . import listener_telemetry
 from . import payload_telemetry
 from . import habitat
