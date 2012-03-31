@@ -27,6 +27,18 @@
             "pattern": "^flight$",
             "required": true
         },
+        "owner": {
+            "title": "Document Owner",
+            "description": "The CouchDB user who owns this document. If specified, only this logged in user and admins may edit the document.",
+            "type": "string",
+            "required": false
+        },
+        "approved": {
+            "title": "Flight Document Approval Status",
+            "description": "The approval status of this flight. Unapproved flights are hidden by default. Flights are approved by admins.",
+            "type": "boolean",
+            "required": true
+        },
         "start": {
             "title": "Start of Launch Window",
             "description": "A date in RFC3339 format that indicates the start of validity for this flight document.",
@@ -123,250 +135,12 @@
         },
         "payloads": {
             "title": "Payloads in Flight",
-            "description": "All the payloads being launched on this flight, with details of the data they transmit.",
-            "type": "object",
-            "required": true,
-            "additionalProperties": {
-                "title": "Payload Details",
-                "description": "Details of one payload.",
-                "type": "object",
-                "required": true,
-                "additionalProperties": false,
-                "properties": {
-                    "transmissions": {
-                        "title": "Radio Transmissions Details",
-                        "description": "A list of all the radio formats in use by the payload.",
-                        "type": "array",
-                        "required": true,
-                        "items": {
-                            "title": "Radio Transmission Details",
-                            "description": "Information on one set of radio settings in use by the payload.",
-                            "type": "object",
-                            "additionalProperties": true,
-                            "properties": {
-                                "frequency": {
-                                    "title": "Radio Frequency",
-                                    "description": "The transmission frequency in use, as a number in Hz.",
-                                    "type": "number",
-                                    "required": true
-                                },
-                                "mode": {
-                                    "title": "Radio Mode",
-                                    "description": "The transmission mode in use, as a string, e.g. 'USB' or 'FM'.",
-                                    "type": "string",
-                                    "required": true
-                                },
-                                "modulation": {
-                                    "title": "Telemetry Modulation",
-                                    "description": "The form of modulation in use, e.g., 'RTTY'.",
-                                    "type": "string",
-                                    "required": true
-                                },
-                                "shift": {
-                                    "title": "Telemetry Shift",
-                                    "description": "Where relevant, the frequency shift used by the telemetry, as a number in Hz.",
-                                    "type": "number",
-                                    "required": false
-                                },
-                                "encoding": {
-                                    "title": "Telemetry Encoding",
-                                    "description": "Where relevant, the encoding scheme used by the telemetry, as a string, e.g. 'ASCII-8'.",
-                                    "type": "string",
-                                    "required": false
-                                },
-                                "baud": {
-                                    "title": "Telemetry Baud Rate",
-                                    "description": "Where relevant, the baud rate used by the telemetry, as a number.",
-                                    "type": "number",
-                                    "required": false
-                                },
-                                "parity": {
-                                    "title": "Telemetry Parity",
-                                    "description": "Where relevant, the parity used by the telemetry, as a string, e.g. 'none' or 'even'.",
-                                    "type": "string",
-                                    "required": false
-                                },
-                                "stop": {
-                                    "title": "Telemetry Stop Bits",
-                                    "description": "Where relevant, the number of stop bits used by the telemetry, as a number.",
-                                    "type": "number",
-                                    "required": false
-                                }
-                            }
-                        }
-                    },
-                    "sentence": {
-                        "title": "Telemetry Sentence Details",
-                        "description": "Information on the format of transmitted telemetry.",
-                        "type": "object",
-                        "required": true,
-                        "additionalProperties": true,
-                        "properties": {
-                            "protocol": {
-                                "title": "Sentence Protocol",
-                                "description": "The protocol in use by this telemetry sentence, as a string, e.g., 'UKHAS'.",
-                                "type": "string",
-                                "required": true
-                            },
-                            "checksum": {
-                                "title": "Sentence Checksum",
-                                "description": "Where relevant, the checksum algorithm in use, as a string, e.g., 'crc16'.",
-                                "type": "string",
-                                "required": false
-                            },
-                            "fields": {
-                                "title": "Sentence Fields",
-                                "description": "The fields this sentence is made up of, as an array, taken in order.",
-                                "required": false,
-                                "type": "array",
-                                "items": {
-                                    "title": "Sentence Field",
-                                    "description": "One field in the sentence.",
-                                    "type": "object",
-                                    "additionalProperties": false,
-                                    "properties": {
-                                        "name": {
-                                            "title": "Field Name",
-                                            "description": "The name used to identify this field once parsed, as a string, e.g. 'altitude'.",
-                                            "type": "string",
-                                            "required": true
-                                        },
-                                        "sensor": {
-                                            "title": "Field Sensor",
-                                            "description": "The sensor module used to parse this field, as a string, e.g. 'base.ascii_int'.",
-                                            "type": "string",
-                                            "required": true
-                                        },
-                                        "format": {
-                                            "title": "Field Format",
-                                            "description": "When required by the sensor, the format to use parsing this field, e.g. 'dd.dddd'.",
-                                            "type": "string",
-                                            "required": false
-                                        }
-                                    }
-                                }
-                            },
-                            "filters": {
-                                "title": "Payload Filters",
-                                "description": "Filters are applied during or after data parsing to help munge data back to how it should be. They're specified here.",
-                                "type": "object",
-                                "required": false,
-                                "additionalProperties": false,
-                                "properties": {
-                                    "intermediate": {
-                                        "title": "Intermediate Filters",
-                                        "description": "These filters are applied once raw data has been identified as belonging to this payload, before parsing.",
-                                        "type": "array",
-                                        "required": false,
-                                        "items": {
-                                            "title": "Filter",
-                                            "description": "A filter munges data into what it should be.",
-                                            "type": "object",
-                                            "additionalProperties": false,
-                                            "properties": {
-                                                "type": {
-                                                    "title": "Filter Type",
-                                                    "description": "Either 'normal' for standard, pre-written filters, or 'hotfix' for code executed from this document.",
-                                                    "type": "string",
-                                                    "required": true,
-                                                    "enum": ["normal", "hotfix"]
-                                                },
-                                                "callable": {
-                                                    "title": "Callable for Filter",
-                                                    "description": "For normal filters, this is the path of the function to execute.",
-                                                    "type": "string",
-                                                    "required": false
-                                                },
-                                                "config": {
-                                                    "title": "Filter Config",
-                                                    "description": "For normal filters, where required, this contains the config for the filter function.",
-                                                    "type": "object",
-                                                    "required": false,
-                                                    "additionalProperties": true
-                                                },
-                                                "code": {
-                                                    "title": "Hotfix Code",
-                                                    "description": "For hotfix filters, this is the code to execute, specified as the body of a function with `data` as the parameter which should be modified and returned.",
-                                                    "type": "string",
-                                                    "required": false
-                                                },
-                                                "signature": {
-                                                    "title": "Hotfix Signature",
-                                                    "description": "For hotfix filters, this is the signature to validate the code. See documentation for more details.",
-                                                    "type": "string",
-                                                    "required": false
-                                                },
-                                                "certificate": {
-                                                    "title": "Hotfix Certificate",
-                                                    "description": "For hotfix filters, this is the certificate against which the signature should be checked. Given as a string certificate file name.",
-                                                    "type": "string",
-                                                    "required": false
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "post": {
-                                        "type": "array",
-                                        "required": false,
-                                        "items": {
-                                            "title": "Filter",
-                                            "description": "A filter munges data into what it should be.",
-                                            "type": "object",
-                                            "additionalProperties": false,
-                                            "properties": {
-                                                "type": {
-                                                    "title": "Filter Type",
-                                                    "description": "Either 'normal' for standard, pre-written filters, or 'hotfix' for code executed from this document.",
-                                                    "type": "string",
-                                                    "required": true,
-                                                    "enum": ["normal", "hotfix"]
-                                                },
-                                                "callable": {
-                                                    "title": "Callable for Filter",
-                                                    "description": "For normal filters, this is the path of the function to execute.",
-                                                    "type": "string",
-                                                    "required": false
-                                                },
-                                                "config": {
-                                                    "title": "Filter Config",
-                                                    "description": "For normal filters, where required, this contains the config for the filter function.",
-                                                    "type": "object",
-                                                    "required": false,
-                                                    "additionalProperties": true
-                                                },
-                                                "code": {
-                                                    "title": "Hotfix Code",
-                                                    "description": "For hotfix filters, this is the code to execute, specified as the body of a function with `data` as the parameter which should be modified and returned.",
-                                                    "type": "string",
-                                                    "required": false
-                                                },
-                                                "signature": {
-                                                    "title": "Hotfix Signature",
-                                                    "description": "For hotfix filters, this is the signature to validate the code. See documentation for more details.",
-                                                    "type": "string",
-                                                    "required": false
-                                                },
-                                                "certificate": {
-                                                    "title": "Hotfix Certificate",
-                                                    "description": "For hotfix filters, this is the certificate against which the signature should be checked. Given as a string certificate file name.",
-                                                    "type": "string",
-                                                    "required": false
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "metadata": {
-                        "title": "Payload Metadata",
-                        "description": "Any additional information about the payload.",
-                        "type": "object",
-                        "required": false,
-                        "additionalProperties": true
-                    }
-                }
+            "description": "The configuration to use for each payload in this flight.",
+            "type": "array",
+            "items": {
+                "title": "Payload Configuration ID",
+                "description": "The CouchDB document ID for a payload configuration of a payload in this flight.",
+                "type": "string"
             }
         }
     }
