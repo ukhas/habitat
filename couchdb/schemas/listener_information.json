@@ -1,6 +1,6 @@
 {
     "title": "Listener Information Document",
-    "description": "Stores generate information about a listener.",
+    "description": "Stores generic information about a listener.",
     "type": "object",
     "additionalProperties": false,
     "required": true,
