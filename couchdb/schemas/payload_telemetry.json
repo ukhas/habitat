@@ -94,7 +94,7 @@
                     },
                     "latest_info": {
                         "title": "Receiver Latest Info",
-                        "description": "A CouchDB document ID for this receiver's most recent listener_info document.",
+                        "description": "A CouchDB document ID for this receiver's most recent listener_information document.",
                         "type": "string",
                         "required": false
                     }

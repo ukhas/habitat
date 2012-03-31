@@ -13,7 +13,7 @@ document are stored, identified by a ``type`` key:
 * Listener telemetry documents containing position data on someone
   listening to a payload (``type: "listener_telemetry"``)
 * Listener information documents containing metadata on a listener such as
-  name and radio (``type: "listener_info"``)
+  name and radio (``type: "listener_information"``)
 
 Ideally all of these documents will be administrated by the web interface but
 manual intervention may be required, especially in the case of configuration
@@ -348,18 +348,17 @@ typically a callsign, time and GPS position:
 Listener Information Documents
 ==============================
 
-Listener information documents make up the fifth document type, with a
-``type`` of ``listener_info``. They contain metadata about a listener and
-are essentially free-form, used to display information of interest in the
-user interface. They use Couch IDs for document IDs, and may typically
-contain information such as a human readable location, the radio or antenna
-system in use, a real name and a callsign or other identifier. An example
-follows:
+Listener information documents make up the fifth document type, with a ``type``
+of ``listener_information``. They contain metadata about a listener and are
+essentially free-form, used to display information of interest in the user
+interface. They use Couch IDs for document IDs, and may typically contain
+information such as a human readable location, the radio or antenna system in
+use, a real name and a callsign or other identifier. An example follows:
 
 .. code-block:: javascript
 
     "10bedc8832fe563c901596c9000026d3": {
-        "type": "listener_info",
+        "type": "listener_information",
         "time_created": 1292772133,
         "time_uploaded": 1292772135,
         "data": {

@@ -16,7 +16,7 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Functions for the listener_info design document.
+Functions for the listener_information design document.
 
 Contains schema validation and a view by creation time and callsign.
 """
@@ -29,18 +29,24 @@ schema = None
 def validate(new, old, userctx, secobj):
     """
     Only allow admins to edit/delete and validate the document against the
-    schema for listener_info documents.
+    schema for listener_information documents.
     """
     global schema
     if not schema:
-        schema = read_json_schema("listener_info.json")
-    if new['type'] == "listener_info":
+        schema = read_json_schema("listener_information.json")
+    if 'type' in new and new['type'] == "listener_information":
         if old:
             must_be_admin(userctx)
         validate_doc(new, schema)
 
 def time_created_callsign_map(doc):
-    """Emit time_created and callsign."""
-    if doc['type'] == "listener_info":
+    """Emit (time_created, callsign)."""
+    if 'type' in doc and doc['type'] == "listener_information":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (tc, doc['data']['callsign']), None
+
+def callsign_time_created_map(doc):
+    """Emit (callsign, time_created)."""
+    if 'type' in doc and doc['type'] == "listener_information":
+        tc = rfc3339_to_timestamp(doc['time_created'])
+        yield (doc['data']['callsign'], tc), None

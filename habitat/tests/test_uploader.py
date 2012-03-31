@@ -42,7 +42,7 @@ telemetry_time_doc["time_uploaded"] = 1276
 info_data = {"my_radio": "Duga-3", "vehicle": "Tractor"}
 info_doc = {
     "data": copy.deepcopy(info_data),
-    "type": "listener_info",
+    "type": "listener_information",
     "time_created": 1259,
     "time_uploaded": 1259
 }
@@ -172,7 +172,7 @@ class TestUploader(object):
         self.mocker.ReplayAll()
 
         self.uploader.listener_telemetry(telemetry_data)
-        self.uploader.listener_info(info_data)
+        self.uploader.listener_information(info_data)
         self.mocker.VerifyAll()
         self.mocker.ResetAll()
 
@@ -187,7 +187,7 @@ class TestUploader(object):
         self.mocker.ReplayAll()
 
         self.uploader.listener_telemetry(telemetry_data, time_created=1232)
-        self.uploader.listener_info(info_data, time_created=1253.8)
+        self.uploader.listener_information(info_data, time_created=1253.8)
         self.mocker.VerifyAll()
 
     def test_returns_doc_id(self):
@@ -214,17 +214,18 @@ class TestUploader(object):
     def ptlm_with_listener_docs(self, doc):
         doc_metadata = doc["receivers"]["TESTCALL"]
         listener_telemetry_id = doc_metadata["latest_listener_telemetry"]
-        listener_info_id = doc_metadata["latest_listener_info"]
+        listener_information_id = doc_metadata["latest_listener_information"]
 
         # Check that besides the two ids, it equals payload_telemetry_doc
         del doc_metadata["latest_listener_telemetry"]
-        del doc_metadata["latest_listener_info"]
+        del doc_metadata["latest_listener_information"]
 
         try:
             assert doc == payload_telemetry_doc
             assert self.docs[listener_telemetry_id]["type"] == \
                     "listener_telemetry"
-            assert self.docs[listener_info_id]["type"] == "listener_info"
+            assert self.docs[listener_information_id]["type"] == \
+                    "listener_information"
         except:
             return False
         else:

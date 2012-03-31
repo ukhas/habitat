@@ -61,9 +61,9 @@ class Uploader(object):
 
     After having created an :class:`Uploader` object, call
     :meth:`payload_telemetry`, :meth:`listener_telemetry` or
-    :meth:`listener_info` in any order. It is however recommended that
-    :meth:`listener_info` and :meth:`listener_telemetry` are called once before
-    any other uploads
+    :meth:`listener_information` in any order. It is however recommended that
+    :meth:`listener_information` and :meth:`listener_telemetry` are called once
+    before any other uploads
 
     See the CouchDB schema for more information, both on
     validation/restrictions and data formats.
@@ -115,12 +115,12 @@ class Uploader(object):
         """
         return self._listener_doc(data, "listener_telemetry", time_created)
 
-    def listener_info(self, data, time_created=None):
+    def listener_information(self, data, time_created=None):
         """
-        Upload a listener_info doc. The doc_id is returned
+        Upload a listener_information doc. The doc_id is returned
 
-        A listener_info document contains static human readable information
-        about a listener.
+        A listener_information document contains static human readable
+        information about a listener.
 
         The format of the document produced is described elsewhere (TODO?);
         the actual document will be constructed by ``Uploader``.
@@ -137,7 +137,7 @@ class Uploader(object):
         *data* must not contain the key ``callsign`` as that is added by
         :class:`Uploader`.
         """
-        return self._listener_doc(data, "listener_info", time_created)
+        return self._listener_doc(data, "listener_information", time_created)
 
     def _listener_doc(self, data, doc_type, time_created=None):
         if time_created is None:
@@ -183,20 +183,20 @@ class Uploader(object):
             }
 
         *metadata* must not contain the keys ``time_created``,
-        ``time_uploaded``, ``latest_listener_info`` or
+        ``time_uploaded``, ``latest_listener_information`` or
         ``latest_listener_telemetry``. These are added by :class:`Uploader`.
         """
 
         if time_created is None:
             time_created = time.time()
 
-        for key in ["time_created", "time_uploaded", "latest_listener_info",
-                    "latest_listener_telemetry"]:
+        for key in ["time_created", "time_uploaded",
+                "latest_listener_information", "latest_listener_telemetry"]:
             assert key not in metadata
 
         receiver_info = copy.deepcopy(metadata)
 
-        for doc_type in ["listener_telemetry", "listener_info"]:
+        for doc_type in ["listener_telemetry", "listener_information"]:
             if doc_type in self._latest:
                 receiver_info["latest_" + doc_type] = self._latest[doc_type]
 
