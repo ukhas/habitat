@@ -50,7 +50,7 @@
             "properties": {
                 "callsign": {
                     "title": "Listener Callsign",
-                    "description": "A callsign for this listener. Does not hae to be an official amateur radio callsign.",
+                    "description": "A callsign for this listener. Does not have to be an official amateur radio callsign.",
                     "type": "string",
                     "required": true
                 }

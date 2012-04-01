@@ -1,6 +1,6 @@
 {
     "title": "Flight Document",
-    "description": "Stores information about one flight, including launch window and payloads, with details on transmitted data.",
+    "description": "Stores information about one flight, including launch window and payloads.",
     "type": "object",
     "additionalProperties": false,
     "required": true,
@@ -139,7 +139,7 @@
             "type": "array",
             "items": {
                 "title": "Payload Configuration ID",
-                "description": "The CouchDB document ID for a payload configuration of a payload in this flight.",
+                "description": "The CouchDB Document ID for a payload configuration of a payload in this flight.",
                 "type": "string"
             }
         }
