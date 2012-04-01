@@ -175,9 +175,9 @@
                                 "required": false,
                                 "items": {
                                     "title": "Filter",
-                                    "description": "A filter munges data into what it should be.",
+                                    "description": "A filter munges data into what it should be. Additional configuration properties may be specified for specific filters.",
                                     "type": "object",
-                                    "additionalProperties": false,
+                                    "additionalProperties": true,
                                     "properties": {
                                         "type": {
                                             "title": "Filter Type",
@@ -191,13 +191,6 @@
                                             "description": "For normal filters, this is the path of the function to execute.",
                                             "type": "string",
                                             "required": false
-                                        },
-                                        "config": {
-                                            "title": "Filter Config",
-                                            "description": "For normal filters, where required, this contains the config for the filter function.",
-                                            "type": "object",
-                                            "required": false,
-                                            "additionalProperties": true
                                         },
                                         "code": {
                                             "title": "Hotfix Code",
@@ -227,9 +220,9 @@
                                 "required": false,
                                 "items": {
                                     "title": "Filter",
-                                    "description": "A filter munges data into what it should be.",
+                                    "description": "A filter munges data into what it should be. Additional configuration properties may be specified for specific filters.",
                                     "type": "object",
-                                    "additionalProperties": false,
+                                    "additionalProperties": true,
                                     "properties": {
                                         "type": {
                                             "title": "Filter Type",
@@ -243,13 +236,6 @@
                                             "description": "For normal filters, this is the path of the function to execute.",
                                             "type": "string",
                                             "required": false
-                                        },
-                                        "config": {
-                                            "title": "Filter Config",
-                                            "description": "For normal filters, where required, this contains the config for the filter function.",
-                                            "type": "object",
-                                            "required": false,
-                                            "additionalProperties": true
                                         },
                                         "code": {
                                             "title": "Hotfix Code",
