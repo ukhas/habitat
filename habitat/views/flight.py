@@ -32,8 +32,6 @@ def validate(new, old, userctx, secobj):
     Validate this flight document against the schema, then check that
     only managers are approving documents and approved documents are only
     edited by managers.
-
-    TODO: value based validation
     """
     global schema
     if not schema:
@@ -53,6 +51,16 @@ def validate(new, old, userctx, secobj):
         if new['approved']:
             if 'manager' not in userctx['roles']:
                 raise ForbiddenError("Only managers may approve documents.")
+
+    start = rfc3339_to_timestamp(new['start'])
+    end = rfc3339_to_timestamp(new['end'])
+    launch = rfc3339_to_timestamp(new['launch']['time'])
+    if start > end:
+        raise ForbiddenError("Launch window may not end before it starts.")
+    if end - start > 3 * 24 * 3600:
+        raise ForbiddenError("Launch window may not be greater than 3 days.")
+    if not start <= launch < end:
+        raise ForbiddenError("Launch time must be within launch window.")
 
 @version(1)
 def end_map(doc):
