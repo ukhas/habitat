@@ -21,14 +21,17 @@ Contains schema validation and views by flight launch time, window end time and
 payload name and window end time.
 """
 
+from python_named_couch import Forbidden
 from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
 
 schema = None
 
 def validate(new, old, userctx, secobj):
     """
-    Validate this flight document against the schema.
-    TODO: handle flight document test/approval/other status.
+    Validate this flight document against the schema, then check that
+    only managers are approving documents and approved documents are only
+    edited by managers.
+
     TODO: value based validation
     """
     global schema
@@ -36,6 +39,18 @@ def validate(new, old, userctx, secobj):
         schema = read_json_schema("flight.json")
     if 'type' in new and new['type'] == "flight":
         validate_doc(new, schema)
+    
+    if '_admin' in userctx['roles']:
+        return
+
+    if old['approved']:
+        if new['approved']:
+            if 'manager' not in userctx['roles']:
+                raise Forbidden("Only managers may edit approved documents.")
+    else:
+        if new['approved']:
+            if 'manager' not in userctx['roles']:
+                raise Forbidden("Only managers may approve documents.")
 
 def end_map(doc):
     """Map by flight window end date."""
