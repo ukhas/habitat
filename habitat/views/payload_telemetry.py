@@ -57,7 +57,7 @@ def validate(new, old, userctx, secobj):
 @version(1)
 def flight_payload_estimated_received_time_map(doc):
     """Map by flight, payload, estimated received time."""
-    if 'type' not in doc or doc['type'] != "payload_telemetry":
+    if doc['type'] != "payload_telemetry":
         return
     if 'data' not in doc or '_parsed' not in doc['data']:
         return

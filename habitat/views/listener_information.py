@@ -44,13 +44,13 @@ def validate(new, old, userctx, secobj):
 @version(1)
 def time_created_callsign_map(doc):
     """Emit (time_created, callsign)."""
-    if 'type' in doc and doc['type'] == "listener_information":
+    if doc['type'] == "listener_information":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (tc, doc['data']['callsign']), None
 
 @version(1)
 def callsign_time_created_map(doc):
     """Emit (callsign, time_created)."""
-    if 'type' in doc and doc['type'] == "listener_information":
+    if doc['type'] == "listener_information":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (doc['data']['callsign'], tc), None
