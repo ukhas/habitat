@@ -27,16 +27,26 @@ from .utils import must_be_admin
 
 allowed_types = set(
     ("flight", "listener_information", "listener_telemetry",
-        "payload_telemetry"))
+        "payload_telemetry", "payload_configuration"))
 
 def validate(new, old, userctx, secobj):
     if '_deleted' in new:
-        must_be_admin(userctx)
+        must_be_admin(userctx, "Only administrators may delete documents.")
         return
+
     if 'type' not in new:
         raise Forbidden("All documents must have a type.")
+
     if new['type'] not in allowed_types:
         raise Forbidden("Invalid document type.")
+
     if old and new['type'] != old['type']:
         raise Forbidden("Cannot change document type.")
 
+    if 'owner' in old and 'manager' not in userctx['roles']:
+        if 'owner' not in new:
+            raise Forbidden("Cannot remove the document owner.")
+        if new['owner'] != old['owner']:
+            raise Forbidden("Cannot change the document owner.")
+        if userctx['name'] != new['owner']:
+            raise Forbidden("Only the owner of this document may edit it.")
