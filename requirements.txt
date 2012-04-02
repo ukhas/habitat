@@ -3,6 +3,7 @@ couchdbkit==0.6.1
 crcmod==1.7
 ipaddr==2.1.10
 PyYAML==3.10
-jsonschema==0.2
+-e git://github.com/Julian/jsonschema.git@6bc1587dca6441e96c27#egg=jsonschema
 couch-named-python==0.1.6dev
 python-dateutil==1.5
+Securetypes==11.12.28
