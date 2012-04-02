@@ -26,13 +26,6 @@
             "pattern": "^payload_telemetry$",
             "required": true
         },
-        "estimated_time_created": {
-            "title": "Estimated Time Created",
-            "description": "An approximation of when this document was created based on the times each listener heard it, as an RFC3339 string.",
-            "type": "string",
-            "format": "date-time",
-            "required": false
-        },
         "data": {
             "title": "Data",
             "description": "All the data about this transmission, including the raw transmitted data and any parsing results.",
@@ -42,19 +35,31 @@
             "properties": {
                 "_raw": {
                     "title": "Raw Data",
-                    "description": "The raw transmitted data, as a base64 string.",
+                    "description": "The raw transmitted data, as a base64 string. Must be uploaded by listeners. If given, _manual probably won't be.",
                     "type": "string",
-                    "required": true
+                    "required": false
+                },
+                "_string": {
+                    "title": "Raw Data String",
+                    "description": "The ASCII representation of the raw data, if the data is all printable. Inserted by the parser.",
+                    "type": "string",
+                    "required": false
+                },
+                "_manual": {
+                    "title": "Manual Telemetry",
+                    "description": "Must be present and true if this telemetry was entered manually rather than by reception of a telemetry string. If true, _raw will probably not be given.",
+                    "type": "boolean",
+                    "required": false
                 },
                 "_protocol": {
                     "title": "Protocol",
-                    "description": "The protocol (habitat parser module) used to parse this transmission.",
+                    "description": "The protocol (habitat parser module) used to parse this transmission. Inserted by the parser.",
                     "type": "string",
                     "required": false
                 },
                 "_parsed": {
                     "title": "Parsed",
-                    "description": "Whether this sentence has been parsed by the parser yet or not.",
+                    "description": "Whether this sentence has been parsed by the parser yet or not. Inserted by the parser.",
                     "type": "boolean",
                     "required": false
                 }
