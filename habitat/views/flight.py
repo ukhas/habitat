@@ -56,19 +56,46 @@ def validate(new, old, userctx, secobj):
 
 @version(1)
 def end_map(doc):
-    """Map by flight window end date."""
-    if 'type' in doc and doc['type'] == "flight":
-        yield rfc3339_to_timestamp(doc['end']), None
+    """
+    Sort by flight window end time.
+    If the flight has payloads, emit it with the list of payloads, and emit
+    a link for each payload so that they get included with include_docs.
+
+    Used by the parser to find active flights and the configurations to use to
+    decode telemetry from them.
+    """
+    if doc['type'] == "flight":
+        if 'payloads' in doc:
+            et = rfc3339_to_timestamp(doc['end'])
+            yield (et, 0), doc['payloads']
+            for payload in doc['payloads']:
+                yield (et, 1), {'_id': payload}
 
 @version(1)
 def launch_time_map(doc):
-    """Map by flight launch time."""
-    if 'type' in doc and doc['type'] == "flight":
-        yield rfc3339_to_timestamp(doc['launch']['time']), None
+    """
+    Sort by flight launch time with the launch name in the value.
+    If the flight has payloads, emit a link for each so their configs are
+    included by include_docs.
+
+    Used to display the list of upcoming launches in various user interfaces
+    and download configurations for receivers.
+    """
+    if doc['type'] == "flight":
+        lt = rfc3339_to_timestamp(doc['launch']['time'])
+        yield (lt, 0), doc['name']
+        if 'payloads' in doc:
+            for payload in doc['payloads']:
+                yield (lt, 1), {'_id': payload}
 
 @version(1)
 def owner_launch_time_map(doc):
-    """Map by owner then launch time."""
-    if 'type' in doc and doc['type'] == "flight" and 'owner' in doc:
-        yield (doc['owner'], rfc3339_to_timestamp(doc['launch']['time'])), None
+    """
+    Map by owner then launch time with the launch name in the value.
+
+    Used to show users their own launch documents.
+    """
+    if doc['type'] == "flight" and 'owner' in doc:
+        lt = rfc3339_to_timestamp(doc['launch']['time'])
+        yield (doc['owner'], lt), doc['name']
 

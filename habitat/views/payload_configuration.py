@@ -40,16 +40,33 @@ def validate(new, old, userctx, secobj):
 
 @version(1)
 def name_version_map(doc):
-    """Emit (name, version)."""
-    if 'type' in doc and doc['type'] == "payload_configuration":
+    """
+    Emit (name, version).
+
+    Used to get a list of all current payload configurations.
+    """
+    if doc['type'] == "payload_configuration":
         yield (doc['name'], doc['version']), None
 
 @version(1)
 def owner_name_version_map(doc):
     """
     Emit (owner, name, version).
+
     Used for selecting payload configurations belonging to a particular user.
     """
-    if 'type' in doc and doc['type'] == "payload_configuration":
+    if doc['type'] == "payload_configuration":
         if 'owner' in doc:
             yield (doc['owner'], doc['name'], doc['version']), None
+
+@version(1)
+def callsign_version_map(doc):
+    """
+    Emit (callsign, version) -> sentence for each callsign in the document.
+
+    Used by the parser when parsing telemetry not in a flight.
+    """
+    if doc['type'] == "payload_configuration":
+        if 'sentences' in doc:
+            for sentence in doc['sentences']:
+                yield (sentence['callsign'], doc['version']), sentence
