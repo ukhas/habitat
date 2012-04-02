@@ -61,32 +61,17 @@ def end_map(doc):
     If the flight has payloads, emit it with the list of payloads, and emit
     a link for each payload so that they get included with include_docs.
 
+    Only shows approved flights.
+
     Used by the parser to find active flights and the configurations to use to
     decode telemetry from them.
     """
     if doc['type'] == "flight":
-        if 'payloads' in doc:
+        if 'payloads' in doc and doc['approved']:
             et = rfc3339_to_timestamp(doc['end'])
             yield (et, 0), doc['payloads']
             for payload in doc['payloads']:
                 yield (et, 1), {'_id': payload}
-
-@version(1)
-def launch_time_map(doc):
-    """
-    Sort by flight launch time with the launch name in the value.
-    If the flight has payloads, emit a link for each so their configs are
-    included by include_docs.
-
-    Used to display the list of upcoming launches in various user interfaces
-    and download configurations for receivers.
-    """
-    if doc['type'] == "flight":
-        lt = rfc3339_to_timestamp(doc['launch']['time'])
-        yield (lt, 0), doc['name']
-        if 'payloads' in doc:
-            for payload in doc['payloads']:
-                yield (lt, 1), {'_id': payload}
 
 @version(1)
 def owner_launch_time_map(doc):
