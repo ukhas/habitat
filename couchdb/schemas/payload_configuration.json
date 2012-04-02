@@ -131,9 +131,9 @@
                     },
                     "callsign": {
                         "title": "Payload Callsign",
-                        "description": "Where in use by the protocol, the callsign of the payload.",
+                        "description": "The callsign of the payload. Used to look up what configuration should be used to parse incoming telemetry.",
                         "type": "string",
-                        "required": false
+                        "required": true
                     },
                     "fields": {
                         "title": "Sentence Fields",
