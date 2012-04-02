@@ -22,10 +22,48 @@ Contains schema validation and a view by payload name and configuration
 version.
 """
 
-from couch_named_python import version
+from couch_named_python import ForbiddenError, version
 from .utils import read_json_schema, validate_doc
 
 schema = None
+
+def _validate_ukhas(sentence):
+    """
+    For UKHAS sentences, check that the checksum is an allowable type and that
+    fields with structural requirements are valid.
+    """
+    checksums = ["xor", "crc16-ccitt", "fletcher-16", "fletcher-16-256"]
+    if 'checksum' in sentence:
+        if sentence['checksum'] not in checksums:
+            raise ForbiddenError("Invalid checksum algorithm.")
+    if 'fields' in sentence:
+        for field in sentence['fields']:
+            if field['sensor'] == "stdtelem.coordinate":
+                if 'format' not in field['sensor']:
+                    raise ForbiddenError(
+                        "Coordinate fields must have formats.")
+
+def _validate_rtty(transmission):
+    """
+    For RTTY transmissions, verify that required keys are present.
+    """
+    required_keys = ['shift', 'encoding', 'baud', 'parity', 'stop']
+    for k in required_keys:
+        if k not in transmission:
+            raise ForbiddenError(
+                "RTTY transmissions must include '{0}'.".format(k))
+
+def _validate_filter(f):
+    """
+    Check that filters have the required keys according to their type.
+    """
+    required_keys = {
+        'normal': ['callable'],
+        'hotfix': ['code', 'signature', 'certificate']}
+    for k in required_keys[f['type']]:
+        if k not in f:
+            raise ForbiddenError(
+                "{0} filters must include '{1}'.".format(f['type'], k))
 
 @version(1)
 def validate(new, old, userctx, secobj):
@@ -37,6 +75,19 @@ def validate(new, old, userctx, secobj):
         schema = read_json_schema("payload_configuration.json")
     if 'type' in new and new['type'] == "payload_configuration":
         validate_doc(new, schema)
+
+    if 'sentences' in new:
+        for sentence in new['sentences']:
+            if sentence['protocol'] == "UKHAS":
+                _validate_ukhas(sentence)
+            if 'filters' in sentence:
+                for f in sentence['filters']:
+                    _validate_filter(f)
+
+    if 'transmissions' in new:
+        for transmission in new['transmissions']:
+            if transmission['modulation'] == "RTTY":
+                _validate_rtty(transmission)
 
 @version(1)
 def name_version_map(doc):

@@ -83,7 +83,8 @@
                         "title": "Telemetry Encoding",
                         "description": "Where relevant, the encoding scheme used by the telemetry, as a string, e.g. 'ASCII-8'.",
                         "type": "string",
-                        "required": false
+                        "required": false,
+                        "enum": ["BAUDOT", "ASCII-7", "ASCII-8"]
                     },
                     "baud": {
                         "title": "Telemetry Baud Rate",
@@ -95,13 +96,15 @@
                         "title": "Telemetry Parity",
                         "description": "Where relevant, the parity used by the telemetry, as a string, e.g. 'none' or 'even'.",
                         "type": "string",
-                        "required": false
+                        "required": false,
+                        "enum": ["even", "odd", "none"]
                     },
                     "stop": {
                         "title": "Telemetry Stop Bits",
                         "description": "Where relevant, the number of stop bits used by the telemetry, as a number.",
                         "type": "number",
-                        "required": false
+                        "required": false,
+                        "enum": [1, 1.5, 2]
                     }
                 }
             }
@@ -125,7 +128,7 @@
                     },
                     "checksum": {
                         "title": "Sentence Checksum",
-                        "description": "Where relevant, the checksum algorithm in use, as a string, e.g., 'crc16'.",
+                        "description": "Where relevant, the checksum algorithm in use, as a string, e.g., 'crc16-ccitt'.",
                         "type": "string",
                         "required": false
                     },
