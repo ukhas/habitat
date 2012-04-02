@@ -57,8 +57,9 @@ def validate(new, old, userctx, secobj):
     launch = rfc3339_to_timestamp(new['launch']['time'])
     if start > end:
         raise ForbiddenError("Launch window may not end before it starts.")
-    if end - start > 3 * 24 * 3600:
-        raise ForbiddenError("Launch window may not be greater than 3 days.")
+    if end - start > 7 * 24 * 3600:
+        raise ForbiddenError("Launch window may not be greater than one week"
+                " (speak to an admin if you have a special requirement).")
     if not start <= launch < end:
         raise ForbiddenError("Launch time must be within launch window.")
 
