@@ -41,9 +41,9 @@
         },
         "version": {
             "title": "Configuration Version",
-            "description": "Which version of the payload this configuration file is for. This number should not be changed once set and is used to differentiate between multiple configurations for the same payload.",
+            "description": "Which version of the payload this configuration file is for. This number should not be changed once set and is used to differentiate newer configurations for the same payload. Only one 'version' should be current at once, use multiple sentences if the current version of the payload might transmit different sentence formats.",
             "required": true,
-            "type": ["string", "number"]
+            "type": "number"
         },
         "transmissions": {
             "title": "Radio Transmissions",
