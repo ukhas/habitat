@@ -52,13 +52,14 @@ def datetime_to_timestamp(dt):
     """Convert a datetime object to a UTC UNIX timestamp"""
     return timegm(dt.utctimetuple())
 
-def must_be_admin(user):
+def must_be_admin(user,
+                  msg="Only server administrators may edit this document."):
     """Raise Unauthorized if the user is not an admin"""
     try:
         if '_admin' not in user['roles']:
-            raise Unauthorized("Only server administrators may edit this document.")
+            raise Unauthorized(msg)
     except (KeyError, TypeError):
-        raise Unauthorized("Only server administrators may edit this document.")
+        raise Unauthorized(msg)
 
 def validate_doc(data, schema):
     """Validate *data* against *schema*, raising descriptive errors"""

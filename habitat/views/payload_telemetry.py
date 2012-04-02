@@ -21,19 +21,37 @@ Contains schema validation and a view by flight, payload and received time.
 """
 
 import math
+from couch_named_python import Forbidden
 from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
 
 schema = None
 
+def _check(new, old):
+    """
+    Raise an error if any items in old are not present unchanged in new.
+    """
+    for k in old:
+        if k == u'_rev':
+            continue
+        if k not in new:
+            raise Forbidden("You may not remove objects.")
+        if isinstance(old[k], dict):
+            _check(new[k], old[k])
+        else:
+            if new[k] != old[k]:
+                raise Forbidden("You may not edit existing items.")
+
 def validate(new, old, userctx, secobj):
     """
-    Validate this payload_telemetry document against the schema.
+    Validate this payload_telemetry document against the schema, then check
+    that new is strictly a superset of old (except for _rev).
     """
     global schema
     if not schema:
         schema = read_json_schema("payload_telemetry.json")
     if 'type' in new and new['type'] == "payload_telemetry":
         validate_doc(new, schema)
+    _check(new, old)
 
 def flight_payload_estimated_received_time_map(doc):
     """Map by flight, payload, estimated received time."""
