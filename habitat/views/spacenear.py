@@ -21,6 +21,9 @@ Contains a filter to select parsed payload telemetry and all listener
 telemetry.
 """
 
+from couch_named_python import version
+
+@version(1)
 def spacenear_filter(doc, req):
     """Select parsed payload_telemetry and all listener_telemetry documents."""
     if 'type' in doc and doc['type'] == "listener_telemetry":

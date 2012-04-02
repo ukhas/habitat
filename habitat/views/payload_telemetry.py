@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Adam Greig
+# Copyright 2011, 2012 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -21,7 +21,7 @@ Contains schema validation and a view by flight, payload and received time.
 """
 
 import math
-from couch_named_python import Forbidden
+from couch_named_python import ForbiddenError, version
 from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
 
 schema = None
@@ -34,13 +34,14 @@ def _check(new, old):
         if k == u'_rev':
             continue
         if k not in new:
-            raise Forbidden("You may not remove objects.")
+            raise ForbiddenError("You may not remove objects.")
         if isinstance(old[k], dict):
             _check(new[k], old[k])
         else:
             if new[k] != old[k]:
-                raise Forbidden("You may not edit existing items.")
+                raise ForbiddenError("You may not edit existing items.")
 
+@version(1)
 def validate(new, old, userctx, secobj):
     """
     Validate this payload_telemetry document against the schema, then check
@@ -53,6 +54,7 @@ def validate(new, old, userctx, secobj):
         validate_doc(new, schema)
     _check(new, old)
 
+@version(1)
 def flight_payload_estimated_received_time_map(doc):
     """Map by flight, payload, estimated received time."""
     if 'type' not in doc or doc['type'] != "payload_telemetry":

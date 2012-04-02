@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Adam Greig
+# Copyright 2011, 2012 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -21,11 +21,13 @@ Functions for the listener_telemetry design document.
 Contains schema validation and a view by creation time and callsign.
 """
 
+from couch_named_python import version
 from .utils import rfc3339_to_timestamp, must_be_admin, validate_doc
 from .utils import read_json_schema
 
 schema = None
 
+@version(1)
 def validate(new, old, userctx, secobj):
     """
     Only allow admins to edit/delete and validate the document against the
@@ -39,12 +41,14 @@ def validate(new, old, userctx, secobj):
             must_be_admin(userctx)
         validate_doc(new, schema)
 
+@version(1)
 def time_created_callsign_map(doc):
     """Emit (time_created, callsign)."""
     if 'type' in doc and doc['type'] == "listener_telemetry":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (tc, doc['data']['callsign']), None
 
+@version(1)
 def callsign_time_created_map(doc):
     """Emit (callsign, time_created)."""
     if 'type' in doc and doc['type'] == "listener_telemetry":

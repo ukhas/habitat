@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Adam Greig
+# Copyright 2011, 2012 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -21,32 +21,33 @@ Functions for the core habitat design document.
 Contains a validation function that applies to every document.
 """
 
-from couch_named_python import Forbidden
-
+from couch_named_python import ForbiddenError, version
 from .utils import must_be_admin
 
 allowed_types = set(
     ("flight", "listener_information", "listener_telemetry",
         "payload_telemetry", "payload_configuration"))
 
+@version(1)
 def validate(new, old, userctx, secobj):
     if '_deleted' in new:
         must_be_admin(userctx, "Only administrators may delete documents.")
         return
 
     if 'type' not in new:
-        raise Forbidden("All documents must have a type.")
+        raise ForbiddenError("All documents must have a type.")
 
     if new['type'] not in allowed_types:
-        raise Forbidden("Invalid document type.")
+        raise ForbiddenError("Invalid document type.")
 
     if old and new['type'] != old['type']:
-        raise Forbidden("Cannot change document type.")
+        raise ForbiddenError("Cannot change document type.")
 
     if 'owner' in old and 'manager' not in userctx['roles']:
         if 'owner' not in new:
-            raise Forbidden("Cannot remove the document owner.")
+            raise ForbiddenError("Cannot remove the document owner.")
         if new['owner'] != old['owner']:
-            raise Forbidden("Cannot change the document owner.")
+            raise ForbiddenError("Cannot change the document owner.")
         if userctx['name'] != new['owner']:
-            raise Forbidden("Only the owner of this document may edit it.")
+            raise ForbiddenError(
+                    "Only the owner of this document may edit it.")

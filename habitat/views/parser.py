@@ -20,6 +20,9 @@ Functions for the parser design document.
 Contains a filter to select unparsed payload_telemetry.
 """
 
+from couch_named_python import version
+
+@version(1)
 def unparsed_filter(doc, req):
     """Only select unparsed payload_telemetry documents."""
     if 'type' in doc and doc['type'] == "payload_telemetry":

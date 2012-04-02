@@ -1,0 +1,40 @@
+flight:
+    validate_doc_update: habitat.views.flight.validate
+    views:
+        end: habitat.views.flight.end_map
+        launch_time: habitat.views.flight.launch_time_map
+        owner_launch_time: habitat.views.flight.owner_launch_time_map
+
+habitat:
+    validate_doc_update: habitat.views.habitat.validate
+
+listener_information:
+    validate_doc_update: habitat.views.listener_information.validate
+    views:
+        callsign_time_created: habitat.views.listener_information.callsign_time_created_map
+        time_created_callsign: habitat.views.listener_information.time_created_callsign_map
+
+listener_telemetry:
+    validate_doc_update: habitat.views.listener_telemetry.validate
+    views:
+        callsign_time_created: habitat.views.listener_telemetry.callsign_time_created_map
+        time_created_callsign: habitat.views.listener_telemetry.time_created_callsign_map
+
+payload_configuration:
+    validate_doc_update: habitat.views.payload_configuration.validate
+    views:
+        name_version: habitat.views.payload_configuration.name_version_map
+        owner_name_version: habitat.views.payload_configuration.owner_name_version_map
+        
+payload_telemetry:
+    validate_doc_update: habitat.views.payload_telemetry.validate
+    views:
+        flight_payload_estimated_received_time: habitat.views.payload_telemetry.flight_payload_estimated_received_time_map
+
+parser:
+    filters:
+        unparsed: habitat.views.parser.unparsed_filter
+
+spacenearus:
+    filters:
+        spacenear: habitat.views.spacenear.spacenear_filter

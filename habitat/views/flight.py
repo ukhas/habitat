@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Adam Greig
+# Copyright 2011, 2012 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -21,11 +21,12 @@ Contains schema validation and views by flight launch time, window end time and
 payload name and window end time.
 """
 
-from python_named_couch import Forbidden
+from couch_named_python import ForbiddenError, version
 from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
 
 schema = None
 
+@version(1)
 def validate(new, old, userctx, secobj):
     """
     Validate this flight document against the schema, then check that
@@ -46,25 +47,28 @@ def validate(new, old, userctx, secobj):
     if old['approved']:
         if new['approved']:
             if 'manager' not in userctx['roles']:
-                raise Forbidden("Only managers may edit approved documents.")
+                raise ForbiddenError(
+                        "Only managers may edit approved documents.")
     else:
         if new['approved']:
             if 'manager' not in userctx['roles']:
-                raise Forbidden("Only managers may approve documents.")
+                raise ForbiddenError("Only managers may approve documents.")
 
+@version(1)
 def end_map(doc):
     """Map by flight window end date."""
     if 'type' in doc and doc['type'] == "flight":
         yield rfc3339_to_timestamp(doc['end']), None
 
+@version(1)
 def launch_time_map(doc):
     """Map by flight launch time."""
     if 'type' in doc and doc['type'] == "flight":
         yield rfc3339_to_timestamp(doc['launch']['time']), None
 
-def payload_end_map(doc):
-    """Map by payload and then flight window end date."""
-    if 'type' in doc and doc['type'] == "flight":
-        for payload in doc['payloads']:
-            yield (payload, rfc3339_to_timestamp(doc['end'])), None
+@version(1)
+def owner_launch_time_map(doc):
+    """Map by owner then launch time."""
+    if 'type' in doc and doc['type'] == "flight" and 'owner' in doc:
+        yield (doc['owner'], rfc3339_to_timestamp(doc['launch']['time'])), None
 

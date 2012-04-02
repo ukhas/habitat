@@ -1,8 +1,8 @@
 M2Crypto==0.21.1
-couchdbkit==0.5.4
+couchdbkit==0.6.1
 crcmod==1.7
 ipaddr==2.1.10
 PyYAML==3.10
 jsonschema==0.2
-couch-named-python==0.1dev
+couch-named-python==0.1.6dev
 python-dateutil==1.5
