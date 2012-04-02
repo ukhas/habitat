@@ -39,6 +39,12 @@
             "required": true,
             "type": "string"
         },
+        "version": {
+            "title": "Configuration Version",
+            "description": "Which version of the payload this configuration file is for. This number should not be changed once set and is used to differentiate between multiple configurations for the same payload.",
+            "required": true,
+            "type": ["string", "number"]
+        },
         "transmissions": {
             "title": "Radio Transmissions",
             "description": "A list of all the radio formats in use by the payload.",
