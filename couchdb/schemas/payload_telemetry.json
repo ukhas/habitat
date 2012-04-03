@@ -59,8 +59,8 @@
                 },
                 "_parsed": {
                     "title": "Parsed",
-                    "description": "Whether this sentence has been parsed by the parser yet or not. Inserted by the parser.",
-                    "type": "boolean",
+                    "description": "If present, records the time at which this document was parsed. If absent, the document has not yet been parsed. Inserted by the parser.",
+                    "type": "date-time",
                     "required": false
                 }
             }
