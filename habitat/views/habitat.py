@@ -28,6 +28,9 @@ allowed_types = set(
     ("flight", "listener_information", "listener_telemetry",
         "payload_telemetry", "payload_configuration"))
 
+ownable_types = set(
+    ("flight", "payload_configuration"))
+
 @version(1)
 def validate(new, old, userctx, secobj):
     if '_deleted' in new:
@@ -43,11 +46,12 @@ def validate(new, old, userctx, secobj):
     if old and new['type'] != old['type']:
         raise ForbiddenError("Cannot change document type.")
 
-    if 'owner' in old and 'manager' not in userctx['roles']:
-        if 'owner' not in new:
-            raise ForbiddenError("Cannot remove the document owner.")
-        if new['owner'] != old['owner']:
-            raise ForbiddenError("Cannot change the document owner.")
-        if userctx['name'] != new['owner']:
-            raise ForbiddenError(
+    if new['type'] in ownable_types:
+        if 'owner' in old and 'manager' not in userctx['roles']:
+            if 'owner' not in new:
+                raise ForbiddenError("Cannot remove the document owner.")
+            if new['owner'] != old['owner']:
+                raise ForbiddenError("Cannot change the document owner.")
+            if userctx['name'] != new['owner']:
+                raise ForbiddenError(
                     "Only the owner of this document may edit it.")
