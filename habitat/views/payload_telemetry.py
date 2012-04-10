@@ -26,7 +26,7 @@ from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
 
 schema = None
 
-def _check(new, old):
+def _check_only_new(new, old):
     """
     Raise an error if any items in old are not present unchanged in new.
     """
@@ -36,7 +36,7 @@ def _check(new, old):
         if k not in new:
             raise ForbiddenError("You may not remove objects.")
         if isinstance(old[k], dict):
-            _check(new[k], old[k])
+            _check_only_new(new[k], old[k])
         else:
             if new[k] != old[k]:
                 raise ForbiddenError("You may not edit existing items.")
@@ -52,7 +52,11 @@ def validate(new, old, userctx, secobj):
         schema = read_json_schema("payload_telemetry.json")
     if 'type' in new and new['type'] == "payload_telemetry":
         validate_doc(new, schema)
-    _check(new, old)
+
+    if '_admin' in userctx['roles']:
+        return
+
+    _check_only_new(new, old)
 
 @version(1)
 def flight_payload_estimated_received_time_map(doc):
