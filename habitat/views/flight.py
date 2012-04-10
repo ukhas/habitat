@@ -64,7 +64,7 @@ def validate(new, old, userctx, secobj):
         raise ForbiddenError("Launch time must be within launch window.")
 
 @version(1)
-def end_map(doc):
+def end_include_payloads_map(doc):
     """
     Sort by flight window end time.
     If the flight has payloads, emit it with the list of payloads, and emit
@@ -81,6 +81,21 @@ def end_map(doc):
             yield (et, 0), doc['payloads']
             for payload in doc['payloads']:
                 yield (et, 1), {'_id': payload}
+
+@version(1)
+def launch_time_map(doc):
+    """
+    Sort by flight launch time.
+    
+    Only shows approved flights.
+
+    Used by the calendar and other interface elements to show a list of
+    upcoming flights.
+    """
+    if doc['type'] == "flight":
+        if doc['approved']:
+            lt = rfc3339_to_timestamp(doc['launch']['time'])
+            yield lt, None
 
 @version(1)
 def owner_launch_time_map(doc):
