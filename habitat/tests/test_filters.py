@@ -1,4 +1,4 @@
-# Copyright 2011 (C) Daniel Richman
+# Copyright 2011 (C) Daniel Richman, Priyesh Patel
 #
 # This file is part of habitat.
 #
@@ -39,6 +39,12 @@ class TestFilters:
         data = {"key": 49, "something": True}
         fixed = f.numeric_scale(config, data)
         assert fixed == {"key": 7, "something": True}
+
+    def test_numeric_scale_rounding(self):
+        config = {"source": "key", "factor": (1.0 / 7.0), "round": 5}
+        data = {"key": 50, "something": True}
+        fixed = f.numeric_scale(config, data)
+        assert fixed == {"key": 7.1429, "something": True}
 
     def test_simple_map(self):
         config = {"source": "key", "destination": "key_thing",
