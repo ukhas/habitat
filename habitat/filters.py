@@ -76,7 +76,8 @@ def numeric_scale(config, data):
 
     ``data[config["source"]]`` is multiplied by ``config["factor"]`` and
     written back to ``data[config["destination"]]`` if it exists, or
-    ``data[config["source"]]`` if not.
+    ``data[config["source"]]`` if not. ``config["offset"]`` is also optionally
+    applied along with ``config["round"]``.
 
     >>> config = {"source": "key", "factor": 2.0}
     >>> data = {"key": "4", "other": "data"}
@@ -89,10 +90,15 @@ def numeric_scale(config, data):
     True
     """
     (source_key, destination_key) = _post_singlefield(config)
-    factor = float(config["factor"])
 
+    factor = float(config["factor"])
     source = float(data[source_key])
-    data[destination_key] = source * factor
+    offset = float(0.0)
+
+    if "offset" in config:
+        offset = float(config["offset"])
+
+    data[destination_key] = (source * factor) + offset
 
     if "round" in config:
         significance = int(config["round"])

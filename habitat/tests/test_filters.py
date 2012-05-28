@@ -46,6 +46,12 @@ class TestFilters:
         fixed = f.numeric_scale(config, data)
         assert fixed == {"key": 7.1429, "something": True}
 
+    def test_numeric_scale_offset(self):
+        config = {"source": "key", "factor": (1.0 / 7.0), "offset": -5}
+        data = {"key": 49, "something": True}
+        fixed = f.numeric_scale(config, data)
+        assert fixed == {"key": 2, "something": True}
+
     def test_simple_map(self):
         config = {"source": "key", "destination": "key_thing",
                   "map": {48: "test", 49: "something"}}
