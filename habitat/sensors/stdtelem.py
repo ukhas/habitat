@@ -80,6 +80,7 @@ def coordinate(config, data):
             raise ValueError("Minutes component > 60.")
         m_to_d = minutes / 60.0
         degrees += math.copysign(m_to_d, degrees)
-        return degrees
+        dp = len(second) + 3 # num digits in minutes + 1
+        return round(degrees, dp)
     else:
         raise ValueError("Invalid coordinate format")
