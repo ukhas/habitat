@@ -68,7 +68,10 @@ class TestStdtelem:
             ("ddmm.mm", "-3506.192", -35.1032),
             ("ddmm.mm", "03506.0", 35.1),
             ("ddd.dddddd", "+12.1234", 12.1234),
-            ("dddmm.mmmm", "-3506.192", -35.1032)
+            ("dddmm.mmmm", "-3506.192", -35.1032),
+            ("dddmm.mmmm", "-2431.5290", -24.5254833),
+            ("dddmm.mmmm", "2431.529", 24.525483),
+            ("dddmm.mmmm", "-2431.0", -24.5167)
         ]
         for i in coordinates:
             config = {"format": i[0], "miscellania": True, "asdf": 1234}
