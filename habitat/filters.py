@@ -66,6 +66,9 @@ def _post_singlefield(config):
     return (source, destination)
 
 def _round_significant(value, significance):
+    if value == 0:
+        return 0
+
     position = int(significance - math.ceil(math.log10(abs(value)))) 
     return round(value, position)
 

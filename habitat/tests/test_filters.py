@@ -24,15 +24,15 @@ from .. import filters as f
 
 class TestFilters:
     def test_semicolons_to_commas(self):
-        data = "$$testpayload,1,2,3;4;5;6*8A24"
+        data = "$$testpayload,1,2,3;4;5;6*8A24\n"
         fixed = f.semicolons_to_commas({}, data)
-        assert fixed == "$$testpayload,1,2,3,4,5,6*888F"
+        assert fixed == "$$testpayload,1,2,3,4,5,6*888F\n"
 
     def test_semicolons_to_commas_with_other_checksum(self):
-        data = "$$testpayload,1,2,3;4;5;6*68"
+        data = "$$testpayload,1,2,3;4;5;6*68\n"
         config = {'checksum': 'xor'}
         fixed = f.semicolons_to_commas(config, data)
-        assert fixed == "$$testpayload,1,2,3,4,5,6*7F"
+        assert fixed == "$$testpayload,1,2,3,4,5,6*7F\n"
 
     def test_numeric_scale(self):
         config = {"source": "key", "factor": (1.0 / 7.0)}
@@ -51,6 +51,12 @@ class TestFilters:
         data = {"key": 49, "something": True}
         fixed = f.numeric_scale(config, data)
         assert fixed == {"key": 2, "something": True}
+
+    def test_numeric_scale_round_zero(self):
+        config = {"source": "key", "factor": 4.0, "round": 3}
+        data = {"key": 0.0}
+        fixed = f.numeric_scale(config, data)
+        assert fixed == {"key": 0.0}
 
     def test_simple_map(self):
         config = {"source": "key", "destination": "key_thing",
