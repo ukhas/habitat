@@ -57,7 +57,7 @@ class UKHASChecksumFixer(object):
             if checksum_data[1].upper() == self._sum(checksum_data[0]):
                 new_string = self._split_str(self.data["data"])[0]
                 new_sum = self._sum(new_string)
-                self.data["data"] = '$$' + new_string + '*' + new_sum
+                self.data["data"] = '$$' + new_string + '*' + new_sum + '\n'
             else:
                 self.data["data"] = self.original_data
 
@@ -82,4 +82,4 @@ class UKHASChecksumFixer(object):
 
     def _split_str(self, data):
         l = self._sum_length()
-        return (data[2:-(l + 1)], data[-l:])
+        return (data[2:-(l + 2)], data[-(l + 1):-1])
