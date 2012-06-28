@@ -320,7 +320,7 @@ class Parser(object):
         """
         if "pre-filters" in module:
             for f in module["pre-filters"]:
-                data = self._filter(data, f)
+                data = self._filter(data, f, str)
         return data
 
     def _intermediate_filter(self, data, config):
@@ -332,7 +332,7 @@ class Parser(object):
         if "filters" in config:
             if "intermediate" in config["filters"]:
                 for f in config["filters"]["intermediate"]:
-                    data = self._filter(data, f)
+                    data = self._filter(data, f, str)
         return data
 
     def _post_filter(self, data, config):
@@ -343,10 +343,10 @@ class Parser(object):
         if "filters" in config:
             if "post" in config["filters"]:
                 for f in config["filters"]["post"]:
-                    data = self._filter(data, f)
+                    data = self._filter(data, f, dict)
         return data
 
-    def _filter(self, data, f):
+    def _filter(self, data, f, result_type):
         """
         Load and run a filter from a dictionary specifying type, the
         relevant filter/code and maybe a config.
@@ -360,14 +360,20 @@ class Parser(object):
         try:
             if f["type"] == "normal":
                 fil = 'filters.' + f['filter']
-                return self.loadable_manager.run(fil, f, data)
+                data = self.loadable_manager.run(fil, f, data)
             elif f["type"] == "hotfix":
-                return self._hotfix_filter(data, f)
+                data = self._hotfix_filter(data, f)
             else:
                 raise ValueError("Invalid filter type")
+
+            if not data or not isinstance(data, result_type):
+                raise ValueError("Hotfix returned no output or "
+                                 "output of wrong type")
         except:
             logger.exception("Error while applying filter " + repr(f))
             return rollback
+        else:
+            return data
 
     def _sanity_check_hotfix(self, f):
         """Perform basic sanity checks on **f**"""
