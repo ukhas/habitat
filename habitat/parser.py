@@ -177,7 +177,7 @@ class Parser(object):
             receiver_callsign = doc['receivers'].keys()[0]
             time_created = doc['receivers'][receiver_callsign]['time_created']
         except (KeyError, IndexError) as e:
-            logger.warning("Could not find required key in doc: " + e)
+            logger.warning("Could not find required key in doc: " + str(e))
             return None
         raw_data = base64.b64decode(original_data)
 
