@@ -146,7 +146,7 @@ class Parser(object):
             if we still can't get any data:
                 error
 
-        Note that in the loops below, the pre_parse, _find_config_doc and
+        Note that in the loops below, the filter, pre_parse, and
         parse methods will all raise a ValueError if failure occurs,
         continuing the loop.
 
@@ -195,23 +195,43 @@ class Parser(object):
         # Try using real configs
         for module in self.modules:
             try:
+                where = "pre_filter"
                 data = self._pre_filter(raw_data, module)
+                where = "pre_parse"
                 callsign = module["module"].pre_parse(data)
-                config_doc = self._find_config_doc(callsign, time_created)
-                config = config_doc["payloads"][callsign]
-                if config["sentence"]["protocol"] == module["name"]:
-                    data = self._intermediate_filter(data, config)
-                    data = module["module"].parse(data, config["sentence"])
-                    data = self._post_filter(data, config)
-                    data["_protocol"] = module["name"]
-                    data["_flight"] = config_doc["_id"]
-                    data["_parsed"] = True
-                    break
             except (ValueError, KeyError) as e:
-                err = "Exception occurred while attempting to parse: "
-                err += "'{e}' from {module}".format(module=module['name'], e=e)
-                logger.debug(err)
+                logger.debug("Exception in {module} {where}: {e}"
+                        .format(e=e, module=module['name'], where=where))
                 continue
+
+            config_doc = self._find_config_doc(callsign, time_created)
+            if not config_doc:
+                logger.debug("No configuration doc for {callsign!r} found"
+                        .format(callsign=callsign))
+                continue
+
+            config = config_doc["payloads"][callsign]
+            if config["sentence"]["protocol"] != module["name"]:
+                logger.debug("Incorrect protocol: {callsign},{module}"
+                        .format(callsign=callsign, module=module["name"]))
+                continue
+
+            try:
+                where = "intermediate filter"
+                data = self._intermediate_filter(data, config)
+                where = "main parse"
+                data = module["module"].parse(data, config["sentence"])
+                where = "post filter"
+                data = self._post_filter(data, config)
+            except (ValueError, KeyError) as e:
+                logger.debug("Exception in {module} {where}: {e}"
+                        .format(module=module['name'], e=e, where=where))
+                continue
+
+            data["_protocol"] = module["name"]
+            data["_flight"] = config_doc["_id"]
+            data["_parsed"] = True
+            break
 
         # If that didn't work, try using default configurations
         if type(data) is not dict:
@@ -280,18 +300,18 @@ class Parser(object):
         could be found. Flight documents only count if their end time is
         in the future.
         If no config can be found, raises
-        :py:exc:`ValueError <exceptions.ValueError>`, otherwise returns
-        the sentence dictionary out of the payload config dictionary.
+        :py:exc:`ValueError <exceptions.ValueError>`. Otherwise, the whole
+        flight document is returned.
         """
+
         startkey = [callsign, time_created]
         result = self.db.view("habitat/payload_config", limit=1,
                 include_docs=True, startkey=startkey).first()
+
         if not result or callsign not in result["doc"]["payloads"]:
-            err = "No configuration document for callsign '{0}' found."
-            err = err.format(callsign)
-            logger.warning(err)
-            raise ValueError(err)
-        return result["doc"]
+            return False
+        else:
+            return result["doc"]
 
     def _pre_filter(self, data, module):
         """

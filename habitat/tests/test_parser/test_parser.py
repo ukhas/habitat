@@ -210,12 +210,22 @@ class TestParser(object):
         callsign = "habitat"
         time_created = 1234567890
         view_result = {'doc': {'payloads': {callsign: True}}}
+
+        mock_view = self.m.CreateMock(couchdbkit.ViewResults)
+        self.parser.db.view("habitat/payload_config", limit=1,
+                include_docs=True, startkey=[callsign,
+                    time_created]).AndReturn(mock_view)
+        mock_view.first().AndReturn(None)
+
         mock_view = self.m.CreateMock(couchdbkit.ViewResults)
         self.parser.db.view("habitat/payload_config", limit=1,
                 include_docs=True, startkey=[callsign,
                     time_created]).AndReturn(mock_view)
         mock_view.first().AndReturn(view_result)
+
         self.m.ReplayAll()
+        result = self.parser._find_config_doc(callsign, time_created)
+        assert result == False
         result = self.parser._find_config_doc(callsign, time_created)
         assert result == view_result['doc']
         self.m.VerifyAll()
@@ -230,9 +240,9 @@ class TestParser(object):
                     time_created]).AndReturn(mock_view)
         mock_view.first().AndReturn(view_result)
         self.m.ReplayAll()
-        assert_raises(ValueError, self.parser._find_config_doc, callsign,
-                time_created)
+        assert self.parser._find_config_doc(callsign, time_created) == False
         self.m.VerifyAll()
+        self.m.ResetAll()
 
     def test_doesnt_parse_if_no_callsign_found(self):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
@@ -265,20 +275,7 @@ class TestParser(object):
         doc['receivers']['tester']['time_created'] = 1234567890
         self.m.StubOutWithMock(self.parser, '_find_config_doc')
         self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign',
-                1234567890).AndRaise(ValueError)
-        self.m.ReplayAll()
-        assert self.parser.parse(doc) is None
-        self.m.VerifyAll()
-
-    def test_doesnt_parse_if_bad_config(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
-        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-        doc['receivers']['tester']['time_created'] = 1234567890
-        config = {'payloads': {'callsign': {'messed': 'up'}}, '_id': 'test'}
-        self.m.StubOutWithMock(self.parser, '_find_config_doc')
-        self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
+        self.parser._find_config_doc('callsign', 1234567890).AndReturn(False)
         self.m.ReplayAll()
         assert self.parser.parse(doc) is None
         self.m.VerifyAll()
