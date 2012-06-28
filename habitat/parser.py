@@ -30,7 +30,7 @@ import re
 import json
 
 from . import loadable_manager
-from .utils import dynamicloader
+from .utils import dynamicloader, immortal_changes
 
 logger = logging.getLogger("habitat.parser")
 
@@ -101,7 +101,7 @@ class Parser(object):
         Start a continuous connection to CouchDB's _changes feed, watching for
         new unparsed telemetry.
         """
-        consumer = couchdbkit.Consumer(self.db)
+        consumer = immortal_changes.Consumer(self.db)
         consumer.wait(self._couch_callback, filter="habitat/unparsed",
                 since=self.last_seq, include_docs=True, heartbeat=1000)
 
@@ -177,7 +177,7 @@ class Parser(object):
             receiver_callsign = doc['receivers'].keys()[0]
             time_created = doc['receivers'][receiver_callsign]['time_created']
         except (KeyError, IndexError) as e:
-            logger.warning("Could not find required key in doc: " + e)
+            logger.warning("Could not find required key in doc: " + str(e))
             return None
         raw_data = base64.b64decode(original_data)
 
