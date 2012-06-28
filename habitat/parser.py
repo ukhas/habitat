@@ -30,7 +30,7 @@ import re
 import json
 
 from . import loadable_manager
-from .utils import dynamicloader
+from .utils import dynamicloader, immortal_changes
 
 logger = logging.getLogger("habitat.parser")
 
@@ -101,7 +101,7 @@ class Parser(object):
         Start a continuous connection to CouchDB's _changes feed, watching for
         new unparsed telemetry.
         """
-        consumer = couchdbkit.Consumer(self.db)
+        consumer = immortal_changes.Consumer(self.db)
         consumer.wait(self._couch_callback, filter="habitat/unparsed",
                 since=self.last_seq, include_docs=True, heartbeat=1000)
 

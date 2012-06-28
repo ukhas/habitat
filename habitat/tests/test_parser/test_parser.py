@@ -28,6 +28,8 @@ import M2Crypto
 from copy import deepcopy
 from nose.tools import assert_raises
 
+from ...utils import immortal_changes
+
 from ... import parser
 
 
@@ -48,6 +50,7 @@ class TestParser(object):
             "couch_uri": "http://localhost:5984", "couch_db": "test"}
 
         self.m.StubOutWithMock(parser, 'couchdbkit')
+        self.m.StubOutWithMock(parser, 'immortal_changes')
         self.mock_server = self.m.CreateMock(couchdbkit.Server)
         self.mock_db = self.m.CreateMock(couchdbkit.Database)
         parser.couchdbkit.Server("http://localhost:5984")\
@@ -134,8 +137,8 @@ class TestParser(object):
         assert self.parser.db == self.mock_db
 
     def test_run_calls_wait_and_uses_update_seq(self):
-        c = self.m.CreateMock(couchdbkit.Consumer)
-        parser.couchdbkit.Consumer(self.parser.db).AndReturn(c)
+        c = self.m.CreateMock(immortal_changes.Consumer)
+        parser.immortal_changes.Consumer(self.parser.db).AndReturn(c)
         c.wait(self.parser._couch_callback, filter="habitat/unparsed",
                since=191238, include_docs=True, heartbeat=1000)
         self.m.ReplayAll()
