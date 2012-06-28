@@ -121,7 +121,7 @@ class TestParser(object):
     def test_handles_couch_exceptions(self):
         self.backend(mox.IgnoreArg(), since=0).AndRaise(IOError)
         self.exc("Exception from changes (couch)")
-        self.sleep(1)
+        self.sleep(2)
         self.backend(mox.IgnoreArg(), since=0).AndRaise(SystemExit)
 
         self.m.ReplayAll()
@@ -147,7 +147,7 @@ class TestParser(object):
         self.cb({"seq": 24, "changes": []})
         self.cb({"seq": 25, "changes": []})
         self.exc("Exception from changes (couch)")
-        self.sleep(1)
+        self.sleep(2)
         self.backend(mox.IgnoreArg(), since=25).WithSideEffects(callbacks_b)
         self.cb({"seq": 26, "changes": []})
 
@@ -161,7 +161,7 @@ class TestParser(object):
         self.m.VerifyAll()
 
     def test_backs_off(self):
-        for length in [1, 2, 4, 8, 16, 32, 60, 60, 60]:
+        for length in [2, 4, 8, 16, 32, 60, 60, 60]:
             self.backend(mox.IgnoreArg(), since=0).AndRaise(IOError)
             self.exc("Exception from changes (couch)")
             self.sleep(length)
@@ -173,7 +173,7 @@ class TestParser(object):
         self.backend(mox.IgnoreArg(), since=0).WithSideEffects(callbacks)
         self.cb({"seq": 2, "changes": []})
         self.exc("Exception from changes (couch)")
-        self.sleep(1)
+        self.sleep(2)
         self.backend(mox.IgnoreArg(), since=2).AndRaise(SystemExit)
 
         self.m.ReplayAll()

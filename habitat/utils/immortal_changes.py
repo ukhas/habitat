@@ -27,7 +27,7 @@ logger = logging.getLogger("habitat.utils.immortal_changes")
 
 class Consumer(couchdbkit.Consumer):
     def wait(self, callback, **kwargs):
-        state = {"delay": 1, "seq": 0} # scope hax.
+        state = {"delay": 2, "seq": 0} # scope hax.
 
         if "since" in kwargs:
             state["seq"] = kwargs["since"]
@@ -35,7 +35,7 @@ class Consumer(couchdbkit.Consumer):
 
         def wrapped_callback(changes):
             state["seq"] = changes["seq"]
-            state["delay"] = 1
+            state["delay"] = 2
 
             try:
                 callback(changes)
