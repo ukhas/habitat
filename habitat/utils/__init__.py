@@ -25,9 +25,11 @@ Various utilities for general use by ``habitat``.
     habitat.utils.dynamicloader
     habitat.utils.filtertools
     habitat.utils.startup
+    habitat.utils.immortal_changes
 """
 
 from . import checksums
 from . import dynamicloader
 from . import filtertools
 from . import startup
+from . import immortal_changes

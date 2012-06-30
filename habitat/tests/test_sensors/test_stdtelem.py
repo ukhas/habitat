@@ -24,27 +24,20 @@ from ...sensors import stdtelem
 
 
 class TestStdtelem:
-
-    def expected_time_output(self, t):
-        r = {"hour": t[1], "minute": t[2]}
-        if t[3] != None:
-            r["second"] = t[3]
-        return r
-
     def test_valid_times(self):
         times = [
-            ("12:00:00", 12, 0, 0),
-            ("11:15:10", 11, 15, 10),
-            ("00:00:00", 0, 0, 0),
-            ("23:59:59", 23, 59, 59),
-            ("12:00", 12, 0, None),
-            ("01:24", 1, 24, None),
-            ("123456", 12, 34, 56),
-            ("0124", 1, 24, None)
+            ("12:00:00", "12:00:00"),
+            ("11:15:10", "11:15:10"),
+            ("00:00:00", "00:00:00"),
+            ("23:59:59", "23:59:59"),
+            ("12:00",  "12:00:00"),
+            ("01:24",  "01:24:00"),
+            ("123456", "12:34:56"),
+            ("0124",   "01:24:00")
         ]
 
         for i in times:
-            assert stdtelem.time(i[0]) == self.expected_time_output(i)
+            assert stdtelem.time(i[0]) == i[1]
 
     @raises(ValueError)
     def check_invalid_time(self, s):

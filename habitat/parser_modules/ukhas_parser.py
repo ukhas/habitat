@@ -198,7 +198,14 @@ class UKHASParser(ParserModule):
 
         name = config["name"]
         sensor = 'sensors.' + config["sensor"]
-        data = self.loadable_manager.run(sensor, config, field)
+
+        try:
+            data = self.loadable_manager.run(sensor, config, field)
+        except (ValueError, KeyError) as e:
+            # Annotate error with the field name.
+            error_type = type(e)
+            raise error_type("(field {f}): {e!s}".format(f=name, e=e))
+
         return [name, data]
 
     def pre_parse(self, string):
