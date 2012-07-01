@@ -141,16 +141,16 @@ def simple_map(config, data):
 
 def invalid_always(data):
     """
-    Add the fix_invalid key to data.
+    Add the _fix_invalid key to data.
     """
-    data["fix_invalid"] = True
+    data["_fix_invalid"] = True
     return data
 
 
 def invalid_location_zero(data):
     """If the latitude and longitude are zero, the fix is marked invalid."""
     if data["latitude"] == 0.0 and data["longitude"] == 0.0:
-        data["fix_invalid"] = True
+        data["_fix_invalid"] = True
     return data
 
 
@@ -172,6 +172,6 @@ def invalid_gps_lock(config, data):
         source = "gps_lock"
 
     if data[source] not in ok_list:
-        data["fix_invalid"] = True
+        data["_fix_invalid"] = True
 
     return data
