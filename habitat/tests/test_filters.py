@@ -64,3 +64,26 @@ class TestFilters:
         data = {"key": 49}
         fixed = f.simple_map(config, data)
         assert fixed == {"key": 49, "key_thing": "something"}
+
+    def test_invalid_always(self):
+        data = {"key": 1235}
+        assert f.invalid_always(data) == {"key": 1235, "fix_invalid": True}
+
+    def test_invalid_location_zero(self):
+        data = {"latitude": 12.12, "longitude": 3.14}
+        assert f.invalid_location_zero(data.copy()) == data
+        data = {"latitude": 0, "longitude": 0}
+        expect = data.copy()
+        expect.update({"fix_invalid": True})
+        assert f.invalid_location_zero(data) == expect
+
+    def test_invalid_gps_lock(self):
+        config = {"ok": [3, 4, "steve"]}
+        assert f.invalid_gps_lock(config, {"gps_lock": 1}) == \
+                {"gps_lock": 1, "fix_invalid": True}
+        assert f.invalid_gps_lock(config, {"gps_lock": 4}) == \
+                {"gps_lock": 4}
+        assert f.invalid_gps_lock(config, {"gps_lock": "barry"}) == \
+                {"gps_lock": "barry", "fix_invalid": True}
+        assert f.invalid_gps_lock(config, {"gps_lock": "steve"}) == \
+                {"gps_lock": "steve"}
