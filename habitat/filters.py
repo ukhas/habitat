@@ -31,7 +31,8 @@ load them for use.
 from .utils import filtertools
 import math
 
-__all__ = ["semicolons_to_commas", "numeric_scale", "simple_map"]
+__all__ = ["semicolons_to_commas", "numeric_scale", "simple_map",
+           "invalid_always", "invalid_location_zero", "invalid_gps_lock"]
 
 
 def semicolons_to_commas(config, data):
