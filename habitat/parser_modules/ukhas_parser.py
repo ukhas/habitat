@@ -242,19 +242,16 @@ class UKHASParser(ParserModule):
         self._verify_config(config)
         strippedstring, checksum = self._split_basic_format(string)
         self._verify_checksum(strippedstring, checksum, config["checksum"])
+
         fields = self._extract_fields(strippedstring)
         self._verify_callsign(fields[0])
+
+        if len(fields) - 1 != len(config["fields"]):
+            raise ValueError("Incorrect number of fields (got {0}, expect {1})"
+                    .format(len(fields), len(config["fields"])))
+
         output = {"payload": fields[0], "_sentence": string}
-        for field_num in range(len(fields) - 1):
-            try:
-                field = fields[field_num + 1]
-                field_config = config["fields"][field_num]
-            except IndexError:
-                # This will happen when config["fields"] does not have
-                # enough fields for the sentence, so return everything
-                # we haven't been able to parse instead
-                output["_extra_data"] = fields[field_num + 1:]
-                break
+        for field, field_config in zip(fields[1:], config["fields"]):
             name, data = self._parse_field(field, field_config)
             output[name] = data
         return output
