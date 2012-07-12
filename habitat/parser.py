@@ -208,12 +208,14 @@ class Parser(object):
             except (ValueError, KeyError) as e:
                 logger.debug("Exception in {module} {where}: {e}"
                         .format(e=e, module=module['name'], where=where))
+                statsd.increment("parse_exception")
                 continue
 
             config_doc = self._find_config_doc(callsign, time_created)
             if not config_doc:
                 logger.debug("No configuration doc for {callsign!r} found"
                         .format(callsign=callsign))
+                statsd.increment("no_config_doc")
                 continue
 
             config = config_doc["payloads"][callsign]
@@ -232,6 +234,7 @@ class Parser(object):
             except (ValueError, KeyError) as e:
                 logger.debug("Exception in {module} {where}: {e}"
                         .format(module=module['name'], e=e, where=where))
+                statsd.increment("parse_exception")
                 continue
 
             data["_protocol"] = module["name"]
@@ -257,15 +260,14 @@ class Parser(object):
                     data["_used_default_config"] = True
                     data["_parsed"] = True
                     logger.info("Using a default configuration document")
+                    statsd.increment("default_configuration")
                     break
                 except (ValueError, KeyError) as e:
                     err = "Exception occurred while attempting to parse "
                     err += "using default config: '{e}' from {module}"
                     logger.debug(err.format(module=module['name'], e=e))
+                    statsd.increment("parse_exception")
                     continue
-
-        if "_protocol" in data:
-            statsd.increment("protocol.{0}".format(data['_protocol']))
 
         if type(data) is dict:
             doc['data'].update(data)
@@ -273,6 +275,8 @@ class Parser(object):
                 .format(module=module["name"], callsign=callsign))
             logger.debug("Parsed data: " + json.dumps(data))
             statsd.increment("parsed")
+            if "_protocol" in data:
+                statsd.increment("protocol.{0}".format(data['_protocol']))
             return doc
         else:
             logger.info("All attempts to parse failed")
