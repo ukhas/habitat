@@ -28,11 +28,13 @@ import couchdbkit
 import copy
 import re
 import json
+import statsd
 
 from . import loadable_manager
 from .utils import dynamicloader, immortal_changes
 
 logger = logging.getLogger("habitat.parser")
+statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat.parser'})
 
 __all__ = ['Parser', 'ParserModule']
 
@@ -115,6 +117,7 @@ class Parser(object):
         if doc:
             self._save_updated_doc(doc)
 
+    @statsd.StatsdTimer.wrap('time')
     def parse(self, doc):
         """
         Attempts to parse telemetry information out of a new telemetry
@@ -178,15 +181,18 @@ class Parser(object):
             time_created = doc['receivers'][receiver_callsign]['time_created']
         except (KeyError, IndexError) as e:
             logger.warning("Could not find required key in doc: " + str(e))
+            statsd.increment("bad_doc")
             return None
         raw_data = base64.b64decode(original_data)
 
         if self.ascii_exp.search(raw_data):
             debug_type = 'ascii'
             debug_data = raw_data
+            statsd.increment("ascii_doc")
         else:
             debug_type = 'b64'
             debug_data = original_data
+            statsd.increment("binary_doc")
 
         logger.info("Parsing [{type}] {data!r} ({id})"\
                 .format(id=doc["_id"], data=debug_data, type=debug_type))
@@ -258,14 +264,19 @@ class Parser(object):
                     logger.debug(err.format(module=module['name'], e=e))
                     continue
 
+        if "_protocol" in data:
+            statsd.increment("protocol.{0}".format(data['_protocol']))
+
         if type(data) is dict:
             doc['data'].update(data)
             logger.info("{module} parsed data from {callsign} successfully" \
                 .format(module=module["name"], callsign=callsign))
             logger.debug("Parsed data: " + json.dumps(data))
+            statsd.increment("parsed")
             return doc
         else:
             logger.info("All attempts to parse failed")
+            statsd.increment("failed")
             return None
 
     def _save_updated_doc(self, doc, attempts=0):
@@ -279,16 +290,19 @@ class Parser(object):
         try:
             self.db.save_doc(latest)
             logger.debug("Saved doc {0} successfully".format(doc["_id"]))
+            statsd.increment("saved")
         except couchdbkit.exceptions.ResourceConflict:
             attempts += 1
             if attempts >= 30:
                 err = "Could not save doc {0} after {1} conflicts." \
                         .format(doc["_id"], attempts)
                 logger.error(err)
+                statsd.increment("save_error")
                 raise RuntimeError(err)
             else:
                 logger.debug("Save conflict, trying again (#{0})" \
                     .format(attempts))
+                statsd.increment("save_conflict")
                 self._save_updated_doc(doc, attempts)
 
     def _find_config_doc(self, callsign, time_created):
@@ -321,6 +335,7 @@ class Parser(object):
         if "pre-filters" in module:
             for f in module["pre-filters"]:
                 data = self._filter(data, f, str)
+                statsd.increment("filters.pre")
         return data
 
     def _intermediate_filter(self, data, config):
@@ -333,6 +348,7 @@ class Parser(object):
             if "intermediate" in config["filters"]:
                 for f in config["filters"]["intermediate"]:
                     data = self._filter(data, f, str)
+                    statsd.increment("filters.intermediate")
         return data
 
     def _post_filter(self, data, config):
@@ -344,6 +360,7 @@ class Parser(object):
             if "post" in config["filters"]:
                 for f in config["filters"]["post"]:
                     data = self._filter(data, f, dict)
+                    statsd.increment("filters.post")
         return data
 
     def _filter(self, data, f, result_type):
@@ -401,8 +418,10 @@ class Parser(object):
             sig = base64.b64decode(f["signature"])
             ok = cert.get_pubkey().get_rsa().verify(digest, sig, 'sha256')
         except (TypeError, M2Crypto.RSA.RSAError):
-            raise ValueError("Signature is invalid.")
+            statsd.increment("filters.hotfix.invalid_signature")
+            raise ValueError("Hotfix signature is not valid")
         if not ok:
+            statsd.increment("filters.hotfix.invalid_signature")
             raise ValueError("Hotfix signature is not valid")
 
     def _compile_hotfix(self, f):
@@ -415,6 +434,7 @@ class Parser(object):
             code = compile(body, "<filter>", "exec")
             exec code in env
         except (SyntaxError, AttributeError, TypeError):
+            statsd.increment("filters.hotfix.compile_error")
             raise ValueError("Hotfix code didn't compile: " + repr(f))
         return env
 
@@ -434,6 +454,8 @@ class Parser(object):
         env = self._compile_hotfix(f)
 
         logger.debug("Executing a hotfix")
+        statsd.increment("filters.hotfix.executed")
+
         return env["f"](data)
 
     def _get_certificate(self, certname):
