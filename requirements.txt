@@ -2,3 +2,4 @@ M2Crypto==0.21.1
 couchdbkit==0.5.4
 crcmod==1.7
 PyYAML==3.10
+statsd-client==1.0.2
