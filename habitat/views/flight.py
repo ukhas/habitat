@@ -99,14 +99,3 @@ def launch_time_including_payloads_map(doc):
             for payload in doc['payloads']:
                 yield (lt, 1), {'_id': payload}
 
-@version(1)
-def owner_launch_time_map(doc):
-    """
-    Map by owner then launch time with the launch name in the value.
-
-    Used to show users their own launch documents.
-    """
-    if doc['type'] == "flight" and 'owner' in doc:
-        lt = rfc3339_to_timestamp(doc['launch']['time'])
-        yield (doc['owner'], lt), doc['name']
-

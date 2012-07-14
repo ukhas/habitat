@@ -3,7 +3,6 @@ flight:
     views:
         end_including_payloads: habitat.views.flight.end_including_payloads_map
         launch_time_including_payloads: habitat.views.flight.launch_time_including_payloads_map
-        owner_launch_time: habitat.views.flight.owner_launch_time_map
 
 habitat:
     validate_doc_update: habitat.views.habitat.validate
@@ -23,8 +22,8 @@ listener_telemetry:
 payload_configuration:
     validate_doc_update: habitat.views.payload_configuration.validate
     views:
-        name_version: habitat.views.payload_configuration.name_version_map
-        owner_name_version: habitat.views.payload_configuration.owner_name_version_map
+        name_time_created: habitat.views.payload_configuration.name_time_created_map
+        callsign_time_created: habitat.views.payload_configuration.callsign_time_created_map
         
 payload_telemetry:
     validate_doc_update: habitat.views.payload_telemetry.validate

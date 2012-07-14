@@ -27,12 +27,6 @@
             "pattern": "^flight$",
             "required": true
         },
-        "owner": {
-            "title": "Document Owner",
-            "description": "The CouchDB user who owns this document. If specified, only this logged in user and admins may edit the document.",
-            "type": "string",
-            "required": false
-        },
         "approved": {
             "title": "Flight Document Approval Status",
             "description": "The approval status of this flight. Unapproved flights are hidden by default. Flights are approved by admins.",

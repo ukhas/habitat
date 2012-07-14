@@ -90,34 +90,23 @@ def validate(new, old, userctx, secobj):
                 _validate_rtty(transmission)
 
 @version(1)
-def name_version_map(doc):
+def name_time_created_map(doc):
     """
-    Emit (name, version).
+    Emit (name, date_created).
 
     Used to get a list of all current payload configurations.
     """
     if doc['type'] == "payload_configuration":
-        yield (doc['name'], doc['version']), None
+        yield (doc['name'], doc['date_created']), None
 
 @version(1)
-def owner_name_version_map(doc):
+def callsign_time_created_map(doc):
     """
-    Emit (owner, name, version).
-
-    Used for selecting payload configurations belonging to a particular user.
-    """
-    if doc['type'] == "payload_configuration":
-        if 'owner' in doc:
-            yield (doc['owner'], doc['name'], doc['version']), None
-
-@version(1)
-def callsign_version_map(doc):
-    """
-    Emit (callsign, version) -> sentence for each callsign in the document.
+    Emit (callsign, created) -> sentence for each callsign in the document.
 
     Used by the parser when parsing telemetry not in a flight.
     """
     if doc['type'] == "payload_configuration":
         if 'sentences' in doc:
             for sentence in doc['sentences']:
-                yield (sentence['callsign'], doc['version']), sentence
+                yield (sentence['callsign'], doc['created']), sentence
