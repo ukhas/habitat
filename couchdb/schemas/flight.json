@@ -95,6 +95,12 @@
                             "minimum": -180,
                             "maximum": 180,
                             "required": true
+                        },
+                        "altitude": {
+                            "title": "Launch Altitude",
+                            "description": "Altitude launch occured at, in metres above mean sea level.",
+                            "type": "number",
+                            "required": false
                         }
                     }
                 }

@@ -42,15 +42,8 @@ def validate(new, old, userctx, secobj):
     if '_admin' in userctx['roles']:
         return
 
-    if old['approved']:
-        if new['approved']:
-            if 'manager' not in userctx['roles']:
-                raise ForbiddenError(
-                        "Only managers may edit approved documents.")
-    else:
-        if new['approved']:
-            if 'manager' not in userctx['roles']:
-                raise ForbiddenError("Only managers may approve documents.")
+    if new['approved'] and 'manager' not in userctx['roles']:
+        raise ForbiddenError("Only managers may approve documents.")
 
     start = rfc3339_to_timestamp(new['start'])
     end = rfc3339_to_timestamp(new['end'])
