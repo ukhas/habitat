@@ -39,11 +39,11 @@
             "required": true,
             "type": "string"
         },
-        "version": {
-            "title": "Configuration Version",
-            "description": "Which version of the payload this configuration file is for. This number should not be changed once set and is used to differentiate newer configurations for the same payload. Only one 'version' should be current at once, use multiple sentences if the current version of the payload might transmit different sentence formats.",
-            "required": true,
-            "type": "number"
+        "time_created": {
+            "title": "Document Creation Date",
+            "description": "The date at which this document was created. Used for fetching the latest version of a configuration document. In RFC3339.",
+            "type": "date-time",
+            "required": true
         },
         "transmissions": {
             "title": "Radio Transmissions",
@@ -105,6 +105,12 @@
                         "type": "number",
                         "required": false,
                         "enum": [1, 1.5, 2]
+                    },
+                    "description": {
+                        "title": "Telemetry Description",
+                        "description": "A brief human readable description of this telemetry configuration, just used for UI.",
+                        "type": "string",
+                        "required": false
                     }
                 }
             }
@@ -138,6 +144,12 @@
                         "type": "string",
                         "required": true
                     },
+                    "description": {
+                        "title": "Sentence Description",
+                        "description": "A brief human readable description of this sentence configuration, just used for UI.",
+                        "type": "string",
+                        "required": false
+                    }
                     "fields": {
                         "title": "Sentence Fields",
                         "description": "The fields this sentence is made up of, as an array, taken in order.",
