@@ -58,7 +58,7 @@ class TestFlight(object):
     def test_validates_against_schema(self):
         flight.validate_doc(doc, schema)
         self.m.ReplayAll()
-        flight.validate(doc, doc, {'roles': []}, {})
+        flight.validate(doc, None, {'roles': []}, {})
         self.m.VerifyAll()
 
     def test_passes_if_admin(self):
