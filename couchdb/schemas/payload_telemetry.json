@@ -59,9 +59,37 @@
                 },
                 "_parsed": {
                     "title": "Parsed",
-                    "description": "If present, records the time at which this document was parsed. If absent, the document has not yet been parsed. Inserted by the parser.",
-                    "type": "date-time",
-                    "required": false
+                    "required": false,
+                    "description": "When present, records information relating to the parsing of the document. If absent the document has not been (or could not be) parsed. Inserted by the parser.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "time_parsed": {
+                            "title": "Time Parsed",
+                            "description": "The time, as an RFC3339 string, when the parser parsed this document.",
+                            "required": true,
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "payload_configuration": {
+                            "title": "Payload Configuration Document ID",
+                            "descrption": "The document ID of the payload_configuration document used to parse this document.",
+                            "required": true,
+                            "type": "string"
+                        },
+                        "configuration_sentence_index": {
+                            "title": "Payload Configuration Sentence Index",
+                            "description": "The index into the sentences list in the payload_configuration document used to parse this document.",
+                            "required": true,
+                            "type": "number"
+                        },
+                        "flight": {
+                            "title": "Flight ID",
+                            "description": "The document ID of the flight associated with this telemetry, if it was parsed as part of a flight.",
+                            "type": "string",
+                            "required": false
+                        }
+                    }
                 }
             }
         },

@@ -58,18 +58,11 @@ def validate(new, old, userctx, secobj):
 
     _check_only_new(new, old)
 
-@version(1)
-def flight_payload_estimated_received_time_map(doc):
-    """Map by flight, payload, estimated received time."""
-    if doc['type'] != "payload_telemetry":
-        return
-    if 'data' not in doc or '_parsed' not in doc['data']:
-        return
-
+def estimate_time_received(receivers):
     sum_x, sum_x2, n = 0, 0, 0
 
-    for callsign in doc['receivers']:
-        x = rfc3339_to_timestamp(doc['receivers'][callsign]['time_created'])
+    for callsign in receivers:
+        x = rfc3339_to_timestamp(receivers[callsign]['time_created'])
         sum_x += x
         sum_x2 += x * x
         n += 1
@@ -79,18 +72,35 @@ def flight_payload_estimated_received_time_map(doc):
 
     new_sum_x, new_n = 0, 0
 
-    for callsign in doc['receivers']:
-        x = rfc3339_to_timestamp(doc['receivers'][callsign]['time_created'])
-        if math.abs(x - mean) > std_dev:
+    for callsign in receivers:
+        x = rfc3339_to_timestamp(receivers[callsign]['time_created'])
+        if abs(x - mean) > std_dev:
             continue
         new_sum_x += x
         new_n += 1
 
-    estimated_time = new_sum_x / new_n if new_n != 0 else mean
-    
-    val = None
-    if '_sentence' in doc['data']:
-        val = doc['data']['_sentence']
+    return new_sum_x / new_n if new_n != 0 else mean
 
-    yield (doc['data']['_flight'], doc['data']['payload'], estimated_time), val
+@version(1)
+def flight_payload_time_map(doc):
+    """Map by flight, payload configuration, estimated received time."""
+    if doc['type'] != "payload_telemetry" or '_parsed' not in doc['data']:
+        return
 
+    estimated_time = estimate_time_received(doc['receivers'])
+
+    parsed = doc['data']['_parsed']
+    flight = None if 'flight' not in parsed else parsed['flight']
+
+    yield (flight, parsed['payload_configuration'], estimated_time), None
+
+@version(1)
+def payload_time_map(doc):
+    """Map by payload configuration, estimated received time."""
+    if doc['type'] != "payload_telemetry" or '_parsed' not in doc['data']:
+        return
+
+    estimated_time = estimate_time_received(doc['receivers'])
+
+    parsed = doc['data']['_parsed']
+    yield (parsed['payload_configuration'], estimated_time), None
