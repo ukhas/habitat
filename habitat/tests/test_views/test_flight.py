@@ -77,6 +77,13 @@ class TestFlight(object):
         flight.validate(unapproved, approved, {'roles': ['manager']}, {})
         flight.validate(approved, approved, {'roles': ['manager']}, {})
 
+    def test_only_managers_edit_docs(self):
+        new = deepcopy(doc)
+        new['name'] = "Edited Launch"
+        assert_raises(ForbiddenError, flight.validate, new, doc,
+                {'roles': []}, {})
+        flight.validate(new, doc, {'roles': ['manager']}, {})
+
     def test_start_before_end(self):
         mydoc = deepcopy(doc)
         # start at the same local time but in UTC not +0100, so 'after'
