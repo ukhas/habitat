@@ -90,9 +90,10 @@ def flight_payload_time_map(doc):
     estimated_time = estimate_time_received(doc['receivers'])
 
     parsed = doc['data']['_parsed']
-    flight = None if 'flight' not in parsed else parsed['flight']
-
-    yield (flight, parsed['payload_configuration'], estimated_time), None
+    if 'flight' in parsed:
+        flight = parsed['flight']
+        config = parsed['payload_configuration']
+        yield (flight, config, estimated_time), None
 
 @version(1)
 def payload_time_map(doc):

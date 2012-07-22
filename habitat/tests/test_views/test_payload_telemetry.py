@@ -82,13 +82,34 @@ class TestPayloadTelemetry(object):
         mydoc['data']['_string'] = 'bla bla'
         payload_telemetry.validate(mydoc, doc, {'roles': []}, {})
 
-    def test_view_flight_payload_estimated_received_time(self):
+    def test_view_flight_payload_time(self):
+        mydoc = deepcopy(doc)
         view = payload_telemetry.flight_payload_time_map
-        result = list(view(doc))
+        result = list(view(mydoc))
         assert result == []
-        doc['data']['_parsed'] = {
+        mydoc['data']['_parsed'] = {
             "time_parsed": "2012-07-17T22:05:00+0100",
             "payload_configuration": "abcdef",
             "configuration_sentence_index": 0
         }
-        result = list(view(doc))
+        result = list(view(mydoc))
+        assert result == []
+        mydoc['data']['_parsed']['flight'] = "fedcba"
+        result = list(view(mydoc))
+        assert result == [(('fedcba', 'abcdef', 1342555406), None)]
+
+    def test_view_payload_time(self):
+        mydoc = deepcopy(doc)
+        view = payload_telemetry.payload_time_map
+        result = list(view(mydoc))
+        assert result == []
+        mydoc['data']['_parsed'] = {
+            "time_parsed": "2012-07-17T22:05:00+0100",
+            "payload_configuration": "abcdef",
+            "configuration_sentence_index": 0
+        }
+        result = list(view(mydoc))
+        assert result == [(('abcdef', 1342555406), None)]
+        mydoc['data']['_parsed']['flight'] = "fedcba"
+        result = list(view(mydoc))
+        assert result == [(('abcdef', 1342555406), None)]
