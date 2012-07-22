@@ -23,7 +23,7 @@ version.
 """
 
 from couch_named_python import ForbiddenError, version
-from .utils import read_json_schema, validate_doc
+from .utils import read_json_schema, validate_doc, must_be_admin
 
 schema = None
 
@@ -75,6 +75,9 @@ def validate(new, old, userctx, secobj):
         schema = read_json_schema("payload_configuration.json")
     if 'type' in new and new['type'] == "payload_configuration":
         validate_doc(new, schema)
+
+    if old:
+        must_be_admin(userctx)
 
     if 'sentences' in new:
         for sentence in new['sentences']:
