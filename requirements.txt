@@ -1,9 +1,9 @@
-M2Crypto==0.21.1
+-e git://github.com/ukhas/M2Crypto.git#egg=M2Crypto
 couchdbkit==0.6.1
 crcmod==1.7
 ipaddr==2.1.10
 PyYAML==3.10
--e git://github.com/Julian/jsonschema.git@6bc1587dca6441e96c27#egg=jsonschema
+-e git://github.com/ukhas/jsonschema.git@6bc1587dca6441e96c27#egg=jsonschema
 couch-named-python==0.1.6dev
 python-dateutil==1.5
 Securetypes==11.12.28
