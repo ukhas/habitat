@@ -56,9 +56,23 @@ def validate(new, old, userctx, secobj):
     if '_admin' in userctx['roles']:
         return
 
-    _check_only_new(new, old)
+    if old:
+        if new['data'] != old['data'] and 'parser' not in userctx['roles']:
+            raise ForbiddenError("Only the parser may add data to an existing"
+                                 " document.")
+        for receiver in old['receivers']:
+            if (receiver not in new['receivers'] or
+               new['receivers'][receiver] != old['receivers'][receiver]):
+                   raise ForbiddenError("May not edit or remove receivers.")
+    else:
+        if len(new['receivers']) != 1:
+            raise ForbiddenError("New documents must have exactly one"
+                                 "receiver.")
+        if new['data'].keys() != ['_raw']:
+            raise ForbiddenError("New documents may only have _raw in data.")
 
-def estimate_time_received(receivers):
+
+def _estimate_time_received(receivers):
     sum_x, sum_x2, n = 0, 0, 0
 
     for callsign in receivers:
@@ -87,7 +101,7 @@ def flight_payload_time_map(doc):
     if doc['type'] != "payload_telemetry" or '_parsed' not in doc['data']:
         return
 
-    estimated_time = estimate_time_received(doc['receivers'])
+    estimated_time = _estimate_time_received(doc['receivers'])
 
     parsed = doc['data']['_parsed']
     if 'flight' in parsed:
@@ -101,7 +115,7 @@ def payload_time_map(doc):
     if doc['type'] != "payload_telemetry" or '_parsed' not in doc['data']:
         return
 
-    estimated_time = estimate_time_received(doc['receivers'])
+    estimated_time = _estimate_time_received(doc['receivers'])
 
     parsed = doc['data']['_parsed']
     yield (parsed['payload_configuration'], estimated_time), None

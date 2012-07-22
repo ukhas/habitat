@@ -35,7 +35,7 @@
             "properties": {
                 "_raw": {
                     "title": "Raw Data",
-                    "description": "The raw transmitted data, as a base64 string. Must be uploaded by listeners. If given, _manual probably won't be.",
+                    "description": "The raw transmitted data, as a base64 string. Must be uploaded by listeners.",
                     "type": "string",
                     "required": false
                 },
@@ -43,12 +43,6 @@
                     "title": "Raw Data String",
                     "description": "The ASCII representation of the raw data, if the data is all printable. Inserted by the parser.",
                     "type": "string",
-                    "required": false
-                },
-                "_manual": {
-                    "title": "Manual Telemetry",
-                    "description": "Must be present and true if this telemetry was entered manually rather than by reception of a telemetry string. If true, _raw will probably not be given.",
-                    "type": "boolean",
                     "required": false
                 },
                 "_protocol": {

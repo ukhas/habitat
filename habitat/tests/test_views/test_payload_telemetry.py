@@ -58,29 +58,40 @@ class TestPayloadTelemetry(object):
         payload_telemetry.validate(doc, {}, {'roles': []}, {})
         self.m.VerifyAll()
 
-    def test_only_admins_may_edit(self):
+    def test_only_parser_may_add_data(self):
         mydoc = deepcopy(doc)
-        mydoc['data']['_raw'] = "123456"
+        mydoc['data']['result'] = 42
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, doc, {'roles': []}, {})
-        payload_telemetry.validate(mydoc, doc, {'roles': ['_admin']}, {})
+        payload_telemetry.validate(mydoc, doc, {'roles': ['parser']}, {})
 
-    def test_only_admins_may_delete(self):
+    def test_may_only_add_receivers(self):
         mydoc = deepcopy(doc)
-        del mydoc['data']['_raw']
+        del mydoc['receivers']['M0RND']
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, doc, {'roles': []}, {})
-        payload_telemetry.validate(mydoc, doc, {'roles': ['_admin']}, {})
-
-    def test_anyone_can_add(self):
+        mydoc = deepcopy(doc)
+        mydoc['receivers']['M0RND']['time_created'] = "changed"
+        assert_raises(ForbiddenError, payload_telemetry.validate,
+                mydoc, doc, {'roles': []}, {})
         mydoc = deepcopy(doc)
         mydoc['receivers']['2E0SKK'] = {
             "time_created": "2012-07-17T21:03:27+0100",
             "time_uploaded": "2012-07-17T21:03:32+0100"
         }
         payload_telemetry.validate(mydoc, doc, {'roles': []}, {})
-        mydoc['data']['_string'] = 'bla bla'
-        payload_telemetry.validate(mydoc, doc, {'roles': []}, {})
+
+    def test_must_have_a_receiver(self):
+        mydoc = deepcopy(doc)
+        mydoc['receivers'] = {}
+        assert_raises(ForbiddenError, payload_telemetry.validate,
+                mydoc, {}, {'roles': []}, {})
+
+    def test_new_docs_may_only_have_raw(self):
+        mydoc = deepcopy(doc)
+        mydoc['data']['result'] = 42
+        assert_raises(ForbiddenError, payload_telemetry.validate,
+                mydoc, {}, {'roles': []}, {})
 
     def test_view_flight_payload_time(self):
         mydoc = deepcopy(doc)
