@@ -21,7 +21,7 @@ Contains schema validation and a view by flight, payload and received time.
 """
 
 import math
-from couch_named_python import ForbiddenError, version
+from couch_named_python import ForbiddenError, UnauthorizedError, version
 from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
 
 schema = None
@@ -58,8 +58,8 @@ def validate(new, old, userctx, secobj):
 
     if old:
         if new['data'] != old['data'] and 'parser' not in userctx['roles']:
-            raise ForbiddenError("Only the parser may add data to an existing"
-                                 " document.")
+            raise UnauthorizedError("Only the parser may add data to an"
+                                    " existing document.")
         for receiver in old['receivers']:
             if (receiver not in new['receivers'] or
                new['receivers'][receiver] != old['receivers'][receiver]):

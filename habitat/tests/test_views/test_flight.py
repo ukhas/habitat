@@ -23,7 +23,7 @@ from ...views import flight
 
 from ...views.utils import read_json_schema
 
-from couch_named_python import ForbiddenError
+from couch_named_python import ForbiddenError, UnauthorizedError
 
 from copy import deepcopy
 from nose.tools import assert_raises
@@ -70,9 +70,9 @@ class TestFlight(object):
         unapproved = deepcopy(doc)
         approved = deepcopy(doc)
         approved['approved'] = True
-        assert_raises(ForbiddenError, flight.validate, approved, unapproved,
+        assert_raises(UnauthorizedError, flight.validate, approved, unapproved,
                 {'roles': []}, {})
-        assert_raises(ForbiddenError, flight.validate, approved, approved,
+        assert_raises(UnauthorizedError, flight.validate, approved, approved,
                 {'roles': []}, {})
         flight.validate(unapproved, approved, {'roles': ['manager']}, {})
         flight.validate(approved, approved, {'roles': ['manager']}, {})
@@ -80,7 +80,7 @@ class TestFlight(object):
     def test_only_managers_edit_docs(self):
         new = deepcopy(doc)
         new['name'] = "Edited Launch"
-        assert_raises(ForbiddenError, flight.validate, new, doc,
+        assert_raises(UnauthorizedError, flight.validate, new, doc,
                 {'roles': []}, {})
         flight.validate(new, doc, {'roles': ['manager']}, {})
 
@@ -88,19 +88,19 @@ class TestFlight(object):
         mydoc = deepcopy(doc)
         # start at the same local time but in UTC not +0100, so 'after'
         mydoc['start'] = "2012-07-15T00:00:00Z"
-        assert_raises(ForbiddenError, flight.validate, mydoc, mydoc,
+        assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
 
     def test_window_less_than_a_week(self):
         mydoc = deepcopy(doc)
         mydoc['start'] = "2012-07-07T00:00:00+0100"
-        assert_raises(ForbiddenError, flight.validate, mydoc, mydoc,
+        assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
 
     def test_launch_time_within_window(self):
         mydoc = deepcopy(doc)
         mydoc['launch']['time'] = "2012-07-14T22:00:00+0100"
-        assert_raises(ForbiddenError, flight.validate, mydoc, mydoc,
+        assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
 
     def test_view_launch_time_including_payloads(self):

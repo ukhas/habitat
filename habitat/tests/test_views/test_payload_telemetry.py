@@ -23,7 +23,7 @@ from ...views import payload_telemetry
 
 from ...views.utils import read_json_schema
 
-from couch_named_python import ForbiddenError
+from couch_named_python import ForbiddenError, UnauthorizedError
 
 from copy import deepcopy
 from nose.tools import assert_raises
@@ -61,7 +61,7 @@ class TestPayloadTelemetry(object):
     def test_only_parser_may_add_data(self):
         mydoc = deepcopy(doc)
         mydoc['data']['result'] = 42
-        assert_raises(ForbiddenError, payload_telemetry.validate,
+        assert_raises(UnauthorizedError, payload_telemetry.validate,
                 mydoc, doc, {'roles': []}, {})
         payload_telemetry.validate(mydoc, doc, {'roles': ['parser']}, {})
 

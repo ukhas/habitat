@@ -21,7 +21,7 @@ Contains schema validation and views by flight launch time, window end time and
 payload name and window end time.
 """
 
-from couch_named_python import ForbiddenError, version
+from couch_named_python import ForbiddenError, UnauthorizedError, version
 from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
 
 schema = None
@@ -43,10 +43,10 @@ def validate(new, old, userctx, secobj):
         return
 
     if new['approved'] and 'manager' not in userctx['roles']:
-        raise ForbiddenError("Only managers may approve documents.")
+        raise UnauthorizedError("Only managers may approve documents.")
 
     if old and 'manager' not in userctx['roles']:
-        raise ForbiddenError("Only managers may edit documents.")
+        raise UnauthorizedError("Only managers may edit documents.")
 
     start = rfc3339_to_timestamp(new['start'])
     end = rfc3339_to_timestamp(new['end'])
