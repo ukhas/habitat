@@ -3,6 +3,7 @@ flight:
     views:
         end_including_payloads: habitat.views.flight.end_including_payloads_map
         launch_time_including_payloads: habitat.views.flight.launch_time_including_payloads_map
+        all_name_time_created: habitat.views.flight.all_name_map
 
 habitat:
     validate_doc_update: habitat.views.habitat.validate
@@ -28,7 +29,8 @@ payload_configuration:
 payload_telemetry:
     validate_doc_update: habitat.views.payload_telemetry.validate
     views:
-        flight_payload_estimated_received_time: habitat.views.payload_telemetry.flight_payload_estimated_received_time_map
+        flight_payload_time: habitat.views.payload_telemetry.flight_payload_time_map
+        payload_time: habitat.views.payload_telemetry.payload_time_map
 
 parser:
     filters:

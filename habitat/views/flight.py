@@ -96,13 +96,14 @@ def launch_time_including_payloads_map(doc):
                 yield (lt, 1), {'_id': payload}
 
 @version(1)
-def name_map(doc):
+def all_name_map(doc):
     """
     Sort by flight name.
+
+    Show all flights, even those unapproved.
     
     Used where the UI must show all the flights in some usefully searchable
     sense.
     """
     if doc['type'] == "flight":
-        if doc['approved']:
-            yield doc['name'], None
+        yield doc['name'], None
