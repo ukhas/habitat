@@ -24,6 +24,7 @@ version.
 
 from couch_named_python import ForbiddenError, version
 from .utils import read_json_schema, validate_doc, must_be_admin
+from .utils import rfc3339_to_timestamp
 
 schema = None
 
@@ -39,7 +40,7 @@ def _validate_ukhas(sentence):
     if 'fields' in sentence:
         for field in sentence['fields']:
             if field['sensor'] == "stdtelem.coordinate":
-                if 'format' not in field['sensor']:
+                if 'format' not in field:
                     raise ForbiddenError(
                         "Coordinate fields must have formats.")
 
@@ -84,8 +85,12 @@ def validate(new, old, userctx, secobj):
             if sentence['protocol'] == "UKHAS":
                 _validate_ukhas(sentence)
             if 'filters' in sentence:
-                for f in sentence['filters']:
-                    _validate_filter(f)
+                if 'intermediate' in sentence['filters']:
+                    for f in sentence['filters']['intermediate']:
+                        _validate_filter(f)
+                if 'post' in sentence['filters']:
+                    for f in sentence['filters']['post']:
+                        _validate_filter(f)
 
     if 'transmissions' in new:
         for transmission in new['transmissions']:
@@ -100,7 +105,8 @@ def name_time_created_map(doc):
     Used to get a list of all current payload configurations.
     """
     if doc['type'] == "payload_configuration":
-        yield (doc['name'], doc['date_created']), None
+        created = rfc3339_to_timestamp(doc['time_created'])
+        yield (doc['name'], created), None
 
 @version(1)
 def callsign_time_created_map(doc):
@@ -111,5 +117,6 @@ def callsign_time_created_map(doc):
     """
     if doc['type'] == "payload_configuration":
         if 'sentences' in doc:
+            created = rfc3339_to_timestamp(doc['time_created'])
             for sentence in doc['sentences']:
-                yield (sentence['callsign'], doc['created']), sentence
+                yield (sentence['callsign'], created), sentence
