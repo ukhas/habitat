@@ -50,6 +50,7 @@ doc = {
             "protocol": "UKHAS",
             "checksum": "crc16-ccitt",
             "callsign": "HABITAT",
+            "fields": [{'sensor': 'bla'}],
             "filters": {
                 "intermediate": [
                     {
@@ -93,18 +94,35 @@ class TestPayloadConfiguration(object):
                 mydoc, doc, {'roles': []}, {})
         payload_configuration.validate(mydoc, doc, {'roles': ['_admin']}, {})
 
-    def test_ukhas_sentences_must_be_ok(self):
+    def test_ukhas_sentences_must_have_valid_checksum(self):
         mydoc = deepcopy(doc)
         sentence = mydoc['sentences'][0]
         sentence['checksum'] = "invalid"
         assert_raises(ForbiddenError, payload_configuration.validate,
                 mydoc, {}, {'roles': []}, {})
-        sentence['checksum'] = "crc16-ccitt"
-        sentence['fields'] = [{"name": "c", "sensor": "stdtelem.coordinate"}]
+        mydoc = deepcopy(doc)
+        del mydoc['sentences'][0]['checksum']
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+
+    def test_ukhas_sentences_must_put_format_in_coordinate_fields(self):
+        mydoc = deepcopy(doc)
+        sentence = mydoc['sentences'][0]
+        sentence['fields'][0] = {"name": "c", "sensor": "stdtelem.coordinate"}
         assert_raises(ForbiddenError, payload_configuration.validate,
                 mydoc, {}, {'roles': []}, {})
         sentence['fields'][0]["format"] = "dd.dddd"
         payload_configuration.validate(mydoc, {}, {'roles': []}, {})
+
+    def test_ukhas_sentences_must_have_fields(self):
+        mydoc = deepcopy(doc)
+        sentence = mydoc['sentences'][0]
+        sentence['fields'] = {}
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+        del sentence['fields']
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
 
     def test_rtty_transmissions_must_be_ok(self):
         for key in ['shift', 'encoding', 'baud', 'parity', 'stop']:

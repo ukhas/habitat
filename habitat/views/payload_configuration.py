@@ -33,16 +33,26 @@ def _validate_ukhas(sentence):
     For UKHAS sentences, check that the checksum is an allowable type and that
     fields with structural requirements are valid.
     """
-    checksums = ["xor", "crc16-ccitt", "fletcher-16", "fletcher-16-256"]
+    checksums = ["xor", "crc16-ccitt", "fletcher-16", "fletcher-16-256",
+                 "none"]
     if 'checksum' in sentence:
         if sentence['checksum'] not in checksums:
             raise ForbiddenError("Invalid checksum algorithm.")
+    else:
+        raise ForbiddenError("UKHAS sentences must have a checksum.")
+
     if 'fields' in sentence:
+        if len(sentence['fields']) < 1:
+            raise ForbiddenError(
+                "UKHAS sentences must have at least one field.")
+
         for field in sentence['fields']:
             if field['sensor'] == "stdtelem.coordinate":
                 if 'format' not in field:
                     raise ForbiddenError(
                         "Coordinate fields must have formats.")
+    else:
+        raise ForbiddenError("UKHAS sentences must have fields.")
 
 def _validate_rtty(transmission):
     """
