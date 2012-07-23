@@ -128,3 +128,9 @@ class TestFlight(object):
         ]
 
         assert result == expected
+
+    def test_view_name(self):
+        mydoc = deepcopy(doc)
+        mydoc['approved'] = True
+        result = list(flight.name_map(mydoc))
+        assert result == [("Test Launch", None)]
