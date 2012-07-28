@@ -27,11 +27,10 @@ __all__ = ["time", "coordinate"]
 
 def time(data):
     """
-    Parse the time, returning a dictionary representation.
+    Parse the time, validating it and returning the standard ``HH:MM:SS``.
 
     Accepted formats include ``HH:MM:SS``, ``HHMMSS``, ``HH:MM`` and ``HHMM``.
-
-    The returned dictionary contains keys ``hour``, ``minute`` and ``second``.
+    It uses strptime to ensure the values are sane.
     """
 
     if len(data) == 8:
@@ -45,12 +44,7 @@ def time(data):
     else:
         raise ValueError("Invalid time value.")
 
-    parsed_data = {}
-    parsed_data["hour"] = t.tm_hour
-    parsed_data["minute"] = t.tm_min
-    if len(data) == 8 or len(data) == 6:
-        parsed_data["second"] = t.tm_sec
-    return parsed_data
+    return "{0.tm_hour:02d}:{0.tm_min:02d}:{0.tm_sec:02d}".format(t)
 
 
 def coordinate(config, data):
@@ -80,6 +74,7 @@ def coordinate(config, data):
             raise ValueError("Minutes component > 60.")
         m_to_d = minutes / 60.0
         degrees += math.copysign(m_to_d, degrees)
-        return degrees
+        dp = len(second) + 3 # num digits in minutes + 1
+        return round(degrees, dp)
     else:
         raise ValueError("Invalid coordinate format")

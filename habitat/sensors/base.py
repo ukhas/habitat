@@ -21,21 +21,21 @@ Basic sensor functions.
 These sensors cover simple ASCII representations of numbers and strings.
 """
 
-__all__ = ["ascii_int", "ascii_float", "string"]
+__all__ = ["ascii_int", "ascii_float", "string", "constant"]
 
 
 def ascii_int(data):
     """
-    Parse *data* to an integer, or return ``None`` if the string is empty.
+    Parse *data* to an integer.
     """
-    return int(data) if data != '' else None
+    return int(data)
 
 
 def ascii_float(data):
     """
-    Parse *data* to a float, or return ``None`` if the string is empty.
+    Parse *data* to a float.
     """
-    return float(data) if data != '' else None
+    return float(data)
 
 
 def string(data):
@@ -43,3 +43,15 @@ def string(data):
     Returns *data* as a string.
     """
     return str(data)
+
+def constant(config, data):
+    """
+    Checks that *data* is equal to config["expect"], returning None.
+    """
+    if "expect" in config:
+        expect = config["expect"]
+    else:
+        expect = ''
+    if data != expect:
+        raise ValueError("Expected '{0}', got '{1}'".format(expect, data))
+    return None

@@ -26,11 +26,15 @@ import M2Crypto
 import os
 import couchdbkit
 import copy
+import re
+import json
+import statsd
 
 from . import loadable_manager
-from .utils import dynamicloader
+from .utils import dynamicloader, immortal_changes
 
 logger = logging.getLogger("habitat.parser")
+statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat.parser'})
 
 __all__ = ['Parser', 'ParserModule']
 
@@ -43,6 +47,8 @@ class Parser(object):
     attempts to use each loaded :class:`ParserModule` to turn this telemetry
     into useful data, which is then saved back to the database.
     """
+
+    ascii_exp = re.compile("^[\\x20-\\x7E]+$")
 
     def __init__(self, config, daemon_name="parser"):
         """
@@ -97,7 +103,7 @@ class Parser(object):
         Start a continuous connection to CouchDB's _changes feed, watching for
         new unparsed telemetry.
         """
-        consumer = couchdbkit.Consumer(self.db)
+        consumer = immortal_changes.Consumer(self.db)
         consumer.wait(self._couch_callback, filter="habitat/unparsed",
                 since=self.last_seq, include_docs=True, heartbeat=1000)
 
@@ -111,6 +117,7 @@ class Parser(object):
         if doc:
             self._save_updated_doc(doc)
 
+    @statsd.StatsdTimer.wrap('time')
     def parse(self, doc):
         """
         Attempts to parse telemetry information out of a new telemetry
@@ -142,7 +149,7 @@ class Parser(object):
             if we still can't get any data:
                 error
 
-        Note that in the loops below, the pre_parse, _find_config_doc and
+        Note that in the loops below, the filter, pre_parse, and
         parse methods will all raise a ValueError if failure occurs,
         continuing the loop.
 
@@ -173,31 +180,67 @@ class Parser(object):
             receiver_callsign = doc['receivers'].keys()[0]
             time_created = doc['receivers'][receiver_callsign]['time_created']
         except (KeyError, IndexError) as e:
-            logger.warning("Could not find required key in doc: " + e)
+            logger.warning("Could not find required key in doc: " + str(e))
+            statsd.increment("bad_doc")
             return None
         raw_data = base64.b64decode(original_data)
+
+        if self.ascii_exp.search(raw_data):
+            debug_type = 'ascii'
+            debug_data = raw_data
+            statsd.increment("ascii_doc")
+        else:
+            debug_type = 'b64'
+            debug_data = original_data
+            statsd.increment("binary_doc")
+
+        logger.info("Parsing [{type}] {data!r} ({id})"\
+                .format(id=doc["_id"], data=debug_data, type=debug_type))
 
         # TODO these two chunks below are ripe for refactoring
         # Try using real configs
         for module in self.modules:
             try:
+                where = "pre_filter"
                 data = self._pre_filter(raw_data, module)
+                where = "pre_parse"
                 callsign = module["module"].pre_parse(data)
-                config_doc = self._find_config_doc(callsign, time_created)
-                config = config_doc["payloads"][callsign]
-                if config["sentence"]["protocol"] == module["name"]:
-                    data = self._intermediate_filter(data, config)
-                    data = module["module"].parse(data, config["sentence"])
-                    data = self._post_filter(data, config)
-                    data["_protocol"] = module["name"]
-                    data["_flight"] = config_doc["_id"]
-                    data["_parsed"] = True
-                    break
             except (ValueError, KeyError) as e:
-                err = "Exception occured while attempting to parse: "
-                err += "'{e}' from {module}".format(module=module['name'], e=e)
-                logger.debug(err)
+                logger.debug("Exception in {module} {where}: {e}"
+                        .format(e=e, module=module['name'], where=where))
+                statsd.increment("parse_exception")
                 continue
+
+            config_doc = self._find_config_doc(callsign, time_created)
+            if not config_doc:
+                logger.debug("No configuration doc for {callsign!r} found"
+                        .format(callsign=callsign))
+                statsd.increment("no_config_doc")
+                continue
+
+            config = config_doc["payloads"][callsign]
+            if config["sentence"]["protocol"] != module["name"]:
+                logger.debug("Incorrect protocol: {callsign},{module}"
+                        .format(callsign=callsign, module=module["name"]))
+                continue
+
+            try:
+                where = "intermediate filter"
+                data = self._intermediate_filter(data, config)
+                where = "main parse"
+                data = module["module"].parse(data, config["sentence"])
+                where = "post filter"
+                data = self._post_filter(data, config)
+            except (ValueError, KeyError) as e:
+                logger.debug("Exception in {module} {where}: {e}"
+                        .format(module=module['name'], e=e, where=where))
+                statsd.increment("parse_exception")
+                continue
+
+            data["_protocol"] = module["name"]
+            data["_flight"] = config_doc["_id"]
+            data["_parsed"] = True
+            break
 
         # If that didn't work, try using default configurations
         if type(data) is not dict:
@@ -217,21 +260,27 @@ class Parser(object):
                     data["_used_default_config"] = True
                     data["_parsed"] = True
                     logger.info("Using a default configuration document")
+                    statsd.increment("default_configuration")
                     break
                 except (ValueError, KeyError) as e:
-                    err = "Exception occured while attempting to parse "
+                    err = "Exception occurred while attempting to parse "
                     err += "using default config: '{e}' from {module}"
                     logger.debug(err.format(module=module['name'], e=e))
+                    statsd.increment("parse_exception")
                     continue
 
         if type(data) is dict:
             doc['data'].update(data)
-            logger.info("{module} parsed data from {callsign} succesfully" \
+            logger.info("{module} parsed data from {callsign} successfully" \
                 .format(module=module["name"], callsign=callsign))
+            logger.debug("Parsed data: " + json.dumps(data))
+            statsd.increment("parsed")
+            if "_protocol" in data:
+                statsd.increment("protocol.{0}".format(data['_protocol']))
             return doc
         else:
-            logger.info("Unable to parse any data from '{d}'" \
-                .format(d=original_data))
+            logger.info("All attempts to parse failed")
+            statsd.increment("failed")
             return None
 
     def _save_updated_doc(self, doc, attempts=0):
@@ -243,15 +292,21 @@ class Parser(object):
         latest = self.db[doc['_id']]
         latest['data'].update(doc['data'])
         try:
-            logger.info("saving doc: {0}".format(doc))
             self.db.save_doc(latest)
+            logger.debug("Saved doc {0} successfully".format(doc["_id"]))
+            statsd.increment("saved")
         except couchdbkit.exceptions.ResourceConflict:
             attempts += 1
             if attempts >= 30:
-                err = "Could not save telemetry doc after 30 conflicts."
+                err = "Could not save doc {0} after {1} conflicts." \
+                        .format(doc["_id"], attempts)
                 logger.error(err)
+                statsd.increment("save_error")
                 raise RuntimeError(err)
             else:
+                logger.debug("Save conflict, trying again (#{0})" \
+                    .format(attempts))
+                statsd.increment("save_conflict")
                 self._save_updated_doc(doc, attempts)
 
     def _find_config_doc(self, callsign, time_created):
@@ -263,18 +318,18 @@ class Parser(object):
         could be found. Flight documents only count if their end time is
         in the future.
         If no config can be found, raises
-        :py:exc:`ValueError <exceptions.ValueError>`, otherwise returns
-        the sentence dictionary out of the payload config dictionary.
+        :py:exc:`ValueError <exceptions.ValueError>`. Otherwise, the whole
+        flight document is returned.
         """
+
         startkey = [callsign, time_created]
         result = self.db.view("habitat/payload_config", limit=1,
                 include_docs=True, startkey=startkey).first()
+
         if not result or callsign not in result["doc"]["payloads"]:
-            err = "No configuration document for callsign '{0}' found."
-            err = err.format(callsign)
-            logger.warning(err)
-            raise ValueError(err)
-        return result["doc"]
+            return False
+        else:
+            return result["doc"]
 
     def _pre_filter(self, data, module):
         """
@@ -283,7 +338,8 @@ class Parser(object):
         """
         if "pre-filters" in module:
             for f in module["pre-filters"]:
-                data = self._filter(data, f)
+                data = self._filter(data, f, str)
+                statsd.increment("filters.pre")
         return data
 
     def _intermediate_filter(self, data, config):
@@ -295,7 +351,8 @@ class Parser(object):
         if "filters" in config:
             if "intermediate" in config["filters"]:
                 for f in config["filters"]["intermediate"]:
-                    data = self._filter(data, f)
+                    data = self._filter(data, f, str)
+                    statsd.increment("filters.intermediate")
         return data
 
     def _post_filter(self, data, config):
@@ -306,10 +363,11 @@ class Parser(object):
         if "filters" in config:
             if "post" in config["filters"]:
                 for f in config["filters"]["post"]:
-                    data = self._filter(data, f)
+                    data = self._filter(data, f, dict)
+                    statsd.increment("filters.post")
         return data
 
-    def _filter(self, data, f):
+    def _filter(self, data, f, result_type):
         """
         Load and run a filter from a dictionary specifying type, the
         relevant filter/code and maybe a config.
@@ -323,14 +381,20 @@ class Parser(object):
         try:
             if f["type"] == "normal":
                 fil = 'filters.' + f['filter']
-                return self.loadable_manager.run(fil, f, data)
+                data = self.loadable_manager.run(fil, f, data)
             elif f["type"] == "hotfix":
-                return self._hotfix_filter(data, f)
+                data = self._hotfix_filter(data, f)
             else:
                 raise ValueError("Invalid filter type")
+
+            if not data or not isinstance(data, result_type):
+                raise ValueError("Hotfix returned no output or "
+                                 "output of wrong type")
         except:
             logger.exception("Error while applying filter " + repr(f))
             return rollback
+        else:
+            return data
 
     def _sanity_check_hotfix(self, f):
         """Perform basic sanity checks on **f**"""
@@ -358,8 +422,10 @@ class Parser(object):
             sig = base64.b64decode(f["signature"])
             ok = cert.get_pubkey().get_rsa().verify(digest, sig, 'sha256')
         except (TypeError, M2Crypto.RSA.RSAError):
-            raise ValueError("Signature is invalid.")
+            statsd.increment("filters.hotfix.invalid_signature")
+            raise ValueError("Hotfix signature is not valid")
         if not ok:
+            statsd.increment("filters.hotfix.invalid_signature")
             raise ValueError("Hotfix signature is not valid")
 
     def _compile_hotfix(self, f):
@@ -372,6 +438,7 @@ class Parser(object):
             code = compile(body, "<filter>", "exec")
             exec code in env
         except (SyntaxError, AttributeError, TypeError):
+            statsd.increment("filters.hotfix.compile_error")
             raise ValueError("Hotfix code didn't compile: " + repr(f))
         return env
 
@@ -391,6 +458,8 @@ class Parser(object):
         env = self._compile_hotfix(f)
 
         logger.debug("Executing a hotfix")
+        statsd.increment("filters.hotfix.executed")
+
         return env["f"](data)
 
     def _get_certificate(self, certname):

@@ -21,25 +21,25 @@ from ...utils import filtertools
 class TestUKHASChecksumFixer:
     """UKHAS Checksum Fixer"""
     def test_leaves_bad_data(self):
-        data = {"data": "$$habitat,bad*ABCD"}
+        data = {"data": "$$habitat,bad*ABCD\n"}
         with filtertools.UKHASChecksumFixer("crc16-ccitt", data) as c:
-            c["data"] = "$$habitat,good*ABCD"
-        assert c["data"] == "$$habitat,bad*ABCD"
+            c["data"] = "$$habitat,good*ABCD\n"
+        assert c["data"] == "$$habitat,bad*ABCD\n"
 
     def test_updates_checksum(self):
-        data = {"data": "$$habitat,good*4918"}
+        data = {"data": "$$habitat,good*4918\n"}
         with filtertools.UKHASChecksumFixer("crc16-ccitt", data) as c:
-            c["data"] = "$$habitat,other*4918"
-        assert c["data"] == "$$habitat,other*2E0C"
+            c["data"] = "$$habitat,other*4918\n"
+        assert c["data"] == "$$habitat,other*2E0C\n"
 
     def test_updates_xor_checksum(self):
-        data = {"data": "$$habitat,good*4c"}
+        data = {"data": "$$habitat,good*4c\n"}
         with filtertools.UKHASChecksumFixer("xor", data) as c:
-            c["data"] = "$$habitat,other*4c"
-        assert c["data"] == "$$habitat,other*2B"
+            c["data"] = "$$habitat,other*4c\n"
+        assert c["data"] == "$$habitat,other*2B\n"
 
     def test_leaves_when_protocol_is_none(self):
-        data = {"data": "$$habitat,boring"}
+        data = {"data": "$$habitat,boring\n"}
         with filtertools.UKHASChecksumFixer("none", data) as c:
-            c["data"] = "$$habitat,sucky"
-        assert c["data"] == "$$habitat,sucky"
+            c["data"] = "$$habitat,sucky\n"
+        assert c["data"] == "$$habitat,sucky\n"

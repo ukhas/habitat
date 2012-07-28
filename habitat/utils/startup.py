@@ -19,6 +19,7 @@
 
 import sys
 import logging
+import logging.handlers
 import yaml
 
 logger = logging.getLogger("habitat.utils.startup")
@@ -97,7 +98,7 @@ def setup_logging(config, daemon_name):
 
     if file_level != None:
         file_name = config[daemon_name]["log_file"]
-        file_handler = logging.FileHandler(file_name)
+        file_handler = logging.handlers.WatchedFileHandler(file_name)
         file_handler.setFormatter(logging.Formatter(formatstring))
         file_handler.setLevel(file_level)
         root_logger.addHandler(file_handler)

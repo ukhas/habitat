@@ -215,7 +215,7 @@ class TestUKHASParser:
         # Correct parser output for the checksum test sentences
         output_checksum_test = {
             "payload": "habitat", "message_count": 1,
-            "time": {"hour": 0, "minute": 0, "second": 0},
+            "time": "00:00:00",
             "latitude": 0.0, "longitude": 0.0, "altitude": 0,
             "speed": 0.0, "custom_string": "hab"}
 
@@ -352,7 +352,7 @@ class TestUKHASParser:
         # Correct parser output for (most) of the good sentences
         output_good = {
             "payload": "habitat", "message_count": 123,
-            "time": {"hour": 12, "minute": 45, "second": 06},
+            "time": "12:45:06",
             "latitude": -35.1032, "longitude": 138.8568,
             "altitude": 4285, "speed": 3.6, "custom_string": "hab"}
 
@@ -361,16 +361,6 @@ class TestUKHASParser:
 
         assert(self.p.parse(sentence_good_1, base_config)
                == self.output_append_sentence(output_good, sentence_good_1))
-
-        sentence_good_2 = \
-            "$$habitat,123,12:45,-35.1032,138.8568,4285,3.6,hab*8e78\n"
-
-        # Correct parser output for sentence_good_2 (no seconds on the time)
-        output_good_2 = deepcopy(output_good)
-        del output_good_2["time"]["second"]
-
-        assert(self.p.parse(sentence_good_2, base_config)
-               == self.output_append_sentence(output_good_2, sentence_good_2))
 
         sentence_good_3 = \
             "$$habitat,123,12:45:06,-3506.192,13851.408,4285,3.6,hab*6139\n"
@@ -405,14 +395,7 @@ class TestUKHASParser:
         # valid
         sentence_short = "$$habitat,123,12:45:06,-35.1032,138.8568,4285*5260\n"
 
-        output_short = {
-            "payload": "habitat", "message_count": 123,
-            "time": {"hour": 12, "minute": 45, "second": 06},
-            "latitude": -35.1032, "longitude": 138.8568,
-            "altitude": 4285}
-
-        assert (self.p.parse(sentence_short, base_config) ==
-                self.output_append_sentence(output_short, sentence_short))
+        assert_raises(ValueError, self.p.parse, sentence_short, base_config)
 
     def test_parse_handles_longer_sentences(self):
         # A sentence with more fields than the config suggests, but otherwise
@@ -421,14 +404,7 @@ class TestUKHASParser:
             "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab,123," \
             "4.56,seven*3253\n"
 
-        output_long = {
-            "payload": "habitat", "message_count": 123,
-            "time": {"hour": 12, "minute": 45, "second": 06},
-            "latitude": -35.1032, "longitude": 138.8568,
-            "altitude": 4285, "speed": 3.6, "custom_string": "hab",
-            "_extra_data": ["123", "4.56", "seven"]}
-        assert (self.p.parse(sentence_long, base_config)
-                == self.output_append_sentence(output_long, sentence_long))
+        assert_raises(ValueError, self.p.parse, sentence_long, base_config)
 
     def test_parser_rejects_sentence_with_no_newline(self):
         # sentence from test_parse_handles_shorter_sentences with no \n:
