@@ -118,15 +118,7 @@ class Parser(object):
                         if it does:
                             module.parse to get the data
                             return
-            if all modules were attempted but no config docs were found:
-                for module in modules:
-                    if this module has a default configuration:
-                        module.pre_parse to find a callsign
-                        if a callsign is found:
-                            use this module's default configuration
-                            module.parse to get the data
-                            return
-            if we still can't get any data:
+            if we can't get any data:
                 error
 
         Note that in the loops below, the filter, pre_parse, and
@@ -141,9 +133,6 @@ class Parser(object):
 
         * ``_protocol`` which gives the parser module name that was used to
           decode this message
-        * ``_used_default_config`` is a boolean value set to True if a
-          default configuration was used for the module as no specific
-          configuration could be found and not included otherwise
 
         From the UKHAS parser module in particular:
 
@@ -177,8 +166,6 @@ class Parser(object):
         logger.info("Parsing [{type}] {data!r} ({id})"\
                 .format(id=doc["_id"], data=debug_data, type=debug_type))
 
-        # TODO these two chunks below are ripe for refactoring
-        # Try using real configs
         for module in self.modules:
             try:
                 where = "pre_filter"
@@ -221,33 +208,6 @@ class Parser(object):
             data["_flight"] = config_doc["_id"]
             data["_parsed"] = True
             break
-
-        # If that didn't work, try using default configurations
-        if type(data) is not dict:
-            for module in self.modules:
-                try:
-                    config = module["default_config"]
-                except KeyError:
-                    continue
-
-                try:
-                    data = self._pre_filter(raw_data, module)
-                    callsign = module["module"].pre_parse(data)
-                    data = self._intermediate_filter(data, config)
-                    data = module["module"].parse(data, config["sentence"])
-                    data = self._post_filter(data, config)
-                    data["_protocol"] = module["name"]
-                    data["_used_default_config"] = True
-                    data["_parsed"] = True
-                    logger.info("Using a default configuration document")
-                    statsd.increment("default_configuration")
-                    break
-                except (ValueError, KeyError) as e:
-                    err = "Exception occurred while attempting to parse "
-                    err += "using default config: '{e}' from {module}"
-                    logger.debug(err.format(module=module['name'], e=e))
-                    statsd.increment("parse_exception")
-                    continue
 
         if type(data) is dict:
             doc['data'].update(data)

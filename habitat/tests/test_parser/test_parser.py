@@ -179,22 +179,6 @@ class TestParser(object):
         assert self.parser.parse(doc) is None
         self.m.VerifyAll()
 
-    def test_uses_default_config(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
-        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-        doc['receivers']['tester']['time_created'] = 1234567890
-        default = {'sentence': {'protocol': 'Mock'}}
-        self.parser.modules[0]['default_config'] = default
-        self.mock_module.pre_parse('test string').AndRaise(ValueError)
-        self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.mock_module.parse('test string',
-            default['sentence']).AndReturn({})
-        self.m.ReplayAll()
-        result = self.parser.parse(doc)
-        assert result['data']['_parsed']
-        assert result['data']['_used_default_config']
-        self.m.VerifyAll()
-
     def test_doesnt_parse_if_no_config(self):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
