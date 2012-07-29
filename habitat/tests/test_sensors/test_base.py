@@ -28,9 +28,6 @@ class TestBaseSensors:
         assert base.ascii_int("12") == 12
         assert base.ascii_int("012") == 12
 
-    def test_ascii_ints_with_empty_strings(self):
-        assert base.ascii_int("") == None
-
     @raises(ValueError)
     def test_ascii_ints_with_invalid_strings(self):
         base.ascii_int("NOT AN INT")
@@ -40,12 +37,27 @@ class TestBaseSensors:
         assert base.ascii_float("12.3") == 12.3
         assert base.ascii_float("0.1") == 0.1
 
-    def test_ascii_floats_with_empty_strings(self):
-        assert base.ascii_float("") == None
-
     @raises(ValueError)
     def test_ascii_floats_with_invalid_strings(self):
         base.ascii_float("NOT A FLOAT")
+
+    def test_strings(self):
+        assert base.string("hello") == "hello"
+        assert base.string("123") == "123"
+
+    @raises(ValueError)
+    def test_bad_constant(self):
+        base.constant({"expect": "right"}, "wrong")
+
+    def test_good_constant(self):
+        assert base.constant({"expect": "right"}, "right") == None
+
+    @raises(ValueError)
+    def test_bad_empty_constant(self):
+        assert base.constant({}, "something") == None
+
+    def test_good_empty_constant(self):
+        assert base.constant({}, "") == None
 
     def test_strings(self):
         assert base.string("hello") == "hello"

@@ -1,0 +1,132 @@
+{
+    "title": "Payload Telemetry Document",
+    "description": "Stores data transmitted by payloads, either as-yet-unparsed or parsed.",
+    "type": "object",
+    "required": true,
+    "properties": {
+        "_id": {
+            "title": "CouchDB Document ID",
+            "type": "string",
+            "required": false
+        },
+        "_rev": {
+            "title": "CouchDB Document Revision Number",
+            "type": "string",
+            "required": false
+        },
+        "_revisions": {
+            "title": "CouchDB Document Revision History",
+            "type": "object",
+            "required": false
+        },
+        "type": {
+            "title": "Document Type",
+            "description": "Indicates that this is a payload telemetry document. Should be 'payload_telemetry'.",
+            "type": "string",
+            "pattern": "^payload_telemetry$",
+            "required": true
+        },
+        "data": {
+            "title": "Data",
+            "description": "All the data about this transmission, including the raw transmitted data and any parsing results.",
+            "type": "object",
+            "required": true,
+            "additionalProperties": true,
+            "properties": {
+                "_raw": {
+                    "title": "Raw Data",
+                    "description": "The raw transmitted data, as a base64 string. Must be uploaded by listeners.",
+                    "type": "string",
+                    "required": false
+                },
+                "_string": {
+                    "title": "Raw Data String",
+                    "description": "The ASCII representation of the raw data, if the data is all printable. Inserted by the parser.",
+                    "type": "string",
+                    "required": false
+                },
+                "_protocol": {
+                    "title": "Protocol",
+                    "description": "The protocol (habitat parser module) used to parse this transmission. Inserted by the parser.",
+                    "type": "string",
+                    "required": false
+                },
+                "_parsed": {
+                    "title": "Parsed",
+                    "required": false,
+                    "description": "When present, records information relating to the parsing of the document. If absent the document has not been (or could not be) parsed. Inserted by the parser.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "time_parsed": {
+                            "title": "Time Parsed",
+                            "description": "The time, as an RFC3339 string, when the parser parsed this document.",
+                            "required": true,
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "payload_configuration": {
+                            "title": "Payload Configuration Document ID",
+                            "description": "The document ID of the payload_configuration document used to parse this document.",
+                            "required": true,
+                            "type": "string"
+                        },
+                        "configuration_sentence_index": {
+                            "title": "Payload Configuration Sentence Index",
+                            "description": "The index into the sentences list in the payload_configuration document used to parse this document.",
+                            "required": true,
+                            "type": "number"
+                        },
+                        "flight": {
+                            "title": "Flight ID",
+                            "description": "The document ID of the flight associated with this telemetry, if it was parsed as part of a flight.",
+                            "type": "string",
+                            "required": false
+                        }
+                    }
+                }
+            }
+        },
+        "receivers": {
+            "title": "Telemetry Receivers",
+            "description": "The listeners who received this telemetry and when they received it.",
+            "type": "object",
+            "required": true,
+            "additionalProperties": {
+                "title": "Receiver",
+                "description": "Information about one receiver of this telemetry.",
+                "type": "object",
+                "required": true,
+                "additionalProperties": false,
+                "properties": {
+                    "time_created": {
+                        "title": "Time Created",
+                        "description": "The time, as an RFC3339 string, when the receiver created this document.",
+                        "type": "string",
+                        "format": "date-time",
+                        "required": true
+                    },
+                    "time_uploaded": {
+                        "title": "Time Uploaded",
+                        "description": "The time, as an RFC3339 string, when the receiver uploaded this document to the database.",
+                        "type": "string",
+                        "format": "date-time",
+                        "required": true
+                    },
+                    "latest_telemtry": {
+                        "title": "Receiver Latest Telemtry",
+                        "description": "A CouchDB document ID for this receiver's most recent listener_telemetry document.",
+                        "type": "string",
+                        "required": false
+                    },
+                    "latest_info": {
+                        "title": "Receiver Latest Info",
+                        "description": "A CouchDB document ID for this receiver's most recent listener_information document.",
+                        "type": "string",
+                        "required": false
+                    }
+                }
+            }
+        }
+    }
+}

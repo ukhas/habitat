@@ -3,3 +3,4 @@
 dist/
 MANIFEST
 habitat.egg-info/
+venv/

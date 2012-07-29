@@ -395,14 +395,7 @@ class TestUKHASParser:
         # valid
         sentence_short = "$$habitat,123,12:45:06,-35.1032,138.8568,4285*5260\n"
 
-        output_short = {
-            "payload": "habitat", "message_count": 123,
-            "time": "12:45:06",
-            "latitude": -35.1032, "longitude": 138.8568,
-            "altitude": 4285}
-
-        assert (self.p.parse(sentence_short, base_config) ==
-                self.output_append_sentence(output_short, sentence_short))
+        assert_raises(ValueError, self.p.parse, sentence_short, base_config)
 
     def test_parse_handles_longer_sentences(self):
         # A sentence with more fields than the config suggests, but otherwise
@@ -411,14 +404,7 @@ class TestUKHASParser:
             "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab,123," \
             "4.56,seven*3253\n"
 
-        output_long = {
-            "payload": "habitat", "message_count": 123,
-            "time": "12:45:06",
-            "latitude": -35.1032, "longitude": 138.8568,
-            "altitude": 4285, "speed": 3.6, "custom_string": "hab",
-            "_extra_data": ["123", "4.56", "seven"]}
-        assert (self.p.parse(sentence_long, base_config)
-                == self.output_append_sentence(output_long, sentence_long))
+        assert_raises(ValueError, self.p.parse, sentence_long, base_config)
 
     def test_parser_rejects_sentence_with_no_newline(self):
         # sentence from test_parse_handles_shorter_sentences with no \n:

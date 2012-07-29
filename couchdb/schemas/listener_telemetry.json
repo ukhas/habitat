@@ -1,0 +1,78 @@
+{
+    "title": "Listener Telemetry Document",
+    "description": "Stores information about a listener's position.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": true,
+    "properties": {
+        "_id": {
+            "title": "CouchDB Document ID",
+            "type": "string",
+            "required": false
+        },
+        "_rev": {
+            "title": "CouchDB Document Revision Number",
+            "type": "string",
+            "required": false
+        },
+        "_revisions": {
+            "title": "CouchDB Document Revision History",
+            "type": "object",
+            "required": false
+        },
+        "type": {
+            "title": "Document Type",
+            "description": "Indicates that this is a listener_telemetry document. Should be 'listener_telemetry'.",
+            "type": "string",
+            "pattern": "^listener_telemetry$",
+            "required": true
+        },
+        "time_created": {
+            "title": "Time Created",
+            "description": "An RFC3339 string containing the time this document was created.",
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "time_uploaded": {
+            "title": "Time Uploaded",
+            "description": "An RFC3339 string containing the time this document was uploaded to the database.",
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "data": {
+            "title": "Listener Position Data",
+            "description": "Information on the listener's position, including latitude, longitude and altitude.",
+            "type": "object",
+            "required": true,
+            "additionalProperties": true,
+            "properties": {
+                "callsign": {
+                    "title": "Listener Callsign",
+                    "description": "A callsign for this listener. Does not hae to be an official amateur radio callsign.",
+                    "type": "string",
+                    "required": true
+                },
+                "latitude": {
+                    "title": "Listener Latitude",
+                    "description": "The listener's current latitude, in decimal degrees.",
+                    "type": "number",
+                    "required": true
+                },
+                "longitude": {
+                    "title": "Listener Longitude",
+                    "description": "The listener's current longitude, in decimal degrees.",
+                    "type": "number",
+                    "required": true
+                },
+                "altitude": {
+                    "title": "Listener Altitude",
+                    "description": "The listener's current altitude, in metres above sea level.",
+                    "type": "number",
+                    "required": false
+                }
+            }
+        }
+    }
+}

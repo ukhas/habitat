@@ -108,11 +108,6 @@
     "time_uploaded": 1292772140,
     "data": {
         "callsign": "M0RND",
-        "time": {
-            "hour": 12,
-            "minute": 40,
-            "second": 12
-        },
         "latitude": -35.11,
         "longitude": 137.567,
         "altitude": 12

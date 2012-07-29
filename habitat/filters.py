@@ -31,7 +31,8 @@ load them for use.
 from .utils import filtertools
 import math
 
-__all__ = ["semicolons_to_commas", "numeric_scale", "simple_map"]
+__all__ = ["semicolons_to_commas", "numeric_scale", "simple_map",
+           "invalid_always", "invalid_location_zero", "invalid_gps_lock"]
 
 
 def semicolons_to_commas(config, data):
@@ -135,4 +136,42 @@ def simple_map(config, data):
         raise ValueError("map should be a dict")
 
     data[destination_key] = value_map[data[source_key]]
+    return data
+
+
+def invalid_always(data):
+    """
+    Add the _fix_invalid key to data.
+    """
+    data["_fix_invalid"] = True
+    return data
+
+
+def invalid_location_zero(data):
+    """If the latitude and longitude are zero, the fix is marked invalid."""
+    if data["latitude"] == 0.0 and data["longitude"] == 0.0:
+        data["_fix_invalid"] = True
+    return data
+
+
+def invalid_gps_lock(config, data):
+    """
+    Checks a gps_lock field to see if the payload has a lock
+
+    The source key is config["source"], or "gps_lock" if that is not set.
+
+    The fix is marked invalid if data[source] is not in the list config["ok"].
+    """
+    ok_list = config["ok"]
+    if not isinstance(ok_list, list):
+        raise ValueError("ok should be a list")
+
+    if "source" in config:
+        source = config["source"]
+    else:
+        source = "gps_lock"
+
+    if data[source] not in ok_list:
+        data["_fix_invalid"] = True
+
     return data

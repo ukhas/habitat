@@ -35,6 +35,7 @@ See http://habitat.habhub.org for more information.
     habitat.filters
     habitat.uploader
     habitat.utils
+    habitat.views
 """
 
 __name__ = "habitat"
@@ -50,3 +51,4 @@ from . import loadable_manager
 from . import sensors
 from . import uploader
 from . import utils
+from . import views
