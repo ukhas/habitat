@@ -26,7 +26,7 @@ import couchdbkit
 import M2Crypto
 
 from copy import deepcopy
-from nose.tools import assert_raises
+from nose.tools import assert_raises, eq_
 
 from ... import parser
 
@@ -132,43 +132,42 @@ class TestParser(object):
         # initialised with CouchDB mocks in all other tests.
         assert self.parser.db == self.mock_db
 
-    def test_looks_for_config_doc(self):
-        callsign = "habitat"
-        time_created = 1234567890
-        view_result = {'doc': {'payloads': {callsign: True}}}
-
-        mock_view = self.m.CreateMock(couchdbkit.ViewResults)
-        self.parser.db.view("habitat/payload_config", limit=1,
-                include_docs=True, startkey=[callsign,
-                    time_created]).AndReturn(mock_view)
-        mock_view.first().AndReturn(None)
-
-        mock_view = self.m.CreateMock(couchdbkit.ViewResults)
-        self.parser.db.view("habitat/payload_config", limit=1,
-                include_docs=True, startkey=[callsign,
-                    time_created]).AndReturn(mock_view)
-        mock_view.first().AndReturn(view_result)
-
+    def test_find_config_doc_looks_for_flights(self):
+        view_result = [{"key": [5, 3, 0]},
+                       {"key": [5, 3, 1], "value": {
+                           "_id": 123, "sentences": [
+                                {"callsign": "habitat"}
+                            ]}, "id": 321}]
+        self.m.StubOutWithMock(parser, 'time')
+        parser.time.time().AndReturn(4)
+        self.parser.db.view("flight/end_start_including_payloads",
+                            startkey=[4]).AndReturn(view_result)
         self.m.ReplayAll()
-        result = self.parser._find_config_doc(callsign, time_created)
-        assert result == False
-        result = self.parser._find_config_doc(callsign, time_created)
-        assert result == view_result['doc']
+        result = self.parser._find_config_doc("habitat")
+        assert result == {"id": 123, "flight_id": 321,
+                          "payload_configuration": view_result[1]["value"]}
         self.m.VerifyAll()
 
-    def test_doesnt_use_bad_config_doc(self):
-        callsign = "habitat"
-        time_created = 1234567890
-        view_result = {'doc': {'payloads': {"not habitat": True}}}
+    def test_find_config_doc_fallbacks_to_configs(self):
+        flight_result = [{"key": [5, 3, 0]},
+                         {"key": [5, 3, 1], "value": {
+                             "_id": 123, "sentences": [{"callsign": "bla"}]},
+                          "id": 321}]
+        config_result = {"id": 123, "doc": {
+            "sentences": [{"callsign": "habitat"}]}}
+        self.m.StubOutWithMock(parser, 'time')
         mock_view = self.m.CreateMock(couchdbkit.ViewResults)
-        self.parser.db.view("habitat/payload_config", limit=1,
-                include_docs=True, startkey=[callsign,
-                    time_created]).AndReturn(mock_view)
-        mock_view.first().AndReturn(view_result)
+        parser.time.time().AndReturn(4)
+        self.parser.db.view("flight/end_start_including_payloads",
+                            startkey=[4]).AndReturn(flight_result)
+        self.parser.db.view("payload_configuration/callsign_time_created",
+                            startkey=["habitat"], include_docs=True, limit=1
+                           ).AndReturn(mock_view)
+        mock_view.first().AndReturn(config_result)
         self.m.ReplayAll()
-        assert self.parser._find_config_doc(callsign, time_created) == False
+        result = self.parser._find_config_doc("habitat")
+        eq_(result, {"id": 123, "payload_configuration": config_result["doc"]})
         self.m.VerifyAll()
-        self.m.ResetAll()
 
     def test_doesnt_parse_if_no_callsign_found(self):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
@@ -185,7 +184,7 @@ class TestParser(object):
         doc['receivers']['tester']['time_created'] = 1234567890
         self.m.StubOutWithMock(self.parser, '_find_config_doc')
         self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 1234567890).AndReturn(False)
+        self.parser._find_config_doc('callsign').AndReturn(False)
         self.m.ReplayAll()
         assert self.parser.parse(doc) is None
         self.m.VerifyAll()
@@ -194,11 +193,12 @@ class TestParser(object):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
-        config = {'payloads': {'callsign': {'sentence': {'protocol': 'Fake'}}}}
-        config['_id'] = 'test'
+        config = {'sentences': [{"callsign": "callsign", 'protocol': 'Fake'}]}
+        config = {'payload_configuration': config}
+        config['id'] = 'test'
         self.m.StubOutWithMock(self.parser, '_find_config_doc')
         self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
+        self.parser._find_config_doc('callsign').AndReturn(config)
         self.m.ReplayAll()
         assert self.parser.parse(doc) is None
         self.m.VerifyAll()
@@ -207,18 +207,26 @@ class TestParser(object):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
-        config = {'payloads': {'callsign': {'sentence': {'protocol': 'Mock'}}}}
-        config['_id'] = 'test'
+        config = {'sentences': [{"callsign": "callsign", 'protocol': 'Mock'}]}
+        config = {'payload_configuration': config}
+        config['id'] = 'test'
         self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.m.StubOutWithMock(parser, 'time')
         self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
+        self.parser._find_config_doc('callsign').AndReturn(config)
         self.mock_module.parse('test string',
-                config['payloads']['callsign']['sentence']).AndReturn({})
+            config['payload_configuration']['sentences'][0]).AndReturn({})
+        parser.time.gmtime().AndReturn(12345)
+        parser.time.strftime("%Y-%m-%dT%H:%M:%SZ", 12345).AndReturn("thetime")
         self.m.ReplayAll()
         result = self.parser.parse(doc)
         assert result['data']['_parsed']
         assert result['data']['_protocol'] == 'Mock'
-        assert result['data']['_flight'] == 'test'
+        assert result['data']['_parsed'] == {
+            "payload_configuration": "test",
+            "configuration_sentence_index": 0,
+            "time_parsed": "thetime"
+        }
         assert result['data']['_raw'] == "dGVzdCBzdHJpbmc="
         assert result['receivers']['tester']['time_created'] == 1234567890
         assert len(result['receivers']) == 1
@@ -226,17 +234,16 @@ class TestParser(object):
 
     def setup_parse(self, config=None, doc=None):
         if config is None:
-            config = {'payloads': {'callsign': {'sentence': {}}}}
-            config['_id'] = 'test'
-            config['payloads']['callsign']['sentence']['protocol'] = 'Mock'
-        payload_config = config['payloads']['callsign']['sentence']
+            config = {'payload_configuration': {'sentences': [
+                {"callsign": "callsign", "protocol": "Mock"}]}, "id": "test"}
+        payload_config = config['payload_configuration']['sentences'][0]
         if doc is None:
             doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'test_id'}
             doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
             doc['receivers']['tester']['time_created'] = 123
         self.m.StubOutWithMock(self.parser, '_find_config_doc')
         self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 123).AndReturn(config)
+        self.parser._find_config_doc('callsign').AndReturn(config)
         self.mock_module.parse('test string', payload_config).AndReturn({})
         return doc, config
 
@@ -245,7 +252,7 @@ class TestParser(object):
         self.m.StubOutWithMock(self.parser, '_pre_filter')
         self.m.StubOutWithMock(self.parser, '_intermediate_filter')
         self.m.StubOutWithMock(self.parser, '_post_filter')
-        payload_config = config['payloads']['callsign']
+        payload_config = config['payload_configuration']['sentences'][0]
         self.parser._pre_filter('test string',
                 self.parser.modules[0]).AndReturn('test string')
         self.parser._intermediate_filter('test string',

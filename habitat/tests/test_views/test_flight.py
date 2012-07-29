@@ -116,15 +116,15 @@ class TestFlight(object):
 
         assert result == expected
 
-    def test_view_end_including_payloads(self):
+    def test_view_end_start_including_payloads(self):
         mydoc = deepcopy(doc)
         mydoc['approved'] = True
         mydoc['payloads'] = ['a', 'b']
-        result = list(flight.end_including_payloads_map(mydoc))
+        result = list(flight.end_start_including_payloads_map(mydoc))
         expected = [
-            ((1342306800, 0), ['a', 'b']),
-            ((1342306800, 1), {'_id': 'a'}),
-            ((1342306800, 1), {'_id': 'b'})
+            ((1342306800, 1342302863, 0), ['a', 'b']),
+            ((1342306800, 1342302863, 1), {'_id': 'a'}),
+            ((1342306800, 1342302863, 1), {'_id': 'b'})
         ]
 
         assert result == expected

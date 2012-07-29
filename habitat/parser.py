@@ -29,6 +29,7 @@ import copy
 import re
 import json
 import statsd
+import time
 
 from . import loadable_manager
 from .utils import dynamicloader
@@ -147,7 +148,6 @@ class Parser(object):
         try:
             original_data = doc['data']['_raw']
             receiver_callsign = doc['receivers'].keys()[0]
-            time_created = doc['receivers'][receiver_callsign]['time_created']
         except (KeyError, IndexError) as e:
             logger.warning("Could not find required key in doc: " + str(e))
             statsd.increment("bad_doc")
@@ -163,8 +163,9 @@ class Parser(object):
             debug_data = original_data
             statsd.increment("binary_doc")
 
-        logger.info("Parsing [{type}] {data!r} ({id})"\
-                .format(id=doc["_id"], data=debug_data, type=debug_type))
+        logger.info("Parsing [{type}] {data!r} ({id}) from {who}"\
+                .format(id=doc["_id"], data=debug_data, type=debug_type,
+                        who=receiver_callsign))
 
         for module in self.modules:
             try:
@@ -178,36 +179,45 @@ class Parser(object):
                 statsd.increment("parse_exception")
                 continue
 
-            config_doc = self._find_config_doc(callsign, time_created)
-            if not config_doc:
+            config = self._find_config_doc(callsign)
+            if not config:
                 logger.debug("No configuration doc for {callsign!r} found"
                         .format(callsign=callsign))
                 statsd.increment("no_config_doc")
                 continue
 
-            config = config_doc["payloads"][callsign]
-            if config["sentence"]["protocol"] != module["name"]:
-                logger.debug("Incorrect protocol: {callsign},{module}"
-                        .format(callsign=callsign, module=module["name"]))
-                continue
+            sentences = config["payload_configuration"]["sentences"]
+            for sentence_index, sentence in enumerate(sentences):
+                if sentence["callsign"] != callsign:
+                    continue
+                if sentence["protocol"] != module["name"]:
+                    logger.debug("Incorrect protocol: {callsign},{module}"
+                            .format(callsign=callsign, module=module["name"]))
+                    continue
+                try:
+                    where = "intermediate filter"
+                    data = self._intermediate_filter(data, sentence)
+                    where = "main parse"
+                    data = module["module"].parse(data, sentence)
+                    where = "post filter"
+                    data = self._post_filter(data, sentence)
+                except (ValueError, KeyError) as e:
+                    logger.debug("Exception in {module} {where}: {e}"
+                            .format(module=module['name'], e=e, where=where))
+                    statsd.increment("parse_exception")
+                    continue
 
-            try:
-                where = "intermediate filter"
-                data = self._intermediate_filter(data, config)
-                where = "main parse"
-                data = module["module"].parse(data, config["sentence"])
-                where = "post filter"
-                data = self._post_filter(data, config)
-            except (ValueError, KeyError) as e:
-                logger.debug("Exception in {module} {where}: {e}"
-                        .format(module=module['name'], e=e, where=where))
-                statsd.increment("parse_exception")
-                continue
+                data["_protocol"] = module["name"]
+                data["_parsed"] = {
+                    "time_parsed": time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                                 time.gmtime()),
+                    "payload_configuration": config["id"],
+                    "configuration_sentence_index": sentence_index
+                }
+                if "flight_id" in config:
+                    data["_parsed"]["flight"] = config["flight_id"]
 
-            data["_protocol"] = module["name"]
-            data["_flight"] = config_doc["_id"]
-            data["_parsed"] = True
-            break
+                break
 
         if type(data) is dict:
             doc['data'].update(data)
@@ -223,27 +233,63 @@ class Parser(object):
             statsd.increment("failed")
             return None
 
-    def _find_config_doc(self, callsign, time_created):
+    def _find_config_doc(self, callsign):
         """
-        Check Couch for a configuration document we can use for this payload.
-        The Couch view first tries to find any Flight documents with this
-        callsign in their payloads dictionary, but will also return any
-        Sandbox documents with this payload if no valid Flight documents
-        could be found. Flight documents only count if their end time is
-        in the future.
-        If no config can be found, raises
-        :py:exc:`ValueError <exceptions.ValueError>`. Otherwise, the whole
-        flight document is returned.
+        Attempt to locate a payload_configuration document suitable for parsing
+        data from *callsign* at the present moment in time.
+        Resolution proceeds as:
+            1. Check all started-but-not-yet-ended (aka active) flights
+               for a reference to a payload_configuration document that
+               includes this callsign in at least one sentence.
+            2. If no active flights mention the callsign, obtain the single
+               most recently created payload_configuration document that does
+               and use it.
+
+        Returns an object that contains the payload_configuration document ID,
+        the flight ID if appropriate, and the payload_configuration::
+
+        {
+            "id": <payload_configuration doc ID>,
+            "payload_configuration": <payload_configuration doc>,
+            "flight_id": <flight doc ID>
+        }
+
+        The returned document may have more than one sentence object, and each
+        should be attemted in order.
+        If no configuration can be found, None is returned.
         """
+        t = int(time.time())
+        flights = self.db.view("flight/end_start_including_payloads",
+                               startkey=[t])
+        for flight in flights:
+            if flight["key"][1] < t and flight["key"][2] == 1:
+                if self._callsign_in_config(callsign, flight["value"]):
+                    return {
+                        "id": flight["value"]["_id"],
+                        "flight_id": flight["id"],
+                        "payload_configuration": flight["value"]
+                    }
 
-        startkey = [callsign, time_created]
-        result = self.db.view("habitat/payload_config", limit=1,
-                include_docs=True, startkey=startkey).first()
+        config = self.db.view("payload_configuration/callsign_time_created",
+                              startkey=[callsign], include_docs=True, limit=1
+                             ).first()
+        # Note that we check the callsign is in this doc as if no configuration
+        # has this callsign, the firt document returned above will be for the
+        # closest callsign alphabetically (and thus not useful).
+        if config and self._callsign_in_config(callsign, config["doc"]):
+            return {
+                "id": config["id"],
+                "payload_configuration": config["doc"]
+            }
 
-        if not result or callsign not in result["doc"]["payloads"]:
-            return False
-        else:
-            return result["doc"]
+        return None
+
+    def _callsign_in_config(self, callsign, config):
+        if "sentences" in config:
+            for sentence in config["sentences"]:
+                if sentence["callsign"] == callsign:
+                    return True
+        return False
 
     def _pre_filter(self, data, module):
         """
@@ -256,27 +302,27 @@ class Parser(object):
                 statsd.increment("filters.pre")
         return data
 
-    def _intermediate_filter(self, data, config):
+    def _intermediate_filter(self, data, sentence):
         """
         Apply all the intermediate (between getting the callsign and parsing)
         filters specified in the payload's configuration document and return
         the resulting filtered data.
         """
-        if "filters" in config:
-            if "intermediate" in config["filters"]:
-                for f in config["filters"]["intermediate"]:
+        if "filters" in sentence:
+            if "intermediate" in sentence["filters"]:
+                for f in sentence["filters"]["intermediate"]:
                     data = self._filter(data, f, str)
                     statsd.increment("filters.intermediate")
         return data
 
-    def _post_filter(self, data, config):
+    def _post_filter(self, data, sentence):
         """
         Apply all the post (after parsing) filters specified in the payload's
         configuration document and return the resulting filtered data.
         """
-        if "filters" in config:
-            if "post" in config["filters"]:
-                for f in config["filters"]["post"]:
+        if "filters" in sentence:
+            if "post" in sentence["filters"]:
+                for f in sentence["filters"]["post"]:
                     data = self._filter(data, f, dict)
                     statsd.increment("filters.post")
         return data

@@ -60,9 +60,9 @@ def validate(new, old, userctx, secobj):
         raise ForbiddenError("Launch time must be within launch window.")
 
 @version(1)
-def end_including_payloads_map(doc):
+def end_start_including_payloads_map(doc):
     """
-    Sort by flight window end time.
+    Sort by flight window end time, start time, created time.
     If the flight has payloads, emit it with the list of payloads, and emit
     a link for each payload so that they get included with include_docs.
 
@@ -74,9 +74,10 @@ def end_including_payloads_map(doc):
     if doc['type'] == "flight":
         if 'payloads' in doc and doc['approved']:
             et = rfc3339_to_timestamp(doc['end'])
-            yield (et, 0), doc['payloads']
+            st = rfc3339_to_timestamp(doc['start'])
+            yield (et, st, 0), doc['payloads']
             for payload in doc['payloads']:
-                yield (et, 1), {'_id': payload}
+                yield (et, st, 1), {'_id': payload}
 
 @version(1)
 def launch_time_including_payloads_map(doc):

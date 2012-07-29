@@ -1,7 +1,7 @@
 flight:
     validate_doc_update: habitat.views.flight.validate
     views:
-        end_including_payloads: habitat.views.flight.end_including_payloads_map
+        end_start_including_payloads: habitat.views.flight.end_start_including_payloads_map
         launch_time_including_payloads: habitat.views.flight.launch_time_including_payloads_map
         all_name_time_created: habitat.views.flight.all_name_map
 

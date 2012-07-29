@@ -67,7 +67,7 @@
                         },
                         "payload_configuration": {
                             "title": "Payload Configuration Document ID",
-                            "descrption": "The document ID of the payload_configuration document used to parse this document.",
+                            "description": "The document ID of the payload_configuration document used to parse this document.",
                             "required": true,
                             "type": "string"
                         },
