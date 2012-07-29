@@ -1,4 +1,4 @@
-# Copyright 2010, 2011 (C) Adam Greig, Daniel Richman
+# Copyright 2010, 2011, 2012 (C) Adam Greig, Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -31,7 +31,7 @@ import json
 import statsd
 
 from . import loadable_manager
-from .utils import dynamicloader, immortal_changes
+from .utils import dynamicloader
 
 logger = logging.getLogger("habitat.parser")
 statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat.parser'})
@@ -43,14 +43,14 @@ class Parser(object):
     """
     habitat's parser
 
-    :class:`Parser` takes arbitrary newly uploaded payload telemetry and
+    :class:`Parser` takes arbitrary unparsed  payload telemetry and
     attempts to use each loaded :class:`ParserModule` to turn this telemetry
-    into useful data, which is then saved back to the database.
+    into useful data.
     """
 
     ascii_exp = re.compile("^[\\x20-\\x7E]+$")
 
-    def __init__(self, config, daemon_name="parser"):
+    def __init__(self, config):
         """
         On construction, it will:
 
@@ -65,7 +65,7 @@ class Parser(object):
         """
 
         config = copy.deepcopy(config)
-        parser_config = config[daemon_name]
+        parser_config = config["parser"]
 
         self.loadable_manager = loadable_manager.LoadableManager(config)
 
@@ -96,26 +96,6 @@ class Parser(object):
 
         self.couch_server = couchdbkit.Server(config["couch_uri"])
         self.db = self.couch_server[config["couch_db"]]
-        self.last_seq = self.db.info()["update_seq"]
-
-    def run(self):
-        """
-        Start a continuous connection to CouchDB's _changes feed, watching for
-        new unparsed telemetry.
-        """
-        consumer = immortal_changes.Consumer(self.db)
-        consumer.wait(self._couch_callback, filter="habitat/unparsed",
-                since=self.last_seq, include_docs=True, heartbeat=1000)
-
-    def _couch_callback(self, result):
-        """
-        Handle a new result from the CouchDB _changes feed. Passes the doc off
-        to self.parse, then saves the result.
-        """
-        self.last_seq = result['seq']
-        doc = self.parse(result['doc'])
-        if doc:
-            self._save_updated_doc(doc)
 
     @statsd.StatsdTimer.wrap('time')
     def parse(self, doc):
@@ -282,32 +262,6 @@ class Parser(object):
             logger.info("All attempts to parse failed")
             statsd.increment("failed")
             return None
-
-    def _save_updated_doc(self, doc, attempts=0):
-        """
-        Save doc to the database, retrying with a merge in the event of
-        resource conflicts. This should definitely be a method of some Telem
-        class thing.
-        """
-        latest = self.db[doc['_id']]
-        latest['data'].update(doc['data'])
-        try:
-            self.db.save_doc(latest)
-            logger.debug("Saved doc {0} successfully".format(doc["_id"]))
-            statsd.increment("saved")
-        except couchdbkit.exceptions.ResourceConflict:
-            attempts += 1
-            if attempts >= 30:
-                err = "Could not save doc {0} after {1} conflicts." \
-                        .format(doc["_id"], attempts)
-                logger.error(err)
-                statsd.increment("save_error")
-                raise RuntimeError(err)
-            else:
-                logger.debug("Save conflict, trying again (#{0})" \
-                    .format(attempts))
-                statsd.increment("save_conflict")
-                self._save_updated_doc(doc, attempts)
 
     def _find_config_doc(self, callsign, time_created):
         """
