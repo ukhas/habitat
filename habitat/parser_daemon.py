@@ -44,7 +44,7 @@ class ParserDaemon(object):
         """
         On construction, it will:
 
-        * Connects to CouchDB using ``self.config["couch_uri"]`` and
+        * Connect to CouchDB using ``self.config["couch_uri"]`` and
           ``config["couch_db"]``.
         """
 
@@ -67,7 +67,7 @@ class ParserDaemon(object):
     def _couch_callback(self, result):
         """
         Handle a new result from the CouchDB _changes feed. Passes the doc off
-        to self.parse, then saves the result.
+        to Parser.parse, then saves the result.
         """
         self.last_seq = result['seq']
         doc = self.parser.parse(result['doc'])
