@@ -40,7 +40,7 @@ class ParserDaemon(object):
     result back in the database.
     """
 
-    def __init__(self, config, daemon_name="parser"):
+    def __init__(self, config, daemon_name="parserdaemon"):
         """
         On construction, it will:
 
@@ -61,7 +61,7 @@ class ParserDaemon(object):
         new unparsed telemetry.
         """
         consumer = immortal_changes.Consumer(self.db)
-        consumer.wait(self._couch_callback, filter="habitat/unparsed",
+        consumer.wait(self._couch_callback, filter="parser/unparsed",
                 since=self.last_seq, include_docs=True, heartbeat=1000)
 
     def _couch_callback(self, result):
