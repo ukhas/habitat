@@ -6,7 +6,31 @@
 import sys
 import os
 
+class Mock(object):
+    """
+    Mock out external modules that might annoy documentation build
+    systems.
+    """
+    def __init__(self, *args, **kwargs):
+        pass
+    def __call__(self, *args, **kwargs):
+        pass
+    @classmethod
+    def __getattr__(cls, name):
+        if name in ('__file__', '__path__'):
+            return '/dev/null'
+        elif name[0] == name[0].upper():
+            return type(name, (), {})
+        else:
+            return Mock()
+
+MOCK_MODULES = ['M2Crypto', 'yaml']
+
+for mod in MOCK_MODULES:
+    sys.modules[mod] = Mock()
+
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
+
 import habitat
 
 
