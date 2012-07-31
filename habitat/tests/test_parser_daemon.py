@@ -64,7 +64,7 @@ class TestParserDaemon(object):
     def test_run_calls_wait_and_uses_update_seq(self):
         c = self.m.CreateMock(immortal_changes.Consumer)
         parser_daemon.immortal_changes.Consumer(self.daemon.db).AndReturn(c)
-        c.wait(self.daemon._couch_callback, filter="habitat/unparsed",
+        c.wait(self.daemon._couch_callback, filter="parser/unparsed",
                since=191238, include_docs=True, heartbeat=1000)
         self.m.ReplayAll()
         self.daemon.run()
