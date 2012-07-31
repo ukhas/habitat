@@ -25,6 +25,6 @@ except ImportError:
     sys.path.append(join(split(abspath(__file__))[0], '..'))
     import habitat
 
-from habitat.parser import Parser
+from habitat.parser_daemon import ParserDaemon
 from habitat.utils.startup import main
-main(Parser)
+main(ParserDaemon)
