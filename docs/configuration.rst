@@ -45,21 +45,23 @@ parser configuration
 
     parser:
         certs_dir: "/path/to/certs"
-        log_file: "/path/to/parser/log"
         modules:
             - name: "UKHAS"
               class: "habitat.parser_modules.ukhas_parser.UKHASParser"
+    parserdaemon:
+        log_file: "/path/to/parser/log"
 
-Inside the *parser* object:
+Inside the *parser* and *parserdaemon* objects:
 
 * *certs_dir* specifies where the habitat certificates (used for code signing)
   are kept
-* *log_file* specifies where the parser should write its log file to
+* *log_file* specifies where the parser daemon should write its log file to
 * *modules* gives a list of all the parser modules that should be loaded, with
   a name (that must match names used in flight documents) and the Python path
   to load.
 
-This configuration is used by :doc:`/habitat/habitat/habitat.parser`.
+This configuration is used by :doc:`/habitat/habitat/habitat.parser` and
+:doc:`/habitat/habitat/habitat.parser_daemon`.
 
 loadable_manager configuration
 ------------------------------

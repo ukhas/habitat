@@ -9,11 +9,13 @@ habitat.views.payload_telemetry
 
    .. autosummary::
    
-      flight_payload_estimated_received_time_map
+      flight_payload_time_map
+      payload_time_map
       read_json_schema
       rfc3339_to_timestamp
       validate
       validate_doc
+      version
    
    
 
@@ -22,5 +24,12 @@ habitat.views.payload_telemetry
    
 
    
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      ForbiddenError
+      UnauthorizedError
    
    

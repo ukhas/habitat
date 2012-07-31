@@ -19,6 +19,7 @@ habitat.views.utils
       timegm
       validate
       validate_doc
+      validate_rfc3339
    
    
 
@@ -38,8 +39,8 @@ habitat.views.utils
 
    .. autosummary::
    
-      Forbidden
-      Unauthorized
+      ForbiddenError
+      UnauthorizedError
       ValidationError
    
    

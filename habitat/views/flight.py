@@ -67,6 +67,16 @@ def validate(new, old, userctx, secobj):
 @version(1)
 def end_start_including_payloads_map(doc):
     """
+    View: ``flight/end_start_including_payloads``
+
+    Emits::
+
+        [end_time, start_time, 0] -> [linked payload_configuration id 1, ...]
+        [end_time, start_time, 1] -> {linked payload_configuration doc 1}
+        [end_time, start_time, 1] -> {...}
+
+    Times are all UNIX timestamps (and therefore in UTC).
+    
     Sort by flight window end time, start time, created time.
     If the flight has payloads, emit it with the list of payloads, and emit
     a link for each payload so that they get included with include_docs.
@@ -75,6 +85,13 @@ def end_start_including_payloads_map(doc):
 
     Used by the parser to find active flights and the configurations to use to
     decode telemetry from them.
+
+    May otherwise be used to find upcoming flights and their associated
+    payloads, though typically the view ``launch_time_including_payloads``
+    would be more useful as it sorts by launch time.
+
+    Query using ``startkey=[current_timestamp]`` to get all flights whose
+    windows have not yet ended.
     """
     if doc['type'] == "flight":
         if 'payloads' in doc and doc['approved']:
@@ -87,12 +104,24 @@ def end_start_including_payloads_map(doc):
 @version(1)
 def launch_time_including_payloads_map(doc):
     """
+    View: ``flight/launch_time_including_payloads``
+
+    Emits::
+
+        [launch_time, 0] -> [linked payload_configuration id 1, ...]
+        [launch_time, 1] -> {linked payload_configuration doc 1}
+        [launch_time, 1] -> {...}
+
+    Times are all UNIX timestamps (and therefore in UTC).
+
     Sort by flight launch time.
     
     Only shows approved flights.
 
     Used by the calendar and other interface elements to show a list of
     upcoming flights.
+
+    Query using ``startkey=[current_timestamp]`` to get all upcoming flights.
     """
     if doc['type'] == "flight":
         if doc['approved']:
@@ -104,12 +133,19 @@ def launch_time_including_payloads_map(doc):
 @version(1)
 def all_name_map(doc):
     """
+    View: ``flight/all_name``
+
+    Emits::
+
+        [name] -> null
+
     Sort by flight name.
 
     Show all flights, even those unapproved.
     
     Used where the UI must show all the flights in some usefully searchable
-    sense.
+    sense, for instance when creating a new flight document based on some old
+    or unapproved one, or when approving new flight documents.
     """
     if doc['type'] == "flight":
         yield doc['name'], None

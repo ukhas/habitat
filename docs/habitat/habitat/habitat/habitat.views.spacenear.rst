@@ -10,6 +10,7 @@ habitat.views.spacenear
    .. autosummary::
    
       spacenear_filter
+      version
    
    
 
