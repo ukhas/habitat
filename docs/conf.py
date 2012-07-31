@@ -25,8 +25,7 @@ class Mock(object):
             return Mock()
 
 MOCK_MODULES = [
-    'M2Crypto', 'crcmod', 'couchdbkit', 'jsonschema', 'couch_named_python',
-    'yaml'
+    'M2Crypto', 'crcmod', 'couchdbkit', 'jsonschema', 'yaml'
 ]
 
 for mod in MOCK_MODULES:
