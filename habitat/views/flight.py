@@ -59,6 +59,11 @@ def validate(new, old, userctx, secobj):
     if not start <= launch < end:
         raise ForbiddenError("Launch time must be within launch window.")
 
+    if 'payloads' in new:
+        payloads = new['payloads']
+        if len(payloads) != len(set(payloads)):
+            raise ForbiddenError("Duplicate entries in payloads list")
+
 @version(1)
 def end_start_including_payloads_map(doc):
     """
