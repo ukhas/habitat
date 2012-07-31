@@ -24,7 +24,10 @@ class Mock(object):
         else:
             return Mock()
 
-MOCK_MODULES = ['M2Crypto', 'yaml']
+MOCK_MODULES = [
+    'M2Crypto', 'crcmod', 'couchdbkit', 'jsonschema', 'couch_named_python',
+    'statsd', 'yaml'
+]
 
 for mod in MOCK_MODULES:
     sys.modules[mod] = Mock()
