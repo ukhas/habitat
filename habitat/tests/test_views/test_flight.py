@@ -103,6 +103,15 @@ class TestFlight(object):
         assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
 
+    def test_duplicate_payloads(self):
+        mydoc = deepcopy(doc)
+        mydoc['payloads'] = ['a', 'b', 'c']
+        flight.validate(mydoc, {}, {'roles': []}, {})
+
+        mydoc['payloads'].append('a')
+        assert_raises(ForbiddenError, flight.validate, mydoc, {},
+                {'roles': []}, {})
+
     def test_view_launch_time_including_payloads(self):
         mydoc = deepcopy(doc)
         mydoc['approved'] = True
