@@ -30,6 +30,15 @@ allowed_types = set(
 
 @version(1)
 def validate(new, old, userctx, secobj):
+    """
+    Core habitat validation function.
+
+    * Prevent deletion by anyone except administrators.
+    * Prevent documents without a type.
+    * Prevent documents whose type is invalid.
+    * Prevent changing document type.
+
+    """
     if '_deleted' in new:
         must_be_admin(userctx, "Only administrators may delete documents.")
         return

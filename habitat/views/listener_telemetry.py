@@ -43,14 +43,34 @@ def validate(new, old, userctx, secobj):
 
 @version(1)
 def time_created_callsign_map(doc):
-    """Emit (time_created, callsign)."""
+    """
+    View: ``listener_telemetry/time_created_callsign``
+
+    Emits::
+
+        [time_created, callsign] -> null
+
+    Times are UNIX timestamps (and therefore in UTC).
+
+    Sorts by time created. Useful to see the latest listener telemetry.
+    """
     if doc['type'] == "listener_telemetry":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (tc, doc['data']['callsign']), None
 
 @version(1)
 def callsign_time_created_map(doc):
-    """Emit (callsign, time_created)."""
+    """
+    View: ``listener_telemetry/callsign_time_created``
+
+    Emits::
+
+        [callsign, time_created] -> null
+
+    Times are UNIX timestamps (and therefore in UTC).
+    
+    Sorts by callsign. Useful to see a certain callsign's latest telemetry.
+    """
     if doc['type'] == "listener_telemetry":
         tc = rfc3339_to_timestamp(doc['time_created'])
         yield (doc['data']['callsign'], tc), None

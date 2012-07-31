@@ -11,6 +11,7 @@ habitat.sensors.base
    
       ascii_float
       ascii_int
+      constant
       string
    
    

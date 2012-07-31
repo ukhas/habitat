@@ -1,7 +1,7 @@
-habitat.views.listener_info
-===========================
+habitat.views.listener_information
+==================================
 
-.. automodule:: habitat.views.listener_info
+.. automodule:: habitat.views.listener_information
 
    
    
@@ -9,12 +9,14 @@ habitat.views.listener_info
 
    .. autosummary::
    
+      callsign_time_created_map
       must_be_admin
       read_json_schema
       rfc3339_to_timestamp
       time_created_callsign_map
       validate
       validate_doc
+      version
    
    
 

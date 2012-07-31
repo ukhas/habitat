@@ -10,6 +10,7 @@ habitat.views.parser
    .. autosummary::
    
       unparsed_filter
+      version
    
    
 

@@ -29,6 +29,7 @@ See http://habitat.habhub.org for more information.
     :toctree: habitat
 
     habitat.parser
+    habitat.parser_daemon
     habitat.parser_modules
     habitat.loadable_manager
     habitat.sensors
@@ -41,11 +42,12 @@ See http://habitat.habhub.org for more information.
 __name__ = "habitat"
 __version__ = "0.2.0"
 __authors__ = "Adam Greig, Daniel Richman"
-__short_copyright__ = "2010, 2011 " + __authors__
+__short_copyright__ = "2010-2012 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
 from . import filters
 from . import parser
+from . import parser_daemon
 from . import parser_modules
 from . import loadable_manager
 from . import sensors
