@@ -23,7 +23,7 @@ habitat related design documents.
     :toctree: habitat
 
     habitat.views.flight
-    habitat.views.listener_info
+    habitat.views.listener_information
     habitat.views.listener_telemetry
     habitat.views.payload_telemetry
     habitat.views.habitat

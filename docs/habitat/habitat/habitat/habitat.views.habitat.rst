@@ -9,7 +9,9 @@ habitat.views.habitat
 
    .. autosummary::
    
+      must_be_admin
       validate
+      version
    
    
 
@@ -23,6 +25,6 @@ habitat.views.habitat
 
    .. autosummary::
    
-      Forbidden
+      ForbiddenError
    
    

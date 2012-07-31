@@ -79,7 +79,21 @@ def _validate_filter(f):
 @version(1)
 def validate(new, old, userctx, secobj):
     """
-    Validate payload_configuration documents against the schema.
+    Validate payload_configuration documents against the schema and then
+    against specific validation requirements.
+
+    * Must match schema
+    * If editing, must be an administrator
+    * If there are any sentences with protocol=UKHAS:
+        * Checksum must be a valid type if provided
+        * Must have at least one field
+        * Coordinate fields must have a format
+    * If any sentences have filters:
+        * Normal filters must specify a callable
+        * Hotfix filters must specify code, a signature and a certificate
+    * If any transmissions have modulation=RTTY:
+        * Must also specify shift, encoding, baud, parity and stop.
+
     """
     global schema
     if not schema:
@@ -110,9 +124,14 @@ def validate(new, old, userctx, secobj):
 @version(1)
 def name_time_created_map(doc):
     """
-    Emit (name, date_created).
+    View: ``payload_configuration/name_time_created``
 
-    Used to get a list of all current payload configurations.
+    Emits::
+
+        [name, time_created] -> null
+
+    Used to get a list of all current payload configurations, for display
+    purposes or elsewhere where sorting by name is useful.
     """
     if doc['type'] == "payload_configuration":
         created = rfc3339_to_timestamp(doc['time_created'])
@@ -121,9 +140,16 @@ def name_time_created_map(doc):
 @version(1)
 def callsign_time_created_map(doc):
     """
-    Emit (callsign, created) -> sentence for each callsign in the document.
+    View: ``payload_configuration/callsign_time_created``
 
-    Used by the parser when parsing telemetry not in a flight.
+    Emits::
+
+        [callsign, time_created] -> sentence 1
+        [callsign, time_created] -> sentence 2
+        [callsign, time_created] -> ...
+
+    Useful to obtain configuration documents for a given callsign if it can't
+    be found via upcoming flights, for example parsing test telemetry.
     """
     if doc['type'] == "payload_configuration":
         if 'sentences' in doc:

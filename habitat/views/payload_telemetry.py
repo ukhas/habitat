@@ -44,8 +44,16 @@ def _check_only_new(new, old):
 @version(1)
 def validate(new, old, userctx, secobj):
     """
-    Validate this payload_telemetry document against the schema, then check
-    that new is strictly a superset of old (except for _rev).
+    Validate this payload_telemetry document against the schema, then perform
+    some specific checks:
+
+    * Admins may perform any further editing
+    * If edited
+        * Only the parser may add new fields to data
+        * The receivers list may only get new receivers
+    * If created
+        * Must have one receiver
+        * Must have _raw and nothing but _raw in data
     """
     global schema
     if not schema:
@@ -97,7 +105,15 @@ def _estimate_time_received(receivers):
 
 @version(1)
 def flight_payload_time_map(doc):
-    """Map by flight, payload configuration, estimated received time."""
+    """
+    View: ``payload_telemetry/flight_payload_time``
+
+    Emits::
+
+        [flight_id, payload_configuration_id, estimated_time_received] -> null
+
+    Useful to find telemetry related to a certain flight.
+    """
     if doc['type'] != "payload_telemetry" or '_parsed' not in doc['data']:
         return
 
@@ -111,7 +127,15 @@ def flight_payload_time_map(doc):
 
 @version(1)
 def payload_time_map(doc):
-    """Map by payload configuration, estimated received time."""
+    """
+    View: ``payload_telemetry/payload_time``
+
+    Emits::
+
+        [payload_configuration_id, estimated_time_received] -> null
+
+    Useful to find telemetry related to a specific payload_configuration.
+    """
     if doc['type'] != "payload_telemetry" or '_parsed' not in doc['data']:
         return
 

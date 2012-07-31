@@ -14,6 +14,12 @@ on how what configuration settings the UKHAS parser module expects.
 Parser module configuration is given in the "sentence" dictionary of the
 payload dictionary in a flight document.
 
+Generating Payload Configuration Documents
+==========================================
+
+The easiest and recommended way to generate configuration documents is using
+the web tool `genpayload <http://habitat.habhub.org/genpayload>`_.
+
 Standard UKHAS Sentences
 ========================
 
@@ -34,55 +40,9 @@ fields may be configured per-payload.
 Parser Module Configuration
 ===========================
 
-The parser module expects to be given the payload name, the checksum algorithm,
+The parser module expects to be given the callsign, the checksum algorithm,
 the protocol name ("UKHAS") and a list of fields, each of which should at
 least specify the field name and data type.
-
-For example, a configuration for the above typical sentence might be:
-
-.. code-block:: javascript
-
-    "habitat": {
-        "sentence": {
-            "protocol": "UKHAS",
-            "checksum": "crc16-ccitt",
-            "fields": [
-                {
-                    "name": "count",
-                    "sensor": "base.ascii_int"
-                }, {
-                    "name": "time",
-                    "sensor": "stdtelem.time"
-                }, {
-                    "name": "latitude",
-                    "sensor": "stdtelem.coordinate",
-                    "format": "dd.dddd"
-                }, {
-                    "name": "longitude",
-                    "sensor": "stdtelem.coordinate",
-                    "format": "dd.dddd"
-                }, {
-                    "name": "altitude",
-                    "sensor": "base.ascii_int"
-                }
-            ]
-        },
-        "filters": {
-            "intermediate": [
-                {
-                    "type": "normal",
-                    "callable": "habitat.filters.upper_case"
-                }
-            ], "post": [
-            ]
-        }
-    }
-
-Payload Name
-------------
-
-The payload name is given as the key to the configuration dictionary, in
-the above case the string "habitat" on the first line.
 
 Checksum Algorithms
 -------------------
@@ -184,6 +144,8 @@ Supported types are:
 * ``int``: a value that should be interpreted as an integer.
 * ``time``: a field containing the time as either ``HH:MM:SS`` or just
   ``HH:MM``. Will be interpreted into a time representation.
+* ``time``: a field containing the time of day, in one of the following
+  formats: ``HH:MM:SS``, ``HHMMSS``, ``HH:MM``, ``HHMM``.
 * ``coordinate``: a coordinate, see below
 
 Coordinate Fields
