@@ -3,6 +3,7 @@
 # habitat documentation build configuration file, created by
 # sphinx-quickstart on Sat Dec 11 14:40:10 2010.
 
+import inspect
 import sys
 import os
 
@@ -14,18 +15,23 @@ class Mock(object):
     def __init__(self, *args, **kwargs):
         pass
     def __call__(self, *args, **kwargs):
-        pass
+        code = inspect.stack()[1][4][0].strip()
+        if code[0] == '@':
+            def dec(f):
+                return f
+            return dec
+        else:
+            return None
     @classmethod
     def __getattr__(cls, name):
         if name in ('__file__', '__path__'):
             return '/dev/null'
-        elif name[0] == name[0].upper():
-            return type(name, (), {})
         else:
             return Mock()
 
 MOCK_MODULES = [
-    'M2Crypto', 'crcmod', 'couchdbkit', 'jsonschema', 'yaml'
+    'M2Crypto', 'crcmod', 'couchdbkit', 'jsonschema', 'yaml',
+    'couch_named_python', 'statsd'
 ]
 
 for mod in MOCK_MODULES:
