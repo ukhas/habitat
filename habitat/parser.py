@@ -118,8 +118,8 @@ class Parser(object):
         receiver_callsign = doc['receivers'].keys()[0]
 
         logger.info("Parsing [{type}] {data!r} ({id}) from {who}"
-                .format(id=doc["_id"], data=debug_data, type=debug_type,
-                        who=receiver_callsign))
+                    .format(id=doc["_id"], data=debug_data, type=debug_type,
+                            who=receiver_callsign))
 
         for module in self.modules:
             try:
@@ -132,8 +132,8 @@ class Parser(object):
 
         if type(data) is dict:
             doc['data'].update(data)
-            logger.info("{module} parsed data from {callsign} successfully" \
-                .format(module=module["name"], callsign=callsign))
+            logger.info("{module} parsed data from {callsign} successfully"
+                        .format(module=module["name"], callsign=callsign))
             logger.debug("Parsed data: " + json.dumps(data, indent=2))
             statsd.increment("parsed")
             if "_protocol" in data:
@@ -161,7 +161,7 @@ class Parser(object):
             callsign = module["module"].pre_parse(raw_data)
         except (ValueError, KeyError) as e:
             logger.debug("Exception in {module} {where}: {e}"
-                    .format(e=e, module=module['name'], where=where))
+                         .format(e=e, module=module['name'], where=where))
             statsd.increment("parse_exception")
             raise CantGetCallsign()
         return callsign
@@ -173,14 +173,14 @@ class Parser(object):
         """
         if config and not self._callsign_in_config(callsign, config):
             logger.debug("Callsign {c!r} not found in configuration doc"
-                    .format(c=callsign))
+                         .format(c=callsign))
             raise CantGetConfig()
 
         config = self._find_config_doc(callsign)
 
         if not config:
             logger.debug("No configuration doc for {callsign!r} found"
-                    .format(callsign=callsign))
+                         .format(callsign=callsign))
             statsd.increment("no_config_doc")
             raise CantGetConfig()
 
@@ -203,7 +203,7 @@ class Parser(object):
                 data = self.filtering.post_filter(data, sentence)
             except (ValueError, KeyError) as e:
                 logger.debug("Exception in {module} {where}: {e}"
-                        .format(module=module['name'], e=e, where=where))
+                             .format(module=module['name'], e=e, where=where))
                 statsd.increment("parse_exception")
                 continue
 
@@ -218,7 +218,6 @@ class Parser(object):
                 data["_parsed"]["flight"] = config["flight_id"]
             return data
         raise CantGetData()
-
 
     def _find_config_doc(self, callsign):
         """
@@ -259,7 +258,7 @@ class Parser(object):
 
         config = self.db.view("payload_configuration/callsign_time_created",
                               startkey=[callsign], include_docs=True, limit=1
-                             ).first()
+                              ).first()
         # Note that we check the callsign is in this doc as if no configuration
         # has this callsign, the firt document returned above will be for the
         # closest callsign alphabetically (and thus not useful).
@@ -273,7 +272,6 @@ class Parser(object):
 
     def _callsign_in_config(self, callsign, config):
         return callsign in (s["callsign"] for s in config["sentences"])
-
 
 
 class ParserFiltering(object):
@@ -297,8 +295,8 @@ class ParserFiltering(object):
             if ca.check_ca():
                 self.certificate_authorities.append(ca)
             else:
-                raise ValueError("CA certificate is not a CA: " +
-                    os.path.join(ca_path, f))
+                raise ValueError("CA certificate is not a CA: {0}"
+                                 .format(os.path.join(ca_path, f)))
 
         self.loaded_certs = {}
 
@@ -467,11 +465,14 @@ class ParserModule(object):
         """
         raise ValueError()
 
+
 class CantGetCallsign(Exception):
     pass
 
+
 class CantGetConfig(Exception):
     pass
+
 
 class CantGetData(Exception):
     pass
