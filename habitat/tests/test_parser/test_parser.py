@@ -115,18 +115,6 @@ class TestParser(object):
                 pass
         assert_raises(TypeError, try_to_load_module, BadParseModule)
 
-    def test_init_loads_CAs(self):
-        assert len(self.parser.certificate_authorities) == 1
-        cert = self.parser.certificate_authorities[0]
-        assert cert.get_serial_number() == 9315532607032814920L
-
-    def test_init_doesnt_load_non_CA_cert(self):
-        config = deepcopy(self.parser_config)
-        base_path = os.path.split(os.path.abspath(__file__))[0]
-        cert_path = os.path.join(base_path, 'non_ca_certs')
-        config['parser']['certs_dir'] = cert_path
-        assert_raises(ValueError, parser.Parser, config)
-
     def test_init_connects_to_couch(self):
         # This actually tested by setup(), since the parser needs to be
         # initialised with CouchDB mocks in all other tests.
@@ -249,91 +237,117 @@ class TestParser(object):
 
     def test_calls_filters(self):
         doc, config = self.setup_parse()
-        self.m.StubOutWithMock(self.parser, '_pre_filter')
-        self.m.StubOutWithMock(self.parser, '_intermediate_filter')
-        self.m.StubOutWithMock(self.parser, '_post_filter')
+        mock_filtering = self.m.CreateMock(parser.ParserFiltering)
         payload_config = config['payload_configuration']['sentences'][0]
-        self.parser._pre_filter('test string',
+        mock_filtering.pre_filter('test string',
                 self.parser.modules[0]).AndReturn('test string')
-        self.parser._intermediate_filter('test string',
+        mock_filtering.intermediate_filter('test string',
                 payload_config).AndReturn('test string')
-        self.parser._post_filter({}, payload_config).AndReturn({})
+        mock_filtering.post_filter({}, payload_config).AndReturn({})
+        self.parser.filtering = mock_filtering
         self.m.ReplayAll()
         self.parser.parse(doc)
         self.m.VerifyAll()
 
+class TestParserFiltering(object):
+    def setup(self):
+        self.m = mox.Mox()
+
+        base_path = os.path.split(os.path.abspath(__file__))[0]
+        cert_path = os.path.join(base_path, 'certs')
+        self.parser_config = {"parser": {
+            "certs_dir": cert_path}, "loadables": [],
+            "couch_uri": "http://localhost:5984", "couch_db": "test"}
+
+        self.fil = parser.ParserFiltering(self.parser_config)
+
+    def teardown(self):
+        self.m.UnsetStubs()
+
+    def test_init_loads_CAs(self):
+        assert len(self.fil.certificate_authorities) == 1
+        cert = self.fil.certificate_authorities[0]
+        assert cert.get_serial_number() == 9315532607032814920L
+
+    def test_init_doesnt_load_non_CA_cert(self):
+        config = deepcopy(self.parser_config)
+        base_path = os.path.split(os.path.abspath(__file__))[0]
+        cert_path = os.path.join(base_path, 'non_ca_certs')
+        config['parser']['certs_dir'] = cert_path
+        assert_raises(ValueError, parser.Parser, config)
+
     def test_runs_pre_filters(self):
-        self.m.StubOutWithMock(self.parser, '_filter')
+        self.m.StubOutWithMock(self.fil, '_filter')
         data = 'test data'
         module = {'pre-filters': ['f1', 'f2']}
-        self.parser._filter('test data', 'f1', str).AndReturn('filtered data')
-        self.parser._filter('filtered data', 'f2', str).AndReturn('result')
+        self.fil._filter('test data', 'f1', str).AndReturn('filtered data')
+        self.fil._filter('filtered data', 'f2', str).AndReturn('result')
         self.m.ReplayAll()
-        assert self.parser._pre_filter(data, module) == 'result'
+        assert self.fil.pre_filter(data, module) == 'result'
         self.m.VerifyAll()
 
     def test_runs_intermediate_filters(self):
-        self.m.StubOutWithMock(self.parser, '_filter')
+        self.m.StubOutWithMock(self.fil, '_filter')
         data = 'test data'
         config = {'filters': {'intermediate': ['f1', 'f2']}}
-        self.parser._filter(data, 'f1', str).AndReturn('filtered data')
-        self.parser._filter('filtered data', 'f2', str).AndReturn('result')
+        self.fil._filter(data, 'f1', str).AndReturn('filtered data')
+        self.fil._filter('filtered data', 'f2', str).AndReturn('result')
         self.m.ReplayAll()
-        assert self.parser._intermediate_filter(data, config) == 'result'
+        assert self.fil.intermediate_filter(data, config) == 'result'
         self.m.VerifyAll()
 
     def test_runs_post_filters(self):
-        self.m.StubOutWithMock(self.parser, '_filter')
+        self.m.StubOutWithMock(self.fil, '_filter')
         data = {'test': 2}
         config = {'filters': {'post': ['f1', 'f2']}}
-        self.parser._filter(data, 'f1', dict).AndReturn({'test': 3})
-        self.parser._filter({'test': 3}, 'f2', dict)\
+        self.fil._filter(data, 'f1', dict).AndReturn({'test': 3})
+        self.fil._filter({'test': 3}, 'f2', dict)\
                 .AndReturn({'result': True})
         self.m.ReplayAll()
-        assert self.parser._post_filter(data, config) == {'result': True}
+        assert self.fil.post_filter(data, config) == {'result': True}
         self.m.VerifyAll()
 
     def test_filters_must_have_type(self):
-        assert self.parser._filter('test data', {}, str) == 'test data'
+        assert self.fil._filter('test data', {}, str) == 'test data'
 
     def test_calls_loadable_manager_for_normal_filters(self):
-        self.m.StubOutWithMock(self.parser, 'loadable_manager')
+        self.m.StubOutWithMock(self.fil, 'loadable_manager')
         data = 'test data'
         f = {'type': 'normal', 'filter': 'some.func'}
-        self.parser.loadable_manager.run(
+        self.fil.loadable_manager.run(
             'filters.some.func', f, 'test data').AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.parser._filter(data, f, str) == 'filtered'
+        assert self.fil._filter(data, f, str) == 'filtered'
         self.m.VerifyAll()
 
     def test_calls_loadable_manager_for_normal_filters_with_config(self):
-        self.m.StubOutWithMock(self.parser, 'loadable_manager')
+        self.m.StubOutWithMock(self.fil, 'loadable_manager')
         data = 'test data'
         f = {'type': 'normal', 'filter': 'some.func', 'config': 'parameters'}
-        self.parser.loadable_manager.run(
+        self.fil.loadable_manager.run(
             'filters.some.func', f, 'test data').AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.parser._filter(data, f, str) == 'filtered'
+        assert self.fil._filter(data, f, str) == 'filtered'
         self.m.VerifyAll()
 
     def test_calls_hotfix_filter(self):
-        self.m.StubOutWithMock(self.parser, '_hotfix_filter')
+        self.m.StubOutWithMock(self.fil, '_hotfix_filter')
         data = 'test data'
         f = {'type': 'hotfix'}
-        self.parser._hotfix_filter('test data', f).AndReturn('filtered')
+        self.fil._hotfix_filter('test data', f).AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.parser._filter(data, f, str) == 'filtered'
+        assert self.fil._filter(data, f, str) == 'filtered'
         self.m.VerifyAll()
 
     def test_skips_unknown_filter_types(self):
-        assert self.parser._filter('tdta', {'type': '?'}, str) == 'tdta'
+        assert self.fil._filter('tdta', {'type': '?'}, str) == 'tdta'
 
     def test_unimportable_normal_filters(self):
         f = {'filter': 'fakefakefake.fakepath.is.fake', 'type': 'normal'}
-        assert self.parser._filter('test string', f, str) == 'test string'
+        assert self.fil._filter('test string', f, str) == 'test string'
 
     def test_sanity_checks_filter_return_type(self):
-        self.m.StubOutWithMock(self.parser, 'loadable_manager')
+        self.m.StubOutWithMock(self.fil, 'loadable_manager')
         cases = [("string", str, True), ("string", dict, False),
                  ({"data": True}, dict, True), ({"data": True}, str, False)]
 
@@ -345,11 +359,11 @@ class TestParser(object):
             else:
                 expect_result = data_in
 
-            self.parser.loadable_manager.run('filters.intercept_me', config,
+            self.fil.loadable_manager.run('filters.intercept_me', config,
                     data_in).AndReturn(filter_return)
 
             self.m.ReplayAll()
-            assert self.parser._filter(data_in, config, want_type) == \
+            assert self.fil._filter(data_in, config, want_type) == \
                     expect_result
             self.m.VerifyAll()
             self.m.ResetAll()
@@ -360,28 +374,28 @@ class TestParser(object):
             assert config == 'config'
             return 'filtered'
         f = {'callable': fil, 'config': 'config', 'type': 'normal'}
-        assert self.parser._filter('test string', f, str) == 'test string'
+        assert self.fil._filter('test string', f, str) == 'test string'
 
     def test_hotfix_filters(self):
-        self.m.StubOutWithMock(self.parser, '_sanity_check_hotfix')
-        self.m.StubOutWithMock(self.parser, '_get_certificate')
-        self.m.StubOutWithMock(self.parser, '_verify_certificate')
-        self.m.StubOutWithMock(self.parser, '_compile_hotfix')
+        self.m.StubOutWithMock(self.fil, '_sanity_check_hotfix')
+        self.m.StubOutWithMock(self.fil, '_get_certificate')
+        self.m.StubOutWithMock(self.fil, '_verify_certificate')
+        self.m.StubOutWithMock(self.fil, '_compile_hotfix')
         f = {'certificate': 'cert'}
         env = {'f': lambda data: 'hotfix ran'}
-        self.parser._sanity_check_hotfix(f)
-        self.parser._get_certificate('cert').AndReturn('got_cert')
-        self.parser._verify_certificate(f, 'got_cert')
-        self.parser._compile_hotfix(f).AndReturn(env)
+        self.fil._sanity_check_hotfix(f)
+        self.fil._get_certificate('cert').AndReturn('got_cert')
+        self.fil._verify_certificate(f, 'got_cert')
+        self.fil._compile_hotfix(f).AndReturn(env)
         self.m.ReplayAll()
-        assert self.parser._hotfix_filter({}, f) == 'hotfix ran'
+        assert self.fil._hotfix_filter({}, f) == 'hotfix ran'
         self.m.VerifyAll()
 
     def test_handles_hotfix_exceptions(self):
-        self.m.StubOutWithMock(self.parser, '_sanity_check_hotfix')
-        self.m.StubOutWithMock(self.parser, '_get_certificate')
-        self.m.StubOutWithMock(self.parser, '_verify_certificate')
-        self.m.StubOutWithMock(self.parser, '_compile_hotfix')
+        self.m.StubOutWithMock(self.fil, '_sanity_check_hotfix')
+        self.m.StubOutWithMock(self.fil, '_get_certificate')
+        self.m.StubOutWithMock(self.fil, '_verify_certificate')
+        self.m.StubOutWithMock(self.fil, '_compile_hotfix')
         f = {'certificate': 'cert', 'type': 'hotfix'}
 
         class OhNoError(Exception):
@@ -391,21 +405,21 @@ class TestParser(object):
             raise OhNoError
 
         env = {'f': hotfix}
-        self.parser._sanity_check_hotfix(f)
-        self.parser._get_certificate('cert').AndReturn('got_cert')
-        self.parser._verify_certificate(f, 'got_cert')
-        self.parser._compile_hotfix(f).AndReturn(env)
+        self.fil._sanity_check_hotfix(f)
+        self.fil._get_certificate('cert').AndReturn('got_cert')
+        self.fil._verify_certificate(f, 'got_cert')
+        self.fil._compile_hotfix(f).AndReturn(env)
         self.m.ReplayAll()
-        assert self.parser._filter('unfiltered', f, str) == 'unfiltered'
+        assert self.fil._filter('unfiltered', f, str) == 'unfiltered'
         self.m.VerifyAll()
 
     def test_handles_hotfix_syntax_error(self):
         f = {'code': "this isn't python!"}
-        assert_raises(ValueError, self.parser._compile_hotfix, f)
+        assert_raises(ValueError, self.fil._compile_hotfix, f)
 
     def test_handles_invalid_hotfix_code(self):
         f = {'code': 12}
-        assert_raises(ValueError, self.parser._compile_hotfix, f)
+        assert_raises(ValueError, self.fil._compile_hotfix, f)
 
     def test_hotfix_doesnt_allow_invalid_signature(self):
         f = {'code': 'return False', 'certificate': 'adamgreig.crt'}
@@ -413,7 +427,7 @@ class TestParser(object):
         cert = self.m.CreateMock(M2Crypto.X509.X509)
         cert.verify(mox.IsA(M2Crypto.EVP.PKey)).AndReturn(True)
         self.m.ReplayAll()
-        assert_raises(ValueError, self.parser._verify_certificate, f, cert)
+        assert_raises(ValueError, self.fil._verify_certificate, f, cert)
         self.m.VerifyAll()
 
     def test_hotfix_doesnt_allow_wrong_signature(self):
@@ -428,31 +442,32 @@ class TestParser(object):
         pubkey.get_rsa().AndReturn(rsa)
         rsa.verify(d, "signature", 'sha256').AndReturn(False)
         self.m.ReplayAll()
-        assert_raises(ValueError, self.parser._verify_certificate, f, cert)
+        assert_raises(ValueError, self.fil._verify_certificate, f, cert)
         self.m.VerifyAll()
 
     def test_hotfix_doesnt_allow_missing_signature(self):
         f = {'code': 'bla', 'certificate': 'cert.pem'}
-        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
+        assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
 
     def test_hotfix_doesnt_allow_missing_certificate(self):
         f = {'code': 'bla', 'signature': 'sign here'}
-        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
+        assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
 
     def test_hotfix_doesnt_allow_missing_code(self):
         f = {'certificate': 'cert.pem', 'signature': 'sign here'}
-        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
+        assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
 
     def test_hotfix_doesnt_allow_certs_not_signed_by_ca(self):
         cert = self.m.CreateMock(M2Crypto.X509.X509)
         cert.verify(mox.IsA(M2Crypto.EVP.PKey)).AndReturn(False)
         self.m.ReplayAll()
-        assert_raises(ValueError, self.parser._verify_certificate, {}, cert)
+        assert_raises(ValueError, self.fil._verify_certificate, {}, cert)
         self.m.VerifyAll()
 
     def test_hotfix_doesnt_allow_unloadable_certs(self):
-        assert_raises(ValueError, self.parser._get_certificate, 'doesntexist')
+        assert_raises(ValueError, self.fil._get_certificate, 'doesntexist')
 
     def test_hotfix_doesnt_allow_certs_with_paths_in_name(self):
         f = {'certificate': '../../dots.pem', 'code': '', 'signature': ''}
-        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
+        assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
+

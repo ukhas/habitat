@@ -57,10 +57,7 @@ class Parser(object):
 
         * Use ``config[daemon_name]`` as ``self.config`` (defaults to
           'parser').
-        * Load a :class:`habitat.loadable_manager.LoadableManager`, passing it
-          *config*.
         * Load modules from ``self.config["modules"]``.
-        * Scan ``self.config["certs_dir"]`` for CA and developer certificates.
         * Connects to CouchDB using ``self.config["couch_uri"]`` and
           ``config["couch_db"]``.
         """
@@ -68,7 +65,7 @@ class Parser(object):
         config = copy.deepcopy(config)
         parser_config = config["parser"]
 
-        self.loadable_manager = loadable_manager.LoadableManager(config)
+        self.filtering = ParserFiltering(config)
 
         self.modules = []
 
@@ -81,54 +78,25 @@ class Parser(object):
             module["module"] = m(self)
             self.modules.append(module)
 
-        self.certificate_authorities = []
-
-        self.cert_path = parser_config["certs_dir"]
-        ca_path = os.path.join(self.cert_path, 'ca')
-        for f in os.listdir(ca_path):
-            ca = M2Crypto.X509.load_cert(os.path.join(ca_path, f))
-            if ca.check_ca():
-                self.certificate_authorities.append(ca)
-            else:
-                raise ValueError("CA certificate is not a CA: " +
-                    os.path.join(ca_path, f))
-
-        self.loaded_certs = {}
-
         self.couch_server = couchdbkit.Server(config["couch_uri"])
         self.db = self.couch_server[config["couch_db"]]
 
     @statsd.StatsdTimer.wrap('time')
-    def parse(self, doc):
+    def parse(self, doc, config=None):
         """
         Attempts to parse telemetry information out of a new telemetry
         document *doc*.
 
         This function attempts to determine which of the loaded parser
         modules should be used to parse the message, and which config
-        file it should be given to do so.
+        file it should be given to do so (if *config* is specified, no attempt
+        will be made to find any other configuration document).
 
-        For the priority ordered list self.modules, resolution proceeds as::
+        The resulting parsed document is returned, or None is returned if no
+        data could be parsed.
 
-            for module in modules:
-                module.pre_parse to find a callsign
-                if a callsign is found:
-                    look up the configuration document for that callsign
-                    if a configuration document is found:
-                        check it specifies that this module should be used
-                        if it does:
-                            module.parse to get the data
-                            return
-            if we can't get any data:
-                error
-
-        Note that in the loops below, the filter, pre_parse, and
-        parse methods will all raise a ValueError if failure occurs,
-        continuing the loop.
-
-        Once parsed, documents are saved back to the CouchDB database with the
-        newly parsed data included. Some reserved field names will also be
-        saved, which are indicated by a leading underscore.
+        Some field names in data["data"] are reserved, as indicated by a
+        leading underscore.
 
         These fields may include:
 
@@ -145,85 +113,28 @@ class Parser(object):
         leading underscores.
         """
         data = None
-        try:
-            original_data = doc['data']['_raw']
-            receiver_callsign = doc['receivers'].keys()[0]
-        except (KeyError, IndexError) as e:
-            logger.warning("Could not find required key in doc: " + str(e))
-            statsd.increment("bad_doc")
-            return None
-        raw_data = base64.b64decode(original_data)
+        raw_data = base64.b64decode(doc['data']['_raw'])
+        debug_type, debug_data = self._get_debug(raw_data)
+        receiver_callsign = doc['receivers'].keys()[0]
 
-        if self.ascii_exp.search(raw_data):
-            debug_type = 'ascii'
-            debug_data = raw_data
-            statsd.increment("ascii_doc")
-        else:
-            debug_type = 'b64'
-            debug_data = original_data
-            statsd.increment("binary_doc")
-
-        logger.info("Parsing [{type}] {data!r} ({id}) from {who}"\
+        logger.info("Parsing [{type}] {data!r} ({id}) from {who}"
                 .format(id=doc["_id"], data=debug_data, type=debug_type,
                         who=receiver_callsign))
 
         for module in self.modules:
             try:
-                where = "pre_filter"
-                data = self._pre_filter(raw_data, module)
-                where = "pre_parse"
-                callsign = module["module"].pre_parse(data)
-            except (ValueError, KeyError) as e:
-                logger.debug("Exception in {module} {where}: {e}"
-                        .format(e=e, module=module['name'], where=where))
-                statsd.increment("parse_exception")
+                callsign = self._get_callsign(raw_data, module)
+                config = self._get_config(callsign, config)
+                data = self._get_data(raw_data, callsign, config, module)
+            except (CantGetCallsign, CantGetConfig, CantGetData):
                 continue
-
-            config = self._find_config_doc(callsign)
-            if not config:
-                logger.debug("No configuration doc for {callsign!r} found"
-                        .format(callsign=callsign))
-                statsd.increment("no_config_doc")
-                continue
-
-            sentences = config["payload_configuration"]["sentences"]
-            for sentence_index, sentence in enumerate(sentences):
-                if sentence["callsign"] != callsign:
-                    continue
-                if sentence["protocol"] != module["name"]:
-                    logger.debug("Incorrect protocol: {callsign},{module}"
-                            .format(callsign=callsign, module=module["name"]))
-                    continue
-                try:
-                    where = "intermediate filter"
-                    data = self._intermediate_filter(data, sentence)
-                    where = "main parse"
-                    data = module["module"].parse(data, sentence)
-                    where = "post filter"
-                    data = self._post_filter(data, sentence)
-                except (ValueError, KeyError) as e:
-                    logger.debug("Exception in {module} {where}: {e}"
-                            .format(module=module['name'], e=e, where=where))
-                    statsd.increment("parse_exception")
-                    continue
-
-                data["_protocol"] = module["name"]
-                data["_parsed"] = {
-                    "time_parsed": time.strftime("%Y-%m-%dT%H:%M:%SZ",
-                                                 time.gmtime()),
-                    "payload_configuration": config["id"],
-                    "configuration_sentence_index": sentence_index
-                }
-                if "flight_id" in config:
-                    data["_parsed"]["flight"] = config["flight_id"]
-
-                break
+            break
 
         if type(data) is dict:
             doc['data'].update(data)
             logger.info("{module} parsed data from {callsign} successfully" \
                 .format(module=module["name"], callsign=callsign))
-            logger.debug("Parsed data: " + json.dumps(data))
+            logger.debug("Parsed data: " + json.dumps(data, indent=2))
             statsd.increment("parsed")
             if "_protocol" in data:
                 statsd.increment("protocol.{0}".format(data['_protocol']))
@@ -232,6 +143,82 @@ class Parser(object):
             logger.info("All attempts to parse failed")
             statsd.increment("failed")
             return None
+
+    def _get_debug(self, raw_data):
+        if self.ascii_exp.search(raw_data):
+            statsd.increment("ascii_doc")
+            return 'ascii', raw_data
+        else:
+            statsd.increment("binary_doc")
+            return 'b64', base64.b64encode(raw_data)
+
+    def _get_callsign(self, raw_data, module):
+        """Attempt to find a callsign from the data."""
+        try:
+            where = "pre_filter"
+            raw_data = self.filtering.pre_filter(raw_data, module)
+            where = "pre_parse"
+            callsign = module["module"].pre_parse(raw_data)
+        except (ValueError, KeyError) as e:
+            logger.debug("Exception in {module} {where}: {e}"
+                    .format(e=e, module=module['name'], where=where))
+            statsd.increment("parse_exception")
+            raise CantGetCallsign()
+        return callsign
+
+    def _get_config(self, callsign, config=None):
+        """
+        Attempt to get a config doc given the callsign and maybe a provided
+        config doc.
+        """
+        if config and not self._callsign_in_config(callsign, config):
+            logger.debug("Callsign {c!r} not found in configuration doc"
+                    .format(c=callsign))
+            raise CantGetConfig()
+
+        config = self._find_config_doc(callsign)
+
+        if not config:
+            logger.debug("No configuration doc for {callsign!r} found"
+                    .format(callsign=callsign))
+            statsd.increment("no_config_doc")
+            raise CantGetConfig()
+
+        return config
+
+    def _get_data(self, raw_data, callsign, config, module):
+        """Attempt to parse data from what we know so far."""
+        sentences = config["payload_configuration"]["sentences"]
+        for sentence_index, sentence in enumerate(sentences):
+            if sentence["callsign"] != callsign:
+                continue
+            if sentence["protocol"] != module["name"]:
+                continue
+            try:
+                where = "intermediate filter"
+                data = self.filtering.intermediate_filter(raw_data, sentence)
+                where = "main parse"
+                data = module["module"].parse(data, sentence)
+                where = "post filter"
+                data = self.filtering.post_filter(data, sentence)
+            except (ValueError, KeyError) as e:
+                logger.debug("Exception in {module} {where}: {e}"
+                        .format(module=module['name'], e=e, where=where))
+                statsd.increment("parse_exception")
+                continue
+
+            data["_protocol"] = module["name"]
+            data["_parsed"] = {
+                "time_parsed": time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                             time.gmtime()),
+                "payload_configuration": config["id"],
+                "configuration_sentence_index": sentence_index
+            }
+            if "flight_id" in config:
+                data["_parsed"]["flight"] = config["flight_id"]
+            return data
+        raise CantGetData()
+
 
     def _find_config_doc(self, callsign):
         """
@@ -255,7 +242,7 @@ class Parser(object):
         }
 
         The returned document may have more than one sentence object, and each
-        should be attemted in order.
+        should be attempted in order.
         If no configuration can be found, None is returned.
         """
         t = int(time.time())
@@ -285,46 +272,65 @@ class Parser(object):
         return None
 
     def _callsign_in_config(self, callsign, config):
-        if "sentences" in config:
-            for sentence in config["sentences"]:
-                if sentence["callsign"] == callsign:
-                    return True
-        return False
+        return callsign in (s["callsign"] for s in config["sentences"])
 
-    def _pre_filter(self, data, module):
+
+
+class ParserFiltering(object):
+    """
+    Handle filtering of data during parsing.
+    """
+    def __init__(self, config):
+        """
+        * Scans ``config["parser"]["certs_dir"]`` for CA and developer
+          certificates.
+        * Loads a :class:`habitat.loadable_manager.LoadableManager` for
+          using loaded filters.
+        """
+        self.config = copy.deepcopy(config)
+        self.loadable_manager = loadable_manager.LoadableManager(config)
+        self.certificate_authorities = []
+        self.cert_path = self.config["parser"]["certs_dir"]
+        ca_path = os.path.join(self.cert_path, 'ca')
+        for f in os.listdir(ca_path):
+            ca = M2Crypto.X509.load_cert(os.path.join(ca_path, f))
+            if ca.check_ca():
+                self.certificate_authorities.append(ca)
+            else:
+                raise ValueError("CA certificate is not a CA: " +
+                    os.path.join(ca_path, f))
+
+        self.loaded_certs = {}
+
+    def pre_filter(self, raw_data, module):
         """
         Apply all the module's pre filters, in order, to the data and
         return the resulting filtered data.
         """
-        if "pre-filters" in module:
-            for f in module["pre-filters"]:
-                data = self._filter(data, f, str)
-                statsd.increment("filters.pre")
-        return data
+        sentence = {"filters": module}
+        return self._apply_filters(raw_data, sentence, "pre-filters", str)
 
-    def _intermediate_filter(self, data, sentence):
+    def intermediate_filter(self, raw_data, sentence):
         """
         Apply all the intermediate (between getting the callsign and parsing)
         filters specified in the payload's configuration document and return
         the resulting filtered data.
         """
-        if "filters" in sentence:
-            if "intermediate" in sentence["filters"]:
-                for f in sentence["filters"]["intermediate"]:
-                    data = self._filter(data, f, str)
-                    statsd.increment("filters.intermediate")
-        return data
+        return self._apply_filters(raw_data, sentence, "intermediate", str)
 
-    def _post_filter(self, data, sentence):
+    def post_filter(self, data, sentence):
         """
         Apply all the post (after parsing) filters specified in the payload's
         configuration document and return the resulting filtered data.
         """
+        return self._apply_filters(data, sentence, "post", dict)
+
+    def _apply_filters(self, data, sentence, filter_type, result_type):
         if "filters" in sentence:
-            if "post" in sentence["filters"]:
-                for f in sentence["filters"]["post"]:
-                    data = self._filter(data, f, dict)
-                    statsd.increment("filters.post")
+            if filter_type in sentence["filters"]:
+                for f in sentence["filters"][filter_type]:
+                    data = self._filter(data, f, result_type)
+                    statsd.increment("filtes.{0}".format(filter_type))
         return data
 
     def _filter(self, data, f, result_type):
@@ -334,7 +340,6 @@ class Parser(object):
         Returns the filtered data, or leaves the data untouched
         if the filter could not be run.
         """
-
         rollback = data
         data = copy.deepcopy(data)
 
@@ -405,16 +410,9 @@ class Parser(object):
     def _hotfix_filter(self, data, f):
         """Load a filter specified by some code in the database. Check its
         authenticity by verifying its certificate, then run if OK."""
-        # Check the hotfix has all the right fields
         self._sanity_check_hotfix(f)
-
-        # Load requested certificate
         cert = self._get_certificate(f["certificate"])
-
-        # Check the certificate and signature are cryptographically okay
         self._verify_certificate(f, cert)
-
-        # Compile the hotfix
         env = self._compile_hotfix(f)
 
         logger.debug("Executing a hotfix")
@@ -468,3 +466,12 @@ class ParserModule(object):
         extracted from the payload's configuration document.
         """
         raise ValueError()
+
+class CantGetCallsign(Exception):
+    pass
+
+class CantGetConfig(Exception):
+    pass
+
+class CantGetData(Exception):
+    pass
