@@ -26,6 +26,7 @@ habitat related design documents.
     habitat.views.listener_information
     habitat.views.listener_telemetry
     habitat.views.payload_telemetry
+    habitat.views.payload_configuration
     habitat.views.habitat
     habitat.views.parser
     habitat.views.spacenear
@@ -36,6 +37,7 @@ from . import flight
 from . import listener_information
 from . import listener_telemetry
 from . import payload_telemetry
+from . import payload_configuration
 from . import habitat
 from . import parser
 from . import spacenear
