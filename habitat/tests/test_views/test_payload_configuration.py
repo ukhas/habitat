@@ -147,12 +147,32 @@ class TestPayloadConfiguration(object):
         result = list(view(doc))
         assert result == [(('Test Payload', 1342978266), None)]
 
-    def test_view_callsign_time_created(self):
+    def test_view_callsign_time_created_index(self):
         mydoc = deepcopy(doc)
         mydoc['sentences'].append(deepcopy(mydoc['sentences'][0]))
         mydoc['sentences'][1]['callsign'] = "TATIBAH"
-        view = payload_configuration.callsign_time_created_map
+        meta = {
+            "name": "Test Payload",
+            "time_created": "2012-07-22T18:31:06+0100",
+        }
+        view = payload_configuration.callsign_time_created_index_map
         result = list(view(mydoc))
         assert result == [
-            (('HABITAT', 1342978266), mydoc['sentences'][0]),
-            (('TATIBAH', 1342978266), mydoc['sentences'][1])]
+            (('HABITAT', 1342978266, 0), (meta, mydoc['sentences'][0])),
+            (('TATIBAH', 1342978266, 1), (meta, mydoc['sentences'][1]))]
+
+    def test_view_callsign_time_created_index_includes_metadata(self):
+        mydoc = deepcopy(doc)
+        mydoc['sentences'].append(deepcopy(mydoc['sentences'][0]))
+        mydoc['sentences'][1]['callsign'] = "TATIBAH"
+        mydoc['metadata'] = {"meta": ["d", "a", "t", "a"]}
+        meta = {
+            "name": "Test Payload",
+            "time_created": "2012-07-22T18:31:06+0100",
+            "metadata": {"meta": ["d", "a", "t", "a"]}
+        }
+        view = payload_configuration.callsign_time_created_index_map
+        result = list(view(mydoc))
+        assert result == [
+            (('HABITAT', 1342978266, 0), (meta, mydoc['sentences'][0])),
+            (('TATIBAH', 1342978266, 1), (meta, mydoc['sentences'][1]))]
