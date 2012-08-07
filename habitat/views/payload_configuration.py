@@ -143,7 +143,7 @@ def name_time_created_map(doc):
 @version(1)
 def callsign_time_created_index_map(doc):
     """
-    View: ``payload_configuration/callsign_time_created``
+    View: ``payload_configuration/callsign_time_created_index``
 
     Emits::
 
