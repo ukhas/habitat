@@ -130,6 +130,9 @@ def name_time_created_map(doc):
 
         [name, time_created] -> null
 
+    In the key, ``time_created`` is emitted as a UNIX timestamp (seconds since
+    epoch).
+
     Used to get a list of all current payload configurations, for display
     purposes or elsewhere where sorting by name is useful.
     """
@@ -138,21 +141,39 @@ def name_time_created_map(doc):
         yield (doc['name'], created), None
 
 @version(1)
-def callsign_time_created_map(doc):
+def callsign_time_created_index_map(doc):
     """
     View: ``payload_configuration/callsign_time_created``
 
     Emits::
 
-        [callsign, time_created] -> sentence 1
-        [callsign, time_created] -> sentence 2
-        [callsign, time_created] -> ...
+        [callsign, time_created, 1] -> [metadata, sentence 1]
+        [callsign, time_created, 2] -> [metadata, sentence 2]
+        ...
+        [callsign, time_created, n] -> [metadata, sentence n]
+
+    Where ``metadata`` is::
+
+        {
+            "name": doc.name,
+            "time_created": doc.time_created (original string),
+            "metadata": doc.metadata (if present in doc)
+        }
+
+    (In other words, one row per sentence in this document).
+
+    In the key, ``time_created`` is emitted as a UNIX timestamp (seconds since
+    epoch).
 
     Useful to obtain configuration documents for a given callsign if it can't
-    be found via upcoming flights, for example parsing test telemetry.
+    be found via upcoming flights, for example parsing test telemetry or
+    selecting a sentence to copy when making a new document.
     """
     if doc['type'] == "payload_configuration":
         if 'sentences' in doc:
             created = rfc3339_to_timestamp(doc['time_created'])
-            for sentence in doc['sentences']:
-                yield (sentence['callsign'], created), sentence
+            for n, sentence in enumerate(doc['sentences']):
+                m = {"name": doc["name"], "time_created": doc["time_created"]}
+                if "metadata" in doc:
+                    m["metadata"] = doc["metadata"]
+                yield (sentence['callsign'], created, n), (m, sentence)
