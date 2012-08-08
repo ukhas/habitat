@@ -25,7 +25,7 @@ import inspect
 import re
 
 from couch_named_python import UnauthorizedError, ForbiddenError
-from jsonschema import ValidationError, validate
+from jsonschema import Validator
 from dateutil.parser import parse
 from dateutil.tz import tzutc
 from calendar import timegm
@@ -97,9 +97,9 @@ def _validate_timestamps(data, schema):
 
 def validate_doc(data, schema):
     """Validate *data* against *schema*, raising descriptive errors"""
-    try:
-        validate(data, schema, unknown_property="skip", stop_on_error=False)
-    except ValidationError as e:
-        out = "Validation errors: " + "; ".join(sorted(e.errors))
-        raise ForbiddenError(out)
+    v = Validator()
+    errors = list(v.iter_errors(data, schema))
+    if errors:
+        errors = ', '.join((str(error) for error in errors))
+        raise ForbiddenError("Validation errors: {0}".format(errors))
     _validate_timestamps(data, schema) 
