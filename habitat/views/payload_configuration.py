@@ -69,7 +69,7 @@ def _validate_filter(f):
     Check that filters have the required keys according to their type.
     """
     required_keys = {
-        'normal': ['callable'],
+        'normal': ['filter'],
         'hotfix': ['code', 'signature', 'certificate']}
     for k in required_keys[f['type']]:
         if k not in f:
@@ -90,7 +90,7 @@ def validate(new, old, userctx, secobj):
         * Must have at least one field
         * Coordinate fields must have a format
     * If any sentences have filters:
-        * Normal filters must specify a callable
+        * Normal filters must specify a filter path
         * Hotfix filters must specify code, a signature and a certificate
     * If any transmissions have modulation=RTTY:
         * Must also specify shift, encoding, baud, parity and stop.
