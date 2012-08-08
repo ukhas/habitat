@@ -1,6 +1,6 @@
 crcmod==1.7
 couchdbkit==0.6.1
--e git://github.com/ukhas/jsonschema.git@6bc1587dca6441e96c27#egg=jsonschema
+jsonschema==0.5
 couch-named-python==0.1.6dev
 python-dateutil==1.5
 statsd-client==1.0.2
