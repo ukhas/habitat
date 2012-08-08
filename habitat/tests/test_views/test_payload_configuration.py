@@ -142,6 +142,20 @@ class TestPayloadConfiguration(object):
             assert_raises(ForbiddenError, payload_configuration.validate,
                     mydoc, {}, {'roles': []}, {})
 
+    def test_only_validates_payload_configuration(self):
+        self.m.ReplayAll()
+        mydoc = {"type": "something_else"}
+        payload_configuration.validate(mydoc, {}, {'roles': []}, {})
+        self.m.VerifyAll()
+
+    def test_forbids_type_change(self):
+        other = deepcopy(doc)
+        other['type'] = 'another_type'
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                doc, other, {'roles': ['_admin']}, {})
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                other, doc, {'roles': ['_admin']}, {})
+
     def test_view_name_time_created(self):
         view = payload_configuration.name_time_created_map
         result = list(view(doc))

@@ -93,6 +93,20 @@ class TestPayloadTelemetry(object):
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, {}, {'roles': []}, {})
 
+    def test_only_validates_payload_telemetry(self):
+        self.m.ReplayAll()
+        mydoc = {"type": "something_else"}
+        payload_telemetry.validate(mydoc, {}, {'roles': []}, {})
+        self.m.VerifyAll()
+
+    def test_forbids_type_change(self):
+        other = deepcopy(doc)
+        other['type'] = 'another_type'
+        assert_raises(ForbiddenError, payload_telemetry.validate, other, doc,
+                {'roles': []}, {})
+        assert_raises(ForbiddenError, payload_telemetry.validate, doc, other,
+                {'roles': []}, {})
+
     def test_view_flight_payload_time(self):
         mydoc = deepcopy(doc)
         view = payload_telemetry.flight_payload_time_map
