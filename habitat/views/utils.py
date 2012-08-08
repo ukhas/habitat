@@ -103,3 +103,38 @@ def validate_doc(data, schema):
         out = "Validation errors: " + "; ".join(sorted(e.errors))
         raise ForbiddenError(out)
     _validate_timestamps(data, schema) 
+
+def only_validates(doc_type):
+    def decorator(func):
+        def wrapped(new, old, userctx, secobj):
+            new_type = new.get("type", None)
+            new_deleted = new.get("_deleted", False)
+            if old:
+                old_type = old.get("type", None)
+            else:
+                old_type = None
+
+            # sanity checks
+            if old_type is None:
+                assert old == {} or old is None
+            if new_deleted:
+                assert new_type is None
+
+            if new_type == doc_type and old_type in [None, doc_type]:
+                # new doc, or modified doc of correct type. validate:
+                return func(new, old, userctx, secobj)
+
+            elif new_deleted and old_type == doc_type:
+                # deletion is managed by habitat.validate
+                return
+
+            elif new_type == doc_type or old_type == doc_type:
+                # one or the other types match but not both, and not a new or deleted doc.
+                raise ForbiddenError("You cannot change the type of a doc")
+
+            else:
+                # other type: not our business
+                return
+
+        return wrapped
+    return decorator
