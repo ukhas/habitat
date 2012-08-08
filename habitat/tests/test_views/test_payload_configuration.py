@@ -55,7 +55,7 @@ doc = {
                 "intermediate": [
                     {
                         "type": "normal",
-                        "callable": "a.b.c"
+                        "filter": "a.b.c"
                     }
                 ],
                 "post": [
@@ -133,7 +133,7 @@ class TestPayloadConfiguration(object):
 
     def test_filters_must_be_ok(self):
         mydoc = deepcopy(doc)
-        del mydoc['sentences'][0]['filters']['intermediate'][0]['callable']
+        del mydoc['sentences'][0]['filters']['intermediate'][0]['filter']
         assert_raises(ForbiddenError, payload_configuration.validate,
                 mydoc, {}, {'roles': []}, {})
         for key in ['code', 'signature', 'certificate']:
