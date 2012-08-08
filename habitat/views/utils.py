@@ -126,11 +126,14 @@ def only_validates(doc_type):
                 return
 
             # If one of the types is doc_type, then enforce "can't change type"
-            if old_type != None and new_type != old_type:
+            if old_type not in [None, doc_type]:
+                raise ForbiddenError("You cannot change the type of a doc")
+            if new_type != doc_type:
                 raise ForbiddenError("You cannot change the type of a doc")
 
             # sanity check.
-            assert old_type == doc_type or old == {} or old == None
+            if old_type == None:
+                assert old == {} or old == None
 
             return func(new, old, userctx, secobj)
         return wrapped
