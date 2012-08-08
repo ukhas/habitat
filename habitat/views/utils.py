@@ -114,27 +114,27 @@ def only_validates(doc_type):
             else:
                 old_type = None
 
-            if new_type != doc_type and old_type != doc_type:
-                # Not interested. Note that habitat.views.habitat.validate
-                # enforces other things such as all docs must have a type,
-                # type must be a valid one, etc.
-                return
-
-            if new_deleted:
-                # deletion is enforced by habitat.views.habitat.validate
-                # The validation function probably can't handle a deleted doc.
-                return
-
-            # If one of the types is doc_type, then enforce "can't change type"
-            if old_type is not None and old_type != doc_type:
-                raise ForbiddenError("You cannot change the type of a doc")
-            if new_type != doc_type:
-                raise ForbiddenError("You cannot change the type of a doc")
-
-            # sanity check.
+            # sanity checks
             if old_type is None:
                 assert old == {} or old is None
+            if new_deleted:
+                assert new_type is None
 
-            return func(new, old, userctx, secobj)
+            if new_type == doc_type and old_type in [None, doc_type]:
+                # new doc, or modified doc of correct type. validate:
+                return func(new, old, userctx, secobj)
+
+            elif new_deleted and old_type == doc_type:
+                # deletion is managed by habitat.validate
+                return
+
+            elif new_type == doc_type or old_type == doc_type:
+                # one or the other types match but not both, and not a new or deleted doc.
+                raise ForbiddenError("You cannot change the type of a doc")
+
+            else:
+                # other type: not our business
+                return
+
         return wrapped
     return decorator

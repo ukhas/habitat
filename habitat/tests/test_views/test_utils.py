@@ -124,6 +124,7 @@ def test_only_validates():
     def my_validate_func(new, old, userctx, secobj):
         assert userctx == {'roles': ['test role']}
         assert secobj['secobj'] == True
+        assert new['type'] == "a_document_type"
         if "check_old" in new:
             assert old == {"type": "a_document_type", "raise": False}
         elif new["raise"]:
@@ -136,21 +137,29 @@ def test_only_validates():
     deleted = {"_deleted": True}
     no_type = {"some_data": [1, 2, '4']}
 
+    # should validate, new doc, new doc with error, changed doc with error
+    my_validate_func(doc, {}, {'roles': ['test role']}, {'secobj': True})
+    assert_raises(ForbiddenError, my_validate_func, bad, {},
+            {'roles': ['test role']}, {'secobj': True})
+    assert_raises(ForbiddenError, my_validate_func, bad, doc,
+            {'roles': ['test role']}, {'secobj': True})
+
+    # check passing all arguments
+    my_validate_func(check_old, doc,
+            {'roles': ['test role']}, {'secobj': True})
+
+    # both type change directions:
     assert_raises(ForbiddenError, my_validate_func,
             doc, type_change, {'roles': []}, {})
     assert_raises(ForbiddenError, my_validate_func,
             type_change, doc, {'roles': []}, {})
 
+    # deleted doc
     my_validate_func(deleted, doc, {'roles': []}, {})
+
+    # docs of other types
     my_validate_func(type_change, {}, {'roles': []}, {})
+    my_validate_func(type_change, type_change, {'roles': []}, {})
+    my_validate_func(deleted, type_change, {'roles': []}, {})
+
     my_validate_func(no_type, {}, {'roles': []}, {})
-
-    my_validate_func(doc, {}, {'roles': ['test role']}, {'secobj': True})
-
-    assert_raises(ForbiddenError, my_validate_func, bad, doc,
-            {'roles': ['test role']}, {'secobj': True})
-    assert_raises(ForbiddenError, my_validate_func, bad, {},
-            {'roles': ['test role']}, {'secobj': True})
-
-    my_validate_func(check_old, doc,
-            {'roles': ['test role']}, {'secobj': True})
