@@ -112,6 +112,20 @@ class TestFlight(object):
         assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
 
+    def test_only_validates_flights(self):
+        self.m.ReplayAll()
+        mydoc = {"type": "something_else", "payloads": ["dup", "dup"]}
+        flight.validate(mydoc, {}, {'roles': []}, {})
+        self.m.VerifyAll()
+
+    def test_forbids_type_change(self):
+        other = deepcopy(doc)
+        other['type'] = 'another_type'
+        assert_raises(ForbiddenError, flight.validate, other, doc,
+                {'roles': ['_admin']}, {})
+        assert_raises(ForbiddenError, flight.validate, doc, other,
+                {'roles': ['_admin']}, {})
+
     def test_view_launch_time_including_payloads(self):
         mydoc = deepcopy(doc)
         mydoc['approved'] = True

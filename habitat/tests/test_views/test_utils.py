@@ -118,3 +118,39 @@ def test_validate_datetimes():
 
     utils.validate_doc(good, schema)
     assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
+
+def test_only_validates():
+    @utils.only_validates("a_document_type")
+    def my_validate_func(new, old, userctx, secobj):
+        assert userctx == {'roles': ['test role']}
+        assert secobj['secobj'] == True
+        if "check_old" in new:
+            assert old == {"type": "a_document_type", "raise": False}
+        elif new["raise"]:
+            raise ForbiddenError("raising")
+
+    doc = {"type": "a_document_type", "raise": False}
+    bad = {"type": "a_document_type", "raise": True}
+    check_old = {"type": "a_document_type", "check_old": True}
+    type_change = {"type": "an_unrelated_type", "blah": 123}
+    deleted = {"_deleted": True}
+    no_type = {"some_data": [1, 2, '4']}
+
+    assert_raises(ForbiddenError, my_validate_func,
+            doc, type_change, {'roles': []}, {})
+    assert_raises(ForbiddenError, my_validate_func,
+            type_change, doc, {'roles': []}, {})
+
+    my_validate_func(deleted, doc, {'roles': []}, {})
+    my_validate_func(type_change, {}, {'roles': []}, {})
+    my_validate_func(no_type, {}, {'roles': []}, {})
+
+    my_validate_func(doc, {}, {'roles': ['test role']}, {'secobj': True})
+
+    assert_raises(ForbiddenError, my_validate_func, bad, doc,
+            {'roles': ['test role']}, {'secobj': True})
+    assert_raises(ForbiddenError, my_validate_func, bad, {},
+            {'roles': ['test role']}, {'secobj': True})
+
+    my_validate_func(check_old, doc,
+            {'roles': ['test role']}, {'secobj': True})

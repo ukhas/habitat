@@ -24,7 +24,7 @@ version.
 
 from couch_named_python import ForbiddenError, version
 from .utils import read_json_schema, validate_doc, must_be_admin
-from .utils import rfc3339_to_timestamp
+from .utils import rfc3339_to_timestamp, only_validates
 
 schema = None
 
@@ -77,6 +77,7 @@ def _validate_filter(f):
                 "{0} filters must include '{1}'.".format(f['type'], k))
 
 @version(1)
+@only_validates("payload_configuration")
 def validate(new, old, userctx, secobj):
     """
     Validate payload_configuration documents against the schema and then
@@ -95,14 +96,13 @@ def validate(new, old, userctx, secobj):
         * Must also specify shift, encoding, baud, parity and stop.
 
     """
+    if old:
+        must_be_admin(userctx)
+
     global schema
     if not schema:
         schema = read_json_schema("payload_configuration.json")
-    if 'type' in new and new['type'] == "payload_configuration":
-        validate_doc(new, schema)
-
-    if old:
-        must_be_admin(userctx)
+    validate_doc(new, schema)
 
     if 'sentences' in new:
         for sentence in new['sentences']:
