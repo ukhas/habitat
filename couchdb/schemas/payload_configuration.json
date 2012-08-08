@@ -201,9 +201,9 @@
                                             "required": true,
                                             "enum": ["normal", "hotfix"]
                                         },
-                                        "callable": {
-                                            "title": "Callable for Filter",
-                                            "description": "For normal filters, this is the path of the function to execute.",
+                                        "filter": {
+                                            "title": "Filter function",
+                                            "description": "For normal filters, this is the path of the function to execute, e.g. 'common.numeric_scale'.",
                                             "type": "string",
                                             "required": false
                                         },
@@ -246,9 +246,9 @@
                                             "required": true,
                                             "enum": ["normal", "hotfix"]
                                         },
-                                        "callable": {
-                                            "title": "Callable for Filter",
-                                            "description": "For normal filters, this is the path of the function to execute.",
+                                        "filter": {
+                                            "title": "Filter function",
+                                            "description": "For normal filters, this is the path of the function to execute, e.g. 'common.numeric_scale'.",
                                             "type": "string",
                                             "required": false
                                         },
