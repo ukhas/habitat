@@ -339,9 +339,49 @@ class TestUploader(object):
         self.mocker.VerifyAll()
 
     def test_flights(self):
-        uploader.time.time().AndReturn(1912)
-        self.fake_db.view("uploader_v1/flights", include_docs=True,
-                          startkey=1912).AndReturn([
+        uploader.time.time().AndReturn(1912.2143)
+        self.fake_db.view("flight/end_start_including_payloads",
+                          include_docs=True, startkey=[1912]).AndReturn([
+            # Lots of keys ommitted
+            {"doc": {"payloads": ["pa", "pb", "pc"], "_id": "fa"},
+                "key": [2000, 10, 0]},
+            {"doc": {"_id": "pa", "name": "A"}, "key": [2000, 10, 1]},
+            {"doc": {"_id": "pb", "name": "B"}, "key": [2000, 10, 1]},
+            {"doc": {"_id": "pc", "name": "C"}, "key": [2000, 10, 1]},
+
+            {"doc": {"payloads": ["pd"], "_id": "fb"}, "key": [2100, 40, 0]},
+            {"doc": {"_id": "pd", "name": "D"}, "key": [2100, 40, 1]},
+
+            {"doc": {"payloads": ["pa", "pc", "pd"], "_id": "fc"},
+                "key": [2200, 10, 0]},
+            {"doc": {"_id": "pa", "name": "A"}, "key": [2200, 10, 1]},
+            {"doc": {"_id": "pc", "name": "C"}, "key": [2200, 10, 1]},
+            {"doc": {"_id": "pd", "name": "D"}, "key": [2200, 10, 1]},
+        ])
+
+        self.mocker.ReplayAll()
+
+        results = self.uploader.flights()
+        assert results == [
+            {"payloads": ["pa", "pb", "pc"], "_id": "fa",
+             "_payload_docs": [
+                 {"_id": "pa", "name": "A"}, {"_id": "pb", "name": "B"},
+                 {"_id": "pc", "name": "C"},
+             ]},
+            {"payloads": ["pd"], "_id": "fb",
+             "_payload_docs": [{"_id": "pd", "name": "D"}]},
+            {"payloads": ["pa", "pc", "pd"], "_id": "fc",
+             "_payload_docs": [
+                 {"_id": "pa", "name": "A"}, {"_id": "pc", "name": "C"},
+                 {"_id": "pd", "name": "D"},
+             ]}
+        ]
+
+        self.mocker.VerifyAll()
+
+    def test_payloads(self):
+        self.fake_db.view("payload_configuration/name_time_created",
+                          include_docs=True).AndReturn([
             {"doc": {"item": 1}, "key": 1, "value": "moo"},
             {"doc": {"item": "frog"}, "key": 2, "value": "moo"},
             {"doc": {"item": "cow"}, "key": 3, "value": "moo"},
@@ -351,7 +391,7 @@ class TestUploader(object):
 
         self.mocker.ReplayAll()
 
-        results = self.uploader.flights()
+        results = self.uploader.payloads()
         assert results == [{"item": 1}, {"item": "frog"}, {"item": "cow"},
                            {"item": 1900}, {"item": False}]
 
@@ -446,6 +486,7 @@ class TestUploaderThread(object):
         self.fake_uploader.listener_telemetry("blah")
         self.fake_uploader.listener_information("boo")
         self.fake_uploader.flights()
+        self.fake_uploader.payloads()
 
         self.mocker.ReplayAll()
 
@@ -453,6 +494,7 @@ class TestUploaderThread(object):
         self.uthr.listener_telemetry("blah")
         self.uthr.listener_information("boo")
         self.uthr.flights()
+        self.uthr.payloads()
 
         delay_event.set()
 
@@ -499,6 +541,19 @@ class TestUploaderThread(object):
         self.uthr.flights()
 
         delay_event.set()
+        self.uthr.join()
+
+        self.mocker.VerifyAll()
+
+    def test_payloads(self):
+        self.mocker.StubOutWithMock(self.uthr, "got_payloads")
+
+        self.fake_uploader.payloads().AndReturn(["item1", "item2", "item3"])
+        self.uthr.got_payloads(["item1", "item2", "item3"])
+
+        self.mocker.ReplayAll()
+
+        self.uthr.payloads()
         self.uthr.join()
 
         self.mocker.VerifyAll()
