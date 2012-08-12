@@ -257,14 +257,52 @@ class Uploader(object):
         return doc
 
     def flights(self):
-        """Return a list of current flight documents"""
+        """
+        Return a list of flight documents.
+        
+        Finished flights are not included; so the returned list contains
+        active and not yet started flights (i.e., now <= flight.end).
+
+        Only approved flights are included.
+
+        Flights are sorted by end time.
+
+        Active is (flight.start <= now <= flight.end), i.e., within the launch
+        window.
+
+        The key ``_payload_docs`` is added to each flight document and is
+        populated with the documents listed in the payloads array.
+        """
 
         results = []
-        for row in self._db.view("uploader_v1/flights", include_docs=True,
-                                 startkey=int(time.time())):
-            results.append(row["doc"])
+        now = int(time.time())
+
+        for row in self._db.view("flight/end_start_including_payloads",
+                                 include_docs=True, startkey=[now]):
+            end, start, is_pcfg = row["key"]
+            doc = row["doc"]
+
+            if not is_pcfg:
+                doc["_payload_docs"] = []
+                results.append(doc)
+            else:
+                results[-1]["_payload_docs"].append(doc)
+
+        for doc in results:
+            assert [p["_id"] for p in doc["_payload_docs"]] == doc["payloads"]
 
         return results
+
+    def payloads(self):
+        """
+        Returns a list of all payload_configuration docs ever.
+
+        Sorted by name, then time created.
+        """
+
+        view = self._db.view("payload_configuration/name_time_created",
+                             include_docs=True)
+        return [row["doc"] for row in view]
 
 
 class UploaderThread(threading.Thread):
@@ -286,6 +324,7 @@ class UploaderThread(threading.Thread):
      - :meth:`reset_done`
      - :meth:`caught_exception`
      - :meth:`got_flights`
+     - :meth:`got_payloads`
 
     Please note that these must all be thread safe.
 
@@ -348,9 +387,17 @@ class UploaderThread(threading.Thread):
         """
         See :meth:`Uploader.flights`.
         
-        Flight data is passed to the :meth:`got_flights` like a callback.
+        Flight data is passed to :meth:`got_flights`.
         """
         self._do_queue(("flights", [], {}))
+
+    def payloads(self):
+        """
+        See :meth:`Uploader.payloads`.
+        
+        Flight data is passed to :meth:`got_payloads`.
+        """
+        self._do_queue(("payloads", [], {}))
 
     def debug(self, msg):
         """Log a debug message"""
@@ -390,7 +437,15 @@ class UploaderThread(threading.Thread):
         Downloads are initiated by calling :meth:`flights`
         """
         self.debug("Default action: got_flights; discarding")
-    
+
+    def got_payloads(self, payloads):
+        """
+        Called after a successful payloads download, with the data.
+
+        Downloads are initiated by calling :meth:`payloads`
+        """
+        self.debug("Default action: got_payloads; discarding")
+
     def _describe(self, queue_item):
         if queue_item is None:
             return "Shutdown"
@@ -436,13 +491,15 @@ class UploaderThread(threading.Thread):
                 elif func == "reset":
                     self._uploader = None
                     self.reset_done()
-                elif func == "flights":
-                    r = self._uploader.flights(*args, **kwargs)
-                    self.got_flights(r)
                 else:
                     f = getattr(self._uploader, func)
                     r = f(*args, **kwargs)
-                    self.saved_id(func, r)
+
+                    if func in ["flights", "payloads"]:
+                        f = getattr(self, "got_" + func)
+                        f(r)
+                    else:
+                        self.saved_id(func, r)
 
             except:
                 self.caught_exception()
