@@ -17,6 +17,7 @@
 
 import os
 import time
+from nose import SkipTest
 
 from ...utils import rfc3339
 
@@ -86,9 +87,9 @@ class TestRFC3339toTimestamp(object):
     def test_leap_year(self):
         assert self.func("2012-02-29T12:42:21Z") == 1330519341
         assert self.func("2000-02-29T23:59:59Z") == 951868799
+        assert self.func("2011-02-28T04:02:12Z") == 1298865732
         assert self.func("2100-02-28T00:00:00Z") == 4107456000
         assert self.func("1900-02-28T00:00:00Z") == -2203977600
-        assert self.func("2011-02-28T04:02:12Z") == 1298865732
 
     def test_dst_transition(self):
         assert self.func("2012-03-25T00:59:59+00:00") == 1332637199
@@ -116,15 +117,28 @@ class TestTimestampToRFC3339UTCOffset(object):
         assert self.func(763664400) == "1994-03-14T17:00:00Z"
 
     def test_y2038(self):
-        assert self.func(4102444800) == "2100-01-01T00:00:00Z"
-        assert self.func(-2208988800) == "1900-01-01T00:00:00Z"
+        try:
+            assert self.func(4102444800) == "2100-01-01T00:00:00Z"
+            assert self.func(-2208988800) == "1900-01-01T00:00:00Z"
+        except ValueError as e:
+            if str(e) == "timestamp out of range for platform time_t":
+                raise SkipTest("Can't run this test on 32 bit")
+            else:
+                raise
 
     def test_leap_year(self):
         assert self.func(1330519341) == "2012-02-29T12:42:21Z"
         assert self.func(951868799) == "2000-02-29T23:59:59Z"
-        assert self.func(4107456000) == "2100-02-28T00:00:00Z"
-        assert self.func(-2203977600) == "1900-02-28T00:00:00Z"
         assert self.func(1298865732) == "2011-02-28T04:02:12Z"
+
+        try:
+            assert self.func(4107456000) == "2100-02-28T00:00:00Z"
+            assert self.func(-2203977600) == "1900-02-28T00:00:00Z"
+        except ValueError as e:
+            if str(e) == "timestamp out of range for platform time_t":
+                raise SkipTest("Can't run this test on 32 bit")
+            else:
+                raise
 
     def test_now(self):
         s = rfc3339.now_to_rfc3339_utcoffset()
