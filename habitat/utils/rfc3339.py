@@ -24,6 +24,9 @@ Goals
  - Simple with minimal dependencies/libraries so that they are less likely
    to break in complicated situations like DST transitions
  - Convert unix timestamps to and from RFC3339
+ - Avoid timezones as much as possible
+ - Either produce RFC3339 strings with a UTC offset (Z) or with the offset
+   that the C time module reports is the local timezone offset.
 
 Rationale/reasons for this file:
 ================================
