@@ -36,8 +36,8 @@ doc = {
     },
     "receivers": {
         "M0RND": {
-            "time_created": "2012-07-17T21:03:26+0100",
-            "time_uploaded": "2012-07-17T21:03:29+0100"
+            "time_created": "2012-07-17T21:03:26+01:00",
+            "time_uploaded": "2012-07-17T21:03:29+01:00"
         }
     }
 }
@@ -76,8 +76,8 @@ class TestPayloadTelemetry(object):
                 mydoc, doc, {'roles': []}, {})
         mydoc = deepcopy(doc)
         mydoc['receivers']['2E0SKK'] = {
-            "time_created": "2012-07-17T21:03:27+0100",
-            "time_uploaded": "2012-07-17T21:03:32+0100"
+            "time_created": "2012-07-17T21:03:27+01:00",
+            "time_uploaded": "2012-07-17T21:03:32+01:00"
         }
         payload_telemetry.validate(mydoc, doc, {'roles': []}, {})
 
@@ -113,7 +113,7 @@ class TestPayloadTelemetry(object):
         result = list(view(mydoc))
         assert result == []
         mydoc['data']['_parsed'] = {
-            "time_parsed": "2012-07-17T22:05:00+0100",
+            "time_parsed": "2012-07-17T22:05:00+01:00",
             "payload_configuration": "abcdef",
             "configuration_sentence_index": 0
         }
@@ -129,7 +129,7 @@ class TestPayloadTelemetry(object):
         result = list(view(mydoc))
         assert result == []
         mydoc['data']['_parsed'] = {
-            "time_parsed": "2012-07-17T22:05:00+0100",
+            "time_parsed": "2012-07-17T22:05:00+01:00",
             "payload_configuration": "abcdef",
             "configuration_sentence_index": 0
         }

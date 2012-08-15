@@ -24,23 +24,6 @@ from couch_named_python import UnauthorizedError, ForbiddenError
 
 from ...views import utils
 
-def test_rfc3339():
-    s = "1996-12-19T16:39:57-08:00"
-    d1 = utils.rfc3339_to_datetime(s)
-    assert d1.isoformat() == "1996-12-19T16:39:57-08:00"
-    d2 = utils.rfc3339_to_utc_datetime(s)
-    assert d2.isoformat() == "1996-12-20T00:39:57+00:00"
-    t = utils.rfc3339_to_timestamp(s)
-    assert t == 851042397
-    t = utils.datetime_to_timestamp(d1)
-    assert t == 851042397
-    t = utils.datetime_to_timestamp(d2)
-    assert t == 851042397
-    
-    assert utils.validate_rfc3339("1234") is False
-    assert utils.validate_rfc3339("20000102T030405Z") is True
-    assert utils.validate_rfc3339("2000-01-02T03:04:05+0100") is True
-
 def test_must_be_admin():
     nonadmin = {'roles': ['not an admin']}
     noroles = {'noroles': True}
@@ -106,15 +89,15 @@ def test_validate_datetimes():
         }
     }
 
-    good = [{1: {"one": "a@b", "two": "20120402T120942Z"},
-             2: {"one": "c@d", "two": "2012-04-02T12:10:04+0100"}},
-            {1: {"one": "e@f", "two": "20120402T120942+01:00"},
-             2: {"one": "g@h", "two": "20120402T12:10:04+01:00"}}]
+    good = [{1: {"one": "a@b", "two": "2012-04-02T12:09:42Z"},
+             2: {"one": "c@d", "two": "2012-04-02T12:10:04+01:00"}},
+            {1: {"one": "e@f", "two": "2012-04-02T12:09:42+01:00"},
+             2: {"one": "g@h", "two": "2012-04-02T12:10:04+01:00"}}]
 
-    bad =  [{1: {"one": "a@b", "two": "20120402T120942Z"},
-             2: {"one": "c@d", "two": "2012-04-02T12:10:04+0100"}},
-            {1: {"one": "e@f", "two": "20120402T120942+01:00"},
-             2: {"one": "g@h", "two": "20120402T12:10:04"}}] #NB this line
+    bad =  [{1: {"one": "a@b", "two": "2012-04-02T12:09:42Z"},
+             2: {"one": "c@d", "two": "2012-04-02T12:10:04+01:00"}},
+            {1: {"one": "e@f", "two": "2012-04-02T12:09:42+01:00"},
+             2: {"one": "g@h", "two": "2012-04-02T12:10:04"}}] #NB this line
 
     utils.validate_doc(good, schema)
     assert_raises(ForbiddenError, utils.validate_doc, bad, schema)

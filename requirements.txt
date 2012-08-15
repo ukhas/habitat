@@ -1,9 +1,7 @@
 crcmod==1.7
-couchdbkit==0.6.1
+couchdbkit==0.6.3
 jsonschema==0.5
 couch-named-python==0.1.6dev
-python-dateutil==1.5
 statsd-client==1.0.2
 PyYAML==3.10
-Securetypes==11.12.28
 -e git://github.com/ukhas/M2Crypto.git#egg=M2Crypto

@@ -23,8 +23,9 @@ version.
 """
 
 from couch_named_python import ForbiddenError, version
+from ..utils.rfc3339 import rfc3339_to_timestamp
 from .utils import read_json_schema, validate_doc, must_be_admin
-from .utils import rfc3339_to_timestamp, only_validates
+from .utils import only_validates
 
 schema = None
 
