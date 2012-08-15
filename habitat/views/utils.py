@@ -26,7 +26,7 @@ import re
 
 from couch_named_python import UnauthorizedError, ForbiddenError
 from jsonschema import Validator
-from ..utils.rfc3339 import validate_rfc3339 as validate_arfc3339
+from ..utils.rfc3339 import validate_rfc3339
 
 def read_json_schema(schemaname):
     mypath = os.path.dirname(inspect.getfile(inspect.currentframe()))
@@ -47,7 +47,7 @@ def must_be_admin(user,
 def _validate_timestamps(data, schema):
     """Go through schema finding format:date-time and validate it's RFC3339."""
     if 'format' in schema and schema['format'] == "date-time":
-        if not validate_arfc3339(data):
+        if not validate_rfc3339(data):
             raise ForbiddenError("A date-time was not in the required format.")
     if 'properties' in schema and isinstance(schema['properties'], dict):
         try:
