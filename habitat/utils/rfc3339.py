@@ -97,6 +97,9 @@ Notes
    In validation, seconds == 60 or seconds == 61 are rejected.
    In the case of reverse leap seconds, calendar.timegm will blisfully accept
    it. The result would be about as correct as you could get.
+ - RFC3339 generation using gmtime or localtime may be limited by the size
+   of time_t on the system: if it is 32 bit, you're limited to dates between
+   (approx) 1901 and 2038. This does not affect rfc3339_to_timestamp.
 
 """
 
