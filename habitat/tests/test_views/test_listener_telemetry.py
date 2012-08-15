@@ -31,8 +31,8 @@ import mox
 
 doc = {
     "type": "listener_telemetry",
-    "time_created": "2012-07-17T21:03:26+0100",
-    "time_uploaded": "2012-07-17T21:03:29+0100",
+    "time_created": "2012-07-17T21:03:26+01:00",
+    "time_uploaded": "2012-07-17T21:03:29+01:00",
     "data": {
         "callsign": "M0RND",
         "latitude": 52.2135,

@@ -32,7 +32,7 @@ import mox
 doc = {
     "type": "payload_configuration",
     "name": "Test Payload",
-    "time_created": "2012-07-22T18:31:06+0100",
+    "time_created": "2012-07-22T18:31:06+01:00",
     "transmissions": [
         {
             "frequency": 434000000,
@@ -167,7 +167,7 @@ class TestPayloadConfiguration(object):
         mydoc['sentences'][1]['callsign'] = "TATIBAH"
         meta = {
             "name": "Test Payload",
-            "time_created": "2012-07-22T18:31:06+0100",
+            "time_created": "2012-07-22T18:31:06+01:00",
         }
         view = payload_configuration.callsign_time_created_index_map
         result = list(view(mydoc))
@@ -182,7 +182,7 @@ class TestPayloadConfiguration(object):
         mydoc['metadata'] = {"meta": ["d", "a", "t", "a"]}
         meta = {
             "name": "Test Payload",
-            "time_created": "2012-07-22T18:31:06+0100",
+            "time_created": "2012-07-22T18:31:06+01:00",
             "metadata": {"meta": ["d", "a", "t", "a"]}
         }
         view = payload_configuration.callsign_time_created_index_map
