@@ -26,13 +26,7 @@ import re
 
 from couch_named_python import UnauthorizedError, ForbiddenError
 from jsonschema import Validator
-from dateutil.parser import parse
-from dateutil.tz import tzutc
-from calendar import timegm
-
-rfc3339_regex = re.compile(
-    "(\d\d\d\d)(-)?(\d\d)(-)?(\d\d)(T)"
-    "(\d\d)(:)?(\d\d)(:)?(\d\d)(\.\d+)?(Z|([+-])(\d\d)(:)?(\d\d))")
+from ..utils.rfc3339 import validate_rfc3339
 
 def read_json_schema(schemaname):
     mypath = os.path.dirname(inspect.getfile(inspect.currentframe()))
@@ -40,26 +34,6 @@ def read_json_schema(schemaname):
     with open(path) as f:
         schema = json.load(f)
     return schema
-
-def validate_rfc3339(datestring):
-    """Check an RFC3339 string is valid via a regex."""
-    return rfc3339_regex.match(datestring) is not None
-
-def rfc3339_to_datetime(datestring):
-    """Convert an RFC3339 date-time string to a datetime"""
-    return parse(datestring)
-
-def rfc3339_to_utc_datetime(datestring):
-    """Convert an RFC3339 date-time string to a UTC datetime"""
-    return rfc3339_to_datetime(datestring).astimezone(tzutc())
-
-def rfc3339_to_timestamp(datestring):
-    """Convert an RFC3339 date-time string to a UTC UNIX timestamp"""
-    return timegm(rfc3339_to_utc_datetime(datestring).utctimetuple())
-
-def datetime_to_timestamp(dt):
-    """Convert a datetime object to a UTC UNIX timestamp"""
-    return timegm(dt.utctimetuple())
 
 def must_be_admin(user,
                   msg="Only server administrators may edit this document."):
