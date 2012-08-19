@@ -25,16 +25,18 @@ by a daemon for further processing.
 """
 
 import sys
-import time
 import copy
 import base64
 import hashlib
 import couchdbkit
 import threading
 import Queue
+import time
 import traceback
 import json
 import logging
+
+from .utils import rfc3339
 
 logger = logging.getLogger("habitat.uploader")
 
@@ -70,10 +72,15 @@ class Uploader(object):
     After having created an :class:`Uploader` object, call
     :meth:`payload_telemetry`, :meth:`listener_telemetry` or
     :meth:`listener_information` in any order. It is however recommended that
-    :meth:`listener_information` and :meth:`listener_telemetry` are called once before
-    any other uploads.
+    :meth:`listener_information` and :meth:`listener_telemetry` are called once
+    before any other uploads.
 
     :meth:`flights` returns a list of current flight documents.
+
+    Each method that causes an upload accepts an optional kwarg, time_created,
+    which should be the unix timestamp of when the doc was created, if it is
+    different from the default 'now'. It will add time_uploaded, and turn both
+    times into RFC3339 strings using the local offset.
 
     See the CouchDB schema for more information, both on
     validation/restrictions and data formats.
@@ -103,17 +110,13 @@ class Uploader(object):
         this function once, at startup. In the latter, you might want to
         call it constantly.
 
-        The format of the document produced is described elsewhere (TODO?);
+        The format of the document produced is described elsewhere;
         the actual document will be constructed by :class:`Uploader`.
         *data* must be a dict and should typically look something like
         this::
 
             data = {
-                "time": {
-                    "hour": 12,
-                    "minute": 40,
-                    "second: 12
-                },
+                "time": "12:40:12",
                 "latitude": -35.11,
                 "longitude": 137.567,
                 "altitude": 12
@@ -121,6 +124,8 @@ class Uploader(object):
 
         ``time`` is the GPS time for this point, ``latitude`` and ``longitude``
         are in decimal degrees, and ``altitude`` is in metres.
+
+        ``latitude`` and ``longitude`` are mandatory.
 
         Validation will be performed by the CouchDB server. *data* must not
         contain the key ``callsign`` as that is added by
@@ -175,8 +180,12 @@ class Uploader(object):
         return doc_id
 
     def _set_time(self, thing, time_created):
-        thing["time_uploaded"] = int(round(time.time()))
-        thing["time_created"] = int(round(time_created))
+        time_uploaded = int(round(time.time()))
+        time_created = int(round(time_created))
+
+        to_rfc3339 = rfc3339.timestamp_to_rfc3339_localoffset
+        thing["time_uploaded"] = to_rfc3339(time_uploaded)
+        thing["time_created"] = to_rfc3339(time_created)
 
     def payload_telemetry(self, string, metadata=None, time_created=None):
         """

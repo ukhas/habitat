@@ -79,6 +79,10 @@ class TestRFC3339toTimestamp(object):
         assert self.func("1996-12-19T16:39:57-08:00") == 851042397
         assert self.func("2012-08-08T21:30:36+01:00") == 1344457836
         assert self.func("1994-03-14T17:00:00Z") == 763664400
+        assert self.func("1970-01-01T00:00:00Z") == 0
+        assert self.func("1970-01-01T01:20:34Z") == 4834
+        assert self.func("1969-12-31T23:59:59Z") == -1
+        assert self.func("1969-12-31T22:51:12Z") == -4128
 
     def test_y2038(self):
         assert self.func("2100-01-01T00:00:00Z") == 4102444800
@@ -115,6 +119,10 @@ class TestTimestampToRFC3339UTCOffset(object):
         assert self.func(851042397) == "1996-12-20T00:39:57Z"
         assert self.func(1344457836) == "2012-08-08T20:30:36Z"
         assert self.func(763664400) == "1994-03-14T17:00:00Z"
+        assert self.func(0) == "1970-01-01T00:00:00Z"
+        assert self.func(4834) == "1970-01-01T01:20:34Z"
+        assert self.func(-1) == "1969-12-31T23:59:59Z"
+        assert self.func(-4128) == "1969-12-31T22:51:12Z"
 
     def test_y2038(self):
         try:
@@ -177,6 +185,8 @@ class TestTimestampToRFC3339LocalOffsetLondon(object):
         assert self.func(1344457836) == "2012-08-08T21:30:36+01:00"
         assert self.func(763664400) == "1994-03-14T17:00:00+00:00"
         assert self.func(1340280000) == "2012-06-21T13:00:00+01:00"
+        assert self.func(1234) == "1970-01-01T01:20:34+01:00"
+        assert self.func(-7728) == "1969-12-31T22:51:12+01:00"
 
     def test_dst_transition(self):
         assert self.func(1332637199) == "2012-03-25T00:59:59+00:00"
@@ -220,6 +230,8 @@ class TestTimestampToRFC3339LocalOffsetNewYork(object):
         assert self.func(1344457836) == "2012-08-08T16:30:36-04:00"
         assert self.func(761245200) == "1994-02-14T12:00:00-05:00"
         assert self.func(1340280000) == "2012-06-21T08:00:00-04:00"
+        assert self.func(19234) == "1970-01-01T00:20:34-05:00"
+        assert self.func(-4128) == "1969-12-31T17:51:12-05:00"
 
     def test_dst_transition(self):
         assert self.func(1331449199) == "2012-03-11T01:59:59-05:00"

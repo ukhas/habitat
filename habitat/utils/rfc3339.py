@@ -61,9 +61,10 @@ time library, we use:
  - timezone: variable that provides the local timezone offset
  - altzone: variable that provides the local timezone DST offset
 
-Based on the (probably correct) assumption that localtime is always right,
-we can use localtime and get the offset from timezone or altzone depending
-on the DST flag, and we don't have to think about any timezones at all.
+Based on the (probably correct) assumption that gmtime and localtime are
+always right, we can use gmtime and localtime, and take the difference in order
+to figure out what the local offset is. As clunky as it sounds, it's far easier
+than using a fully fledged timezone library.
 
 calendar is implemented in python. From calendar, we use
 
@@ -190,8 +191,8 @@ def timestamp_to_rfc3339_localoffset(timestamp):
     """
     Convert a UTC UNIX timestamp to RFC3339, using the local offset.
     
-    localtime() provides the time parts, time.timezone/time.altzone
-    provide the offset with localtime().tm_isdst selecting between the two.
+    localtime() provides the time parts. The difference between gmtime and
+    localtime tells us the offset.
     """
 
     timestamp_int = int(timestamp)
@@ -200,21 +201,19 @@ def timestamp_to_rfc3339_localoffset(timestamp):
     time_tuple = time.localtime(timestamp_int)
     datestring = _make_datestring_start(time_tuple, seconds_part)
 
-    if time_tuple.tm_isdst:
-        offset_seconds = -time.altzone
-    else:
-        offset_seconds = -time.timezone
+    gm_time_tuple = time.gmtime(timestamp_int)
+    offset = calendar.timegm(time_tuple) - calendar.timegm(gm_time_tuple)
 
-    if abs(offset_seconds) % 60 != 0:
+    if abs(offset) % 60 != 0:
         raise ValueError("Your local offset is not a whole minute")
 
-    offset_minutes = abs(offset_seconds) / 60
+    offset_minutes = abs(offset) / 60
     offset_hours = offset_minutes // 60
     offset_minutes %= 60
 
     offset_string = "{0:02d}:{1:02d}".format(offset_hours, offset_minutes)
 
-    if offset_seconds < 0:
+    if offset < 0:
         datestring += "-"
     else:
         datestring += "+"
