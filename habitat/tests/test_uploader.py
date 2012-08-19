@@ -24,34 +24,41 @@ import sys
 import copy
 import uuid
 import threading
+import time
 
 import couchdbkit
 
+from ..utils import rfc3339
+from .. import views
+
 from .. import uploader
 
-telemetry_data = {"some_data": 123, "_flag": True}
+to_rfc3339 = rfc3339.timestamp_to_rfc3339_localoffset
+
+telemetry_data = {"latitude": 0.1234, "longitude": 1.345,
+                  "some_data": 123, "_flag": True}
 telemetry_doc = {
     "data": copy.deepcopy(telemetry_data),
     "type": "listener_telemetry",
-    "time_created": 1234,
-    "time_uploaded": 1234,
+    "time_created": to_rfc3339(1300001234),
+    "time_uploaded": to_rfc3339(1300001234)
 }
 telemetry_doc["data"]["callsign"] = "TESTCALL"
 telemetry_time_doc = copy.deepcopy(telemetry_doc)
-telemetry_time_doc["time_created"] = 1232
-telemetry_time_doc["time_uploaded"] = 1276
+telemetry_time_doc["time_created"] = to_rfc3339(1300001232)
+telemetry_time_doc["time_uploaded"] = to_rfc3339(1300001276)
 
 info_data = {"my_radio": "Duga-3", "vehicle": "Tractor"}
 info_doc = {
     "data": copy.deepcopy(info_data),
     "type": "listener_information",
-    "time_created": 1259,
-    "time_uploaded": 1259
+    "time_created": to_rfc3339(1300001259),
+    "time_uploaded": to_rfc3339(1300001259)
 }
 info_doc["data"]["callsign"] = "TESTCALL"
 info_time_doc = copy.deepcopy(info_doc)
-info_time_doc["time_created"] = 1254
-info_time_doc["time_uploaded"] = 1290
+info_time_doc["time_created"] = to_rfc3339(1300001254)
+info_time_doc["time_uploaded"] = to_rfc3339(1300001290)
 
 payload_telemetry_string = "asdf blah \x12 binar\x04\x00"
 payload_telemetry_metadata = {"frequency": 434075000, "misc": "Hi"}
@@ -62,9 +69,8 @@ payload_telemetry_doc = {
     "type": "payload_telemetry",
     "receivers": {
         "TESTCALL": {
-            "time_created": 1234,
-            "time_uploaded": 1234,
-            # TODO: this ought to be in the schema/docs
+            "time_created": to_rfc3339(1300001234),
+            "time_uploaded": to_rfc3339(1300001234),
             "frequency": 434075000,
             "misc": "Hi"
         }
@@ -78,8 +84,8 @@ payload_telemetry_doc_existing = {
     "type": "payload_telemetry",
     "receivers": {
         "SOMEONEELSE": {
-            "time_created": 200,
-            "time_uploaded": 240,
+            "time_created": to_rfc3339(1300000200),
+            "time_uploaded": to_rfc3339(1300000240),
             "frequency": 434074000,
             "asdf": "World"
         }
@@ -88,13 +94,23 @@ payload_telemetry_doc_existing = {
 payload_telemetry_doc_merged = copy.deepcopy(payload_telemetry_doc_existing)
 payload_telemetry_doc_merged["receivers"]["TESTCALL"] = \
     copy.deepcopy(payload_telemetry_doc["receivers"]["TESTCALL"])
-payload_telemetry_doc_merged["receivers"]["TESTCALL"]["time_uploaded"] += 1
+payload_telemetry_doc_merged["receivers"]["TESTCALL"]["time_uploaded"] = \
+        to_rfc3339(1300001235)
 payload_telemetry_doc_existing_collision = \
     copy.deepcopy(payload_telemetry_doc_existing)
 payload_telemetry_doc_existing_collision["data"]["_raw"] = "cGluZWFwcGxlcw=="
 
 payload_telemetry_doc_id = "cf4511bba32c4273a13d8f2e39501a96" \
                            "9ec664a4dc5c67bc556b514410087309"
+
+def validate_all(new, old=None):
+    userctx = {'roles': []}
+    secobj = {}
+
+    for mod in [views.flight, views.listener_information,
+                views.listener_telemetry, views.payload_telemetry,
+                views.payload_configuration, views.habitat]:
+        mod.validate(new, old, userctx, secobj)
 
 
 class TestUploaderSetup(object):
@@ -165,11 +181,11 @@ class TestUploader(object):
         self.docs[doc_id] = doc
 
     def add_sample_listener_docs(self):
-        uploader.time.time().AndReturn(1233.9)
-        uploader.time.time().AndReturn(1234.0)
+        uploader.time.time().AndReturn(1300001233.9)
+        uploader.time.time().AndReturn(1300001234.0)
         self.fake_db.save_doc(telemetry_doc).WithSideEffects(self.save_doc)
-        uploader.time.time().AndReturn(1259.1)
-        uploader.time.time().AndReturn(1259.1)
+        uploader.time.time().AndReturn(1300001259.1)
+        uploader.time.time().AndReturn(1300001259.1)
         self.fake_db.save_doc(info_doc).WithSideEffects(self.save_doc)
         self.mocker.ReplayAll()
 
@@ -181,20 +197,22 @@ class TestUploader(object):
     def test_pushes_listener_docs(self):
         self.add_sample_listener_docs()
 
-        uploader.time.time().AndReturn(1276.1)
+        uploader.time.time().AndReturn(1300001276.1)
         self.fake_db.save_doc(telemetry_time_doc) \
                 .WithSideEffects(self.save_doc)
-        uploader.time.time().AndReturn(1290.1)
+        uploader.time.time().AndReturn(1300001290.1)
         self.fake_db.save_doc(info_time_doc).WithSideEffects(self.save_doc)
         self.mocker.ReplayAll()
 
-        self.uploader.listener_telemetry(telemetry_data, time_created=1232)
-        self.uploader.listener_information(info_data, time_created=1253.8)
+        self.uploader.listener_telemetry(telemetry_data,
+                time_created=1300001232)
+        self.uploader.listener_information(info_data,
+                time_created=1300001253.8)
         self.mocker.VerifyAll()
 
     def test_returns_doc_id(self):
-        uploader.time.time().AndReturn(1233.9)
-        uploader.time.time().AndReturn(1234.0)
+        uploader.time.time().AndReturn(1300001233.9)
+        uploader.time.time().AndReturn(1300001234.0)
         self.fake_db.save_doc(telemetry_doc).WithSideEffects(self.save_doc)
         self.mocker.ReplayAll()
 
@@ -202,8 +220,8 @@ class TestUploader(object):
         assert self.docs[doc_id]["type"] == "listener_telemetry"
 
     def test_pushes_payload_telemetry_simple(self):
-        uploader.time.time().AndReturn(1234.3)
-        uploader.time.time().AndReturn(1234.3)
+        uploader.time.time().AndReturn(1300001234.3)
+        uploader.time.time().AndReturn(1300001234.3)
         self.fake_db.__setitem__(payload_telemetry_doc_id,
                                  payload_telemetry_doc)
         self.mocker.ReplayAll()
@@ -236,8 +254,8 @@ class TestUploader(object):
     def test_adds_latest_listener_docs(self):
         self.add_sample_listener_docs()
 
-        uploader.time.time().AndReturn(1234.0)
-        uploader.time.time().AndReturn(1234.0)
+        uploader.time.time().AndReturn(1300001234.0)
+        uploader.time.time().AndReturn(1300001234.0)
         self.fake_db.__setitem__(payload_telemetry_doc_id,
                                  mox.Func(self.ptlm_with_listener_docs))
         self.mocker.ReplayAll()
@@ -247,14 +265,14 @@ class TestUploader(object):
         self.mocker.VerifyAll()
 
     def test_ptlm_merges_payload_conflicts(self):
-        uploader.time.time().AndReturn(1234.0)
-        uploader.time.time().AndReturn(1234.0)
+        uploader.time.time().AndReturn(1300001234.0)
+        uploader.time.time().AndReturn(1300001234.0)
         self.fake_db.__setitem__(payload_telemetry_doc_id,
                                  payload_telemetry_doc) \
              .AndRaise(couchdbkit.exceptions.ResourceConflict)
         self.fake_db.__getitem__(payload_telemetry_doc_id) \
              .AndReturn(payload_telemetry_doc_existing)
-        uploader.time.time().AndReturn(1235.0)
+        uploader.time.time().AndReturn(1300001235.0)
         self.fake_db.__setitem__(payload_telemetry_doc_id,
                                  payload_telemetry_doc_merged)
         self.mocker.ReplayAll()
@@ -264,14 +282,14 @@ class TestUploader(object):
         self.mocker.VerifyAll()
 
     def test_ptlm_refuses_to_merge_collision(self):
-        uploader.time.time().AndReturn(1234.0)
-        uploader.time.time().AndReturn(1234.0)
+        uploader.time.time().AndReturn(1300001234.0)
+        uploader.time.time().AndReturn(1300001234.0)
         self.fake_db.__setitem__(payload_telemetry_doc_id,
                                  payload_telemetry_doc) \
              .AndRaise(couchdbkit.exceptions.ResourceConflict)
         self.fake_db.__getitem__(payload_telemetry_doc_id) \
              .AndReturn(payload_telemetry_doc_existing_collision)
-        uploader.time.time().AndReturn(1235.0)
+        uploader.time.time().AndReturn(1300001235.0)
         self.mocker.ReplayAll()
 
         try:
@@ -285,8 +303,8 @@ class TestUploader(object):
         self.mocker.VerifyAll()
 
     def add_mock_conflicts(self, n):
-        uploader.time.time().AndReturn(1234.0)
-        uploader.time.time().AndReturn(1234.0)
+        uploader.time.time().AndReturn(1300001234.0)
+        uploader.time.time().AndReturn(1300001234.0)
         self.fake_db.__setitem__(payload_telemetry_doc_id,
                                  payload_telemetry_doc) \
              .AndRaise(couchdbkit.exceptions.ResourceConflict)
@@ -296,7 +314,7 @@ class TestUploader(object):
 
         for i in xrange(n):
             self.fake_db.__getitem__(payload_telemetry_doc_id).AndReturn(doc)
-            uploader.time.time().AndReturn(1235.0 + i)
+            uploader.time.time().AndReturn(1300001235.0 + i)
             self.fake_db.__setitem__(payload_telemetry_doc_id, doc_merged) \
                 .AndRaise(couchdbkit.exceptions.ResourceConflict)
 
@@ -304,10 +322,13 @@ class TestUploader(object):
             doc_merged = copy.deepcopy(doc_merged)
 
             new_call = "listener_{0}".format(i)
-            new_info = {"time_created": 1000 + i, "time_uploaded": 1001 + i}
+            new_info = {"time_created": to_rfc3339(1300001000 + i),
+                        "time_uploaded": to_rfc3339(1300001001 + i)}
             doc["receivers"][new_call] = new_info
             doc_merged["receivers"][new_call] = new_info
-            doc_merged["receivers"]["TESTCALL"]["time_uploaded"] += 1
+
+            doc_merged["receivers"]["TESTCALL"]["time_uploaded"] = \
+                to_rfc3339(1300001236 + i)
 
         return (doc, doc_merged)
 
@@ -315,7 +336,7 @@ class TestUploader(object):
         (final_doc, final_doc_merged) = self.add_mock_conflicts(14)
 
         self.fake_db.__getitem__(payload_telemetry_doc_id).AndReturn(final_doc)
-        uploader.time.time().AndReturn(1235.0 + 14)
+        uploader.time.time().AndReturn(1300001235.0 + 14)
         self.fake_db.__setitem__(payload_telemetry_doc_id, final_doc_merged)
         self.mocker.ReplayAll()
 
@@ -338,10 +359,18 @@ class TestUploader(object):
 
         self.mocker.VerifyAll()
 
+    def test_uploaded_docs_pass_validation(self):
+        for doc in [telemetry_doc, telemetry_time_doc,
+                    info_doc, info_time_doc, payload_telemetry_doc]:
+            validate_all(doc)
+
+        validate_all(payload_telemetry_doc_merged,
+                     payload_telemetry_doc_existing)
+
     def test_flights(self):
-        uploader.time.time().AndReturn(1912.2143)
+        uploader.time.time().AndReturn(1300001912.2143)
         self.fake_db.view("flight/end_start_including_payloads",
-                          include_docs=True, startkey=[1912]).AndReturn([
+                          include_docs=True, startkey=[1300001912]).AndReturn([
             # Lots of keys ommitted
             {"doc": {"payloads": ["pa", "pb", "pc"], "_id": "fa"},
                 "key": [2000, 10, 0]},

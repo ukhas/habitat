@@ -97,7 +97,7 @@
                 "description": "Information about one receiver of this telemetry.",
                 "type": "object",
                 "required": true,
-                "additionalProperties": false,
+                "additionalProperties": true,
                 "properties": {
                     "time_created": {
                         "title": "Time Created",
