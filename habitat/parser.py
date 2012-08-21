@@ -32,7 +32,7 @@ import statsd
 import time
 
 from . import loadable_manager
-from .utils import dynamicloader
+from .utils import dynamicloader, rfc3339
 
 logger = logging.getLogger("habitat.parser")
 statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat.parser'})
@@ -209,8 +209,7 @@ class Parser(object):
 
                 data["_protocol"] = module["name"]
                 data["_parsed"] = {
-                    "time_parsed": time.strftime("%Y-%m-%dT%H:%M:%SZ",
-                                                 time.gmtime()),
+                    "time_parsed": rfc3339.now_to_rfc3339_utcoffset(),
                     "payload_configuration": config["id"],
                     "configuration_sentence_index": sentence_index
                 }
