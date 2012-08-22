@@ -131,6 +131,24 @@ class TestPayloadConfiguration(object):
             assert_raises(ForbiddenError, payload_configuration.validate,
                     mydoc, {}, {'roles': []}, {})
 
+    def test_dominoex_transmissions_must_be_ok(self):
+        mydoc = deepcopy(doc)
+        mydoc['transmissions'][0] = \
+            {"frequency": 434000000, "mode": "USB", "modulation": "DominoEX"}
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+        mydoc['transmissions'][0]['speed'] = 11
+        payload_configuration.validate(mydoc, {}, {'roles': []}, {})
+
+    def test_hellschreiber_transmissions_must_be_ok(self):
+        mydoc = deepcopy(doc)
+        mydoc['transmissions'][0] = \
+            {"frequency": 1, "mode": "USB", "modulation": "Hellschreiber"}
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+        mydoc['transmissions'][0]['variant'] = 'feldhell'
+        payload_configuration.validate(mydoc, {}, {'roles': []}, {})
+
     def test_filters_must_be_ok(self):
         mydoc = deepcopy(doc)
         del mydoc['sentences'][0]['filters']['intermediate'][0]['filter']
