@@ -55,15 +55,22 @@ def _validate_ukhas(sentence):
     else:
         raise ForbiddenError("UKHAS sentences must have fields.")
 
-def _validate_rtty(transmission):
+def _validate_modulation_settings(transmission):
     """
-    For RTTY transmissions, verify that required keys are present.
+    Check that required keys for each modulation type are present.
     """
-    required_keys = ['shift', 'encoding', 'baud', 'parity', 'stop']
-    for k in required_keys:
+    required_keys = {'RTTY': ['shift', 'encoding', 'baud', 'parity', 'stop'],
+                     'DominoEX': ['speed'],
+                     'Hellschreiber': ['variant']}
+
+    modulation = transmission['modulation']
+    if modulation not in required_keys:
+        return
+
+    for k in required_keys[modulation]:
         if k not in transmission:
             raise ForbiddenError(
-                "RTTY transmissions must include '{0}'.".format(k))
+                "{0} transmissions must include '{1}'.".format(modulation, k))
 
 def _validate_filter(f):
     """
@@ -119,8 +126,7 @@ def validate(new, old, userctx, secobj):
 
     if 'transmissions' in new:
         for transmission in new['transmissions']:
-            if transmission['modulation'] == "RTTY":
-                _validate_rtty(transmission)
+            _validate_modulation_settings(transmission)
 
 @version(1)
 def name_time_created_map(doc):

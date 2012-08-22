@@ -63,42 +63,56 @@
                     },
                     "modulation": {
                         "title": "Telemetry Modulation",
-                        "description": "The form of modulation in use, e.g., 'RTTY'.",
+                        "description": "The form of modulation in use, can be anything. genpayload and dl-fldigi recognise 'RTTY', 'DominoEX' and 'Hellschreiber' (case sensitive).",
                         "type": "string",
                         "required": true
                     },
                     "shift": {
                         "title": "Telemetry Shift",
-                        "description": "Where relevant, the frequency shift used by the telemetry, as a number in Hz.",
+                        "description": "The frequency shift used by the telemetry, as a number in Hz (RTTY only).",
                         "type": "number",
                         "required": false
                     },
                     "encoding": {
                         "title": "Telemetry Encoding",
-                        "description": "Where relevant, the encoding scheme used by the telemetry, as a string, e.g. 'ASCII-8'.",
+                        "description": "The encoding scheme used by the telemetry, as a string, e.g. 'ASCII-8' (RTTY only).",
                         "type": "string",
                         "required": false,
                         "enum": ["BAUDOT", "ASCII-7", "ASCII-8"]
                     },
                     "baud": {
                         "title": "Telemetry Baud Rate",
-                        "description": "Where relevant, the baud rate used by the telemetry, as a number.",
+                        "description": "The baud rate used by the telemetry, as a number (RTTY only).",
                         "type": "number",
                         "required": false
                     },
                     "parity": {
                         "title": "Telemetry Parity",
-                        "description": "Where relevant, the parity used by the telemetry, as a string, e.g. 'none' or 'even'.",
+                        "description": "The parity used by the telemetry, as a string, e.g. 'none' or 'even' (RTTY only).",
                         "type": "string",
                         "required": false,
                         "enum": ["even", "odd", "none"]
                     },
                     "stop": {
                         "title": "Telemetry Stop Bits",
-                        "description": "Where relevant, the number of stop bits used by the telemetry, as a number.",
+                        "description": "The number of stop bits used by the telemetry, as a number (RTTY only).",
                         "type": "number",
                         "required": false,
                         "enum": [1, 1.5, 2]
+                    },
+                    "speed": {
+                        "title": "Telemetry Speed",
+                        "description": "The speed setting used by the telemetry (DominoEX only).",
+                        "type": "number",
+                        "required": false,
+                        "enum": [4, 5, 8, 11, 16, 22]
+                    },
+                    "variant": {
+                        "title": "Telemetry Variant",
+                        "description": "The variant of the modulation used (Hellschreiber only).",
+                        "type": "string",
+                        "required": false,
+                        "enum": ["feldhell", "slowhell"]
                     },
                     "description": {
                         "title": "Telemetry Description",
