@@ -30,9 +30,10 @@ from nose.tools import assert_raises
 import mox
 
 doc = {
+    "_id": "54e9ac9ec19a57d6828a737525e3cc792743a16344b1c69dfe1562620b0fac9b",
     "type": "payload_telemetry",
     "data": {
-        "_raw": "ABCDEF"
+        "_raw": "ABCDEF=="
     },
     "receivers": {
         "M0RND": {
@@ -90,6 +91,14 @@ class TestPayloadTelemetry(object):
     def test_new_docs_may_only_have_raw(self):
         mydoc = deepcopy(doc)
         mydoc['data']['result'] = 42
+        assert_raises(ForbiddenError, payload_telemetry.validate,
+                mydoc, {}, {'roles': []}, {})
+
+    def test_doc_id_must_be_sha256_of_base64_raw(self):
+        mydoc = deepcopy(doc)
+        payload_telemetry.validate(doc, {}, {'roles': []}, {})
+        mydoc["_id"] = "9e40534c92adfdd55620e786a2b434d3" + \
+                       "ffda21cae75b9c2e719853e94fbae3eb"
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, {}, {'roles': []}, {})
 

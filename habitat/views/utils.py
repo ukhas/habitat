@@ -1,4 +1,4 @@
-# Copyright 2011, 2012 (C) Adam Greig
+# Copyright 2011, 2012 (C) Adam Greig, Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -23,10 +23,13 @@ import os
 import json
 import inspect
 import re
+import base64
 
 from couch_named_python import UnauthorizedError, ForbiddenError
 from jsonschema import Validator
 from ..utils.rfc3339 import validate_rfc3339
+
+timestr_regex = re.compile(r"(\d\d):(\d\d):(\d\d)")
 
 def read_json_schema(schemaname):
     mypath = os.path.dirname(inspect.getfile(inspect.currentframe()))
@@ -44,28 +47,56 @@ def must_be_admin(user,
     except (KeyError, TypeError):
         raise UnauthorizedError(msg)
 
-def _validate_timestamps(data, schema):
-    """Go through schema finding format:date-time and validate it's RFC3339."""
-    if 'format' in schema and schema['format'] == "date-time":
-        if not validate_rfc3339(data):
+def _validate_timestr(data):
+    """Check that a time string is of the format HH:MM:SS"""
+    m = timestr_regex.match(data)
+    if m is None:
+        return False
+
+    hour, minute, second = [int(i) for i in m.groups()]
+    return (0 <= hour <= 23 and 0 <= minute <= 59 and 0 <= second <= 60)
+
+def _validate_base64(data):
+    """Check that a string is valid base64. Note: forbids whitespace"""
+    try:
+        decoded = base64.b64decode(data)
+    except TypeError:
+        return False
+
+    # Some clients rely on the base64 not containing any whitespace.
+    # b64encode produces a string without any whitespace, so...
+    if base64.b64encode(decoded) != data:
+        return False
+
+    return True
+
+def _validate_formats(data, schema):
+    """Go through schema checking the formats date-time, time and base64"""
+    if 'format' in schema:
+        format_name = schema['format']
+        if format_name == "date-time" and not validate_rfc3339(data):
             raise ForbiddenError("A date-time was not in the required format.")
+        elif format_name == "time" and not _validate_timestr(data):
+            raise ForbiddenError("A time was not in the required format.")
+        elif format_name == "base64" and not _validate_base64(data):
+            raise ForbiddenError("A string was not valid base64.")
     if 'properties' in schema and isinstance(schema['properties'], dict):
         try:
             for key, value in data.items():
-                _validate_timestamps(value, schema['properties'][key])
+                _validate_formats(value, schema['properties'][key])
         except (TypeError, KeyError):
             pass
     if 'additionalProperties' in schema:
         if isinstance(schema['additionalProperties'], dict):
             try:
                 for value in data.values():
-                    _validate_timestamps(value, schema['additionalProperties'])
+                    _validate_formats(value, schema['additionalProperties'])
             except TypeError:
                 pass
     if 'items' in schema and isinstance(schema['items'], dict):
         try:
             for item in data:
-                _validate_timestamps(item, schema['items'])
+                _validate_formats(item, schema['items'])
         except TypeError:
             pass
 
@@ -76,7 +107,7 @@ def validate_doc(data, schema):
     if errors:
         errors = ', '.join((str(error) for error in errors))
         raise ForbiddenError("Validation errors: {0}".format(errors))
-    _validate_timestamps(data, schema) 
+    _validate_formats(data, schema) 
 
 def only_validates(doc_type):
     def decorator(func):
