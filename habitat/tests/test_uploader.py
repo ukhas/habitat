@@ -360,12 +360,17 @@ class TestUploader(object):
         self.mocker.VerifyAll()
 
     def test_uploaded_docs_pass_validation(self):
+        ptlm_with_id = copy.deepcopy(payload_telemetry_doc)
+        ptlm_with_id['_id'] = payload_telemetry_doc_id
+
         for doc in [telemetry_doc, telemetry_time_doc,
-                    info_doc, info_time_doc, payload_telemetry_doc]:
+                    info_doc, info_time_doc, ptlm_with_id]:
             validate_all(doc)
 
-        validate_all(payload_telemetry_doc_merged,
-                     payload_telemetry_doc_existing)
+        ptlm_with_id_merged = copy.deepcopy(payload_telemetry_doc_merged)
+        ptlm_with_id_merged['_id'] = payload_telemetry_doc_id
+
+        validate_all(ptlm_with_id_merged, payload_telemetry_doc_existing)
 
     def test_flights(self):
         uploader.time.time().AndReturn(1300001912.2143)

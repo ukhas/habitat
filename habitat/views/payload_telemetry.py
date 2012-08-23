@@ -21,6 +21,7 @@ Contains schema validation and a view by flight, payload and received time.
 """
 
 import math
+import hashlib
 from couch_named_python import ForbiddenError, UnauthorizedError, version
 from ..utils.rfc3339 import rfc3339_to_timestamp
 from .utils import validate_doc, read_json_schema
@@ -65,6 +66,10 @@ def validate(new, old, userctx, secobj):
 
     if '_admin' in userctx['roles']:
         return
+
+    expect_id = hashlib.sha256(new['data']['_raw']).hexdigest()
+    if '_id' not in new or new['_id'] != expect_id:
+        raise ForbiddenError("Document ID must be sha256(base64 _raw data)")
 
     if old:
         if new['data'] != old['data'] and 'parser' not in userctx['roles']:
