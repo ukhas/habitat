@@ -37,6 +37,7 @@
                     "title": "Raw Data",
                     "description": "The raw transmitted data, as a base64 string. Must be uploaded by listeners.",
                     "type": "string",
+                    "format": "base64",
                     "required": false
                 },
                 "_string": {
@@ -84,6 +85,41 @@
                             "required": false
                         }
                     }
+                },
+                "sentence_id": {
+                    "title": "Sentence ID",
+                    "description": "The sentence ID. Used to be known as 'sequence' or 'count'. Inserted by the parser, if configured to do so.",
+                    "type": "number",
+                    "required": false
+                },
+                "time": {
+                    "title": "GPS Time",
+                    "description": "The GPS time; a string in the format of HH:MM:SS. Inserted by the parser, if configured to do so.",
+                    "type": "string",
+                    "format": "time",
+                    "required": false
+                },
+                "latitude": {
+                    "title": "Latitude",
+                    "description": "The latitude of the payload. Inserted by the parser, if configured to do so.",
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90,
+                    "required": false
+                },
+                "longitude": {
+                    "title": "Longitude",
+                    "description": "The longitude of the payload. Inserted by the parser, if configured to do so.",
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180,
+                    "required": false
+                },
+                "altitude": {
+                    "title": "Altitude",
+                    "description": "The altitude of the payload. Inserted by the parser, if configured to do so.",
+                    "type": "number",
+                    "required": false
                 }
             }
         },

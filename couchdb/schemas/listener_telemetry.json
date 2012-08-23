@@ -58,12 +58,16 @@
                     "title": "Listener Latitude",
                     "description": "The listener's current latitude, in decimal degrees.",
                     "type": "number",
+                    "minimum": -90,
+                    "maximum": 90,
                     "required": true
                 },
                 "longitude": {
                     "title": "Listener Longitude",
                     "description": "The listener's current longitude, in decimal degrees.",
                     "type": "number",
+                    "minimum": -180,
+                    "maximum": 180,
                     "required": true
                 },
                 "altitude": {

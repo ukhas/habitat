@@ -65,7 +65,7 @@ def coordinate(config, data):
 
     left, right = coordinate_format.split(".")
     if left[-1] == "d" and right[-1] == "d":
-        return float(data)
+        coord = float(data)
     elif left[0] == "d" and left[-1] == "m" and right[-1] == "m":
         first, second = data.split(".")
         degrees = float(first[:-2])
@@ -75,6 +75,15 @@ def coordinate(config, data):
         m_to_d = minutes / 60.0
         degrees += math.copysign(m_to_d, degrees)
         dp = len(second) + 3 # num digits in minutes + 1
-        return round(degrees, dp)
+        coord = round(degrees, dp)
     else:
         raise ValueError("Invalid coordinate format")
+
+    if 'name' in config and config['name'] == 'latitude':
+        if not (-90.0 <= coord <= 90.0):
+            raise ValueError("Coordinate out of range (-90 <= x <= 90)")
+    else:
+        if not (-180.0 <= coord <= 180.0):
+            raise ValueError("Coordinate out of range (-180 <= x <= 180)")
+
+    return coord

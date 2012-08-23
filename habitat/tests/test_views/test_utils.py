@@ -19,6 +19,8 @@
 Unit tests for the view function utilities
 """
 
+import copy
+
 from nose.tools import assert_raises
 from couch_named_python import UnauthorizedError, ForbiddenError
 
@@ -68,26 +70,30 @@ def test_validate_doc():
     assert_raises(ForbiddenError, utils.validate_doc, multibad, schema)
     assert_raises(ForbiddenError, utils.validate_doc, extras, schema)
 
-def test_validate_datetimes():
-    schema = {
-        "type": "array",
-        "additionalProperties": False,
-        "items": {
+test_format_schema = {
+    "type": "array",
+    "additionalProperties": False,
+    "items": {
+        "type": "object",
+        "additionalProperties": {
             "type": "object",
-            "additionalProperties": {
-                "type": "object",
-                "properties": {
-                    "one": {
-                        "type": "string",
-                        "format": "email"
-                    }, "two": {
-                        "type": "string",
-                        "format": "date-time"
-                    }
+            "properties": {
+                "one": {
+                    "type": "string",
+                    "format": "email"
+                }, "two": {
+                    "type": "string",
+                    "format": "replace-me"
                 }
             }
         }
     }
+}
+
+def test_validate_datetimes():
+    schema = copy.deepcopy(test_format_schema)
+    schema["items"]["additionalProperties"]["properties"]["two"]["format"] = \
+            "date-time"
 
     good = [{1: {"one": "a@b", "two": "2012-04-02T12:09:42Z"},
              2: {"one": "c@d", "two": "2012-04-02T12:10:04+01:00"}},
@@ -101,6 +107,40 @@ def test_validate_datetimes():
 
     utils.validate_doc(good, schema)
     assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
+
+def test_validate_base64():
+    schema = copy.deepcopy(test_format_schema)
+    schema["items"]["additionalProperties"]["properties"]["two"]["format"] = \
+            "base64"
+
+    good = [{1: {"one": "a@b", "two": "aGVsbG8gd29ybGQ="},
+             2: {"one": "c@d", "two": "RGFuaWVsIHdhcyBoZXJl"}},
+            {1: {"one": "e@f", "two": "U2hpYmJvbGVldA=="},
+             2: {"one": "g@h", "two": ""}}]
+    utils.validate_doc(good, schema)
+
+    for bad_b64 in ["asd", "U2hpYm\n\n\n\t\t\tJvbGVldA==", "aGVsbG8gd29ybGQ"]:
+        bad = copy.deepcopy(good)
+        bad[1][2]["two"] = bad_b64
+        assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
+
+def test_validate_times():
+    schema = copy.deepcopy(test_format_schema)
+    schema["items"]["additionalProperties"]["properties"]["two"]["format"] = \
+            "time"
+
+    good = [{1: {"one": "a@b", "two": "20:09:00"},
+             2: {"one": "c@d", "two": "12:10:04"}},
+            {1: {"one": "e@f", "two": "00:09:42"},
+             2: {"one": "g@h", "two": "23:59:60"}}]
+    utils.validate_doc(good, schema)
+
+    for bad_time in ["12:0:04", "120004", "12:23", "asdf", ""]:
+        bad =  [{1: {"one": "a@b", "two": "12:09:42"},
+                 2: {"one": "c@d", "two": "12:10:04"}},
+                {1: {"one": "e@f", "two": "12:09:42"},
+                 2: {"one": "g@h", "two": bad_time}}]
+        assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
 
 def test_only_validates():
     @utils.only_validates("a_document_type")

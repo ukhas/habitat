@@ -82,8 +82,17 @@ class TestStdtelem:
     def test_invalid_coordinates(self):
         invalid_coordinates = [
             ("dd.dddd", "asdf"),
+            ("dd.dddd", "-200.00"),
+            ("dd.dddd", "+200.00"),
+            ("ddmm.mm", "20000.0000"),
+            ("ddmm.mm", "-20000.0000"),
             ("ddmm.mm", "03599.1234"),
             ("ddmm.mm", "-12")
         ]
         for i in invalid_coordinates:
             self.check_invalid_coordinate(i)
+
+    @raises(ValueError)
+    def test_latitude_range(self):
+        config = {"name": "latitude", "format": "dd.dddd"}
+        stdtelem.coordinate(config, "100.00")
