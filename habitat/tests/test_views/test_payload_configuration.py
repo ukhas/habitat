@@ -32,7 +32,7 @@ import mox
 doc = {
     "type": "payload_configuration",
     "name": "Test Payload",
-    "time_created": "2012-07-22T18:31:06+0100",
+    "time_created": "2012-07-22T18:31:06+01:00",
     "transmissions": [
         {
             "frequency": 434000000,
@@ -55,7 +55,7 @@ doc = {
                 "intermediate": [
                     {
                         "type": "normal",
-                        "callable": "a.b.c"
+                        "filter": "a.b.c"
                     }
                 ],
                 "post": [
@@ -131,9 +131,27 @@ class TestPayloadConfiguration(object):
             assert_raises(ForbiddenError, payload_configuration.validate,
                     mydoc, {}, {'roles': []}, {})
 
+    def test_dominoex_transmissions_must_be_ok(self):
+        mydoc = deepcopy(doc)
+        mydoc['transmissions'][0] = \
+            {"frequency": 434000000, "mode": "USB", "modulation": "DominoEX"}
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+        mydoc['transmissions'][0]['speed'] = 11
+        payload_configuration.validate(mydoc, {}, {'roles': []}, {})
+
+    def test_hellschreiber_transmissions_must_be_ok(self):
+        mydoc = deepcopy(doc)
+        mydoc['transmissions'][0] = \
+            {"frequency": 1, "mode": "USB", "modulation": "Hellschreiber"}
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+        mydoc['transmissions'][0]['variant'] = 'feldhell'
+        payload_configuration.validate(mydoc, {}, {'roles': []}, {})
+
     def test_filters_must_be_ok(self):
         mydoc = deepcopy(doc)
-        del mydoc['sentences'][0]['filters']['intermediate'][0]['callable']
+        del mydoc['sentences'][0]['filters']['intermediate'][0]['filter']
         assert_raises(ForbiddenError, payload_configuration.validate,
                 mydoc, {}, {'roles': []}, {})
         for key in ['code', 'signature', 'certificate']:
@@ -142,17 +160,51 @@ class TestPayloadConfiguration(object):
             assert_raises(ForbiddenError, payload_configuration.validate,
                     mydoc, {}, {'roles': []}, {})
 
+    def test_only_validates_payload_configuration(self):
+        self.m.ReplayAll()
+        mydoc = {"type": "something_else"}
+        payload_configuration.validate(mydoc, {}, {'roles': []}, {})
+        self.m.VerifyAll()
+
+    def test_forbids_type_change(self):
+        other = deepcopy(doc)
+        other['type'] = 'another_type'
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                doc, other, {'roles': ['_admin']}, {})
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                other, doc, {'roles': ['_admin']}, {})
+
     def test_view_name_time_created(self):
         view = payload_configuration.name_time_created_map
         result = list(view(doc))
         assert result == [(('Test Payload', 1342978266), None)]
 
-    def test_view_callsign_time_created(self):
+    def test_view_callsign_time_created_index(self):
         mydoc = deepcopy(doc)
         mydoc['sentences'].append(deepcopy(mydoc['sentences'][0]))
         mydoc['sentences'][1]['callsign'] = "TATIBAH"
-        view = payload_configuration.callsign_time_created_map
+        meta = {
+            "name": "Test Payload",
+            "time_created": "2012-07-22T18:31:06+01:00",
+        }
+        view = payload_configuration.callsign_time_created_index_map
         result = list(view(mydoc))
         assert result == [
-            (('HABITAT', 1342978266), mydoc['sentences'][0]),
-            (('TATIBAH', 1342978266), mydoc['sentences'][1])]
+            (('HABITAT', 1342978266, 0), (meta, mydoc['sentences'][0])),
+            (('TATIBAH', 1342978266, 1), (meta, mydoc['sentences'][1]))]
+
+    def test_view_callsign_time_created_index_includes_metadata(self):
+        mydoc = deepcopy(doc)
+        mydoc['sentences'].append(deepcopy(mydoc['sentences'][0]))
+        mydoc['sentences'][1]['callsign'] = "TATIBAH"
+        mydoc['metadata'] = {"meta": ["d", "a", "t", "a"]}
+        meta = {
+            "name": "Test Payload",
+            "time_created": "2012-07-22T18:31:06+01:00",
+            "metadata": {"meta": ["d", "a", "t", "a"]}
+        }
+        view = payload_configuration.callsign_time_created_index_map
+        result = list(view(mydoc))
+        assert result == [
+            (('HABITAT', 1342978266, 0), (meta, mydoc['sentences'][0])),
+            (('TATIBAH', 1342978266, 1), (meta, mydoc['sentences'][1]))]

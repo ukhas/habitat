@@ -30,14 +30,15 @@ from nose.tools import assert_raises
 import mox
 
 doc = {
+    "_id": "54e9ac9ec19a57d6828a737525e3cc792743a16344b1c69dfe1562620b0fac9b",
     "type": "payload_telemetry",
     "data": {
-        "_raw": "ABCDEF"
+        "_raw": "ABCDEF=="
     },
     "receivers": {
         "M0RND": {
-            "time_created": "2012-07-17T21:03:26+0100",
-            "time_uploaded": "2012-07-17T21:03:29+0100"
+            "time_created": "2012-07-17T21:03:26+01:00",
+            "time_uploaded": "2012-07-17T21:03:29+01:00"
         }
     }
 }
@@ -76,8 +77,8 @@ class TestPayloadTelemetry(object):
                 mydoc, doc, {'roles': []}, {})
         mydoc = deepcopy(doc)
         mydoc['receivers']['2E0SKK'] = {
-            "time_created": "2012-07-17T21:03:27+0100",
-            "time_uploaded": "2012-07-17T21:03:32+0100"
+            "time_created": "2012-07-17T21:03:27+01:00",
+            "time_uploaded": "2012-07-17T21:03:32+01:00"
         }
         payload_telemetry.validate(mydoc, doc, {'roles': []}, {})
 
@@ -93,13 +94,35 @@ class TestPayloadTelemetry(object):
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, {}, {'roles': []}, {})
 
+    def test_doc_id_must_be_sha256_of_base64_raw(self):
+        mydoc = deepcopy(doc)
+        payload_telemetry.validate(doc, {}, {'roles': []}, {})
+        mydoc["_id"] = "9e40534c92adfdd55620e786a2b434d3" + \
+                       "ffda21cae75b9c2e719853e94fbae3eb"
+        assert_raises(ForbiddenError, payload_telemetry.validate,
+                mydoc, {}, {'roles': []}, {})
+
+    def test_only_validates_payload_telemetry(self):
+        self.m.ReplayAll()
+        mydoc = {"type": "something_else"}
+        payload_telemetry.validate(mydoc, {}, {'roles': []}, {})
+        self.m.VerifyAll()
+
+    def test_forbids_type_change(self):
+        other = deepcopy(doc)
+        other['type'] = 'another_type'
+        assert_raises(ForbiddenError, payload_telemetry.validate, other, doc,
+                {'roles': []}, {})
+        assert_raises(ForbiddenError, payload_telemetry.validate, doc, other,
+                {'roles': []}, {})
+
     def test_view_flight_payload_time(self):
         mydoc = deepcopy(doc)
         view = payload_telemetry.flight_payload_time_map
         result = list(view(mydoc))
         assert result == []
         mydoc['data']['_parsed'] = {
-            "time_parsed": "2012-07-17T22:05:00+0100",
+            "time_parsed": "2012-07-17T22:05:00+01:00",
             "payload_configuration": "abcdef",
             "configuration_sentence_index": 0
         }
@@ -115,7 +138,7 @@ class TestPayloadTelemetry(object):
         result = list(view(mydoc))
         assert result == []
         mydoc['data']['_parsed'] = {
-            "time_parsed": "2012-07-17T22:05:00+0100",
+            "time_parsed": "2012-07-17T22:05:00+01:00",
             "payload_configuration": "abcdef",
             "configuration_sentence_index": 0
         }

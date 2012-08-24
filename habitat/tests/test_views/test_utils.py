@@ -19,27 +19,12 @@
 Unit tests for the view function utilities
 """
 
+import copy
+
 from nose.tools import assert_raises
 from couch_named_python import UnauthorizedError, ForbiddenError
 
 from ...views import utils
-
-def test_rfc3339():
-    s = "1996-12-19T16:39:57-08:00"
-    d1 = utils.rfc3339_to_datetime(s)
-    assert d1.isoformat() == "1996-12-19T16:39:57-08:00"
-    d2 = utils.rfc3339_to_utc_datetime(s)
-    assert d2.isoformat() == "1996-12-20T00:39:57+00:00"
-    t = utils.rfc3339_to_timestamp(s)
-    assert t == 851042397
-    t = utils.datetime_to_timestamp(d1)
-    assert t == 851042397
-    t = utils.datetime_to_timestamp(d2)
-    assert t == 851042397
-    
-    assert utils.validate_rfc3339("1234") is False
-    assert utils.validate_rfc3339("20000102T030405Z") is True
-    assert utils.validate_rfc3339("2000-01-02T03:04:05+0100") is True
 
 def test_must_be_admin():
     nonadmin = {'roles': ['not an admin']}
@@ -85,36 +70,119 @@ def test_validate_doc():
     assert_raises(ForbiddenError, utils.validate_doc, multibad, schema)
     assert_raises(ForbiddenError, utils.validate_doc, extras, schema)
 
-def test_validate_datetimes():
-    schema = {
-        "type": "array",
-        "additionalProperties": False,
-        "items": {
+test_format_schema = {
+    "type": "array",
+    "additionalProperties": False,
+    "items": {
+        "type": "object",
+        "additionalProperties": {
             "type": "object",
-            "additionalProperties": {
-                "type": "object",
-                "properties": {
-                    "one": {
-                        "type": "string",
-                        "format": "email"
-                    }, "two": {
-                        "type": "string",
-                        "format": "date-time"
-                    }
+            "properties": {
+                "one": {
+                    "type": "string",
+                    "format": "email"
+                }, "two": {
+                    "type": "string",
+                    "format": "replace-me"
                 }
             }
         }
     }
+}
 
-    good = [{1: {"one": "a@b", "two": "20120402T120942Z"},
-             2: {"one": "c@d", "two": "2012-04-02T12:10:04+0100"}},
-            {1: {"one": "e@f", "two": "20120402T120942+01:00"},
-             2: {"one": "g@h", "two": "20120402T12:10:04+01:00"}}]
+def test_validate_datetimes():
+    schema = copy.deepcopy(test_format_schema)
+    schema["items"]["additionalProperties"]["properties"]["two"]["format"] = \
+            "date-time"
 
-    bad =  [{1: {"one": "a@b", "two": "20120402T120942Z"},
-             2: {"one": "c@d", "two": "2012-04-02T12:10:04+0100"}},
-            {1: {"one": "e@f", "two": "20120402T120942+01:00"},
-             2: {"one": "g@h", "two": "20120402T12:10:04"}}] #NB this line
+    good = [{1: {"one": "a@b", "two": "2012-04-02T12:09:42Z"},
+             2: {"one": "c@d", "two": "2012-04-02T12:10:04+01:00"}},
+            {1: {"one": "e@f", "two": "2012-04-02T12:09:42+01:00"},
+             2: {"one": "g@h", "two": "2012-04-02T12:10:04+01:00"}}]
+
+    bad =  [{1: {"one": "a@b", "two": "2012-04-02T12:09:42Z"},
+             2: {"one": "c@d", "two": "2012-04-02T12:10:04+01:00"}},
+            {1: {"one": "e@f", "two": "2012-04-02T12:09:42+01:00"},
+             2: {"one": "g@h", "two": "2012-04-02T12:10:04"}}] #NB this line
 
     utils.validate_doc(good, schema)
     assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
+
+def test_validate_base64():
+    schema = copy.deepcopy(test_format_schema)
+    schema["items"]["additionalProperties"]["properties"]["two"]["format"] = \
+            "base64"
+
+    good = [{1: {"one": "a@b", "two": "aGVsbG8gd29ybGQ="},
+             2: {"one": "c@d", "two": "RGFuaWVsIHdhcyBoZXJl"}},
+            {1: {"one": "e@f", "two": "U2hpYmJvbGVldA=="},
+             2: {"one": "g@h", "two": ""}}]
+    utils.validate_doc(good, schema)
+
+    for bad_b64 in ["asd", "U2hpYm\n\n\n\t\t\tJvbGVldA==", "aGVsbG8gd29ybGQ"]:
+        bad = copy.deepcopy(good)
+        bad[1][2]["two"] = bad_b64
+        assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
+
+def test_validate_times():
+    schema = copy.deepcopy(test_format_schema)
+    schema["items"]["additionalProperties"]["properties"]["two"]["format"] = \
+            "time"
+
+    good = [{1: {"one": "a@b", "two": "20:09:00"},
+             2: {"one": "c@d", "two": "12:10:04"}},
+            {1: {"one": "e@f", "two": "00:09:42"},
+             2: {"one": "g@h", "two": "23:59:60"}}]
+    utils.validate_doc(good, schema)
+
+    for bad_time in ["12:0:04", "120004", "12:23", "asdf", ""]:
+        bad =  [{1: {"one": "a@b", "two": "12:09:42"},
+                 2: {"one": "c@d", "two": "12:10:04"}},
+                {1: {"one": "e@f", "two": "12:09:42"},
+                 2: {"one": "g@h", "two": bad_time}}]
+        assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
+
+def test_only_validates():
+    @utils.only_validates("a_document_type")
+    def my_validate_func(new, old, userctx, secobj):
+        assert userctx == {'roles': ['test role']}
+        assert secobj['secobj'] == True
+        assert new['type'] == "a_document_type"
+        if "check_old" in new:
+            assert old == {"type": "a_document_type", "raise": False}
+        elif new["raise"]:
+            raise ForbiddenError("raising")
+
+    doc = {"type": "a_document_type", "raise": False}
+    bad = {"type": "a_document_type", "raise": True}
+    check_old = {"type": "a_document_type", "check_old": True}
+    type_change = {"type": "an_unrelated_type", "blah": 123}
+    deleted = {"_deleted": True}
+    no_type = {"some_data": [1, 2, '4']}
+
+    # should validate, new doc, new doc with error, changed doc with error
+    my_validate_func(doc, {}, {'roles': ['test role']}, {'secobj': True})
+    assert_raises(ForbiddenError, my_validate_func, bad, {},
+            {'roles': ['test role']}, {'secobj': True})
+    assert_raises(ForbiddenError, my_validate_func, bad, doc,
+            {'roles': ['test role']}, {'secobj': True})
+
+    # check passing all arguments
+    my_validate_func(check_old, doc,
+            {'roles': ['test role']}, {'secobj': True})
+
+    # both type change directions:
+    assert_raises(ForbiddenError, my_validate_func,
+            doc, type_change, {'roles': []}, {})
+    assert_raises(ForbiddenError, my_validate_func,
+            type_change, doc, {'roles': []}, {})
+
+    # deleted doc
+    my_validate_func(deleted, doc, {'roles': []}, {})
+
+    # docs of other types
+    my_validate_func(type_change, {}, {'roles': []}, {})
+    my_validate_func(type_change, type_change, {'roles': []}, {})
+    my_validate_func(deleted, type_change, {'roles': []}, {})
+
+    my_validate_func(no_type, {}, {'roles': []}, {})

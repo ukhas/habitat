@@ -32,11 +32,11 @@ import mox
 doc = {
     "type": "flight",
     "approved": False,
-    "start": "2012-07-14T22:54:23+0100",
-    "end": "2012-07-15T00:00:00+0100",
+    "start": "2012-07-14T22:54:23+01:00",
+    "end": "2012-07-15T00:00:00+01:00",
     "name": "Test Launch",
     "launch": {
-        "time": "2012-07-14T23:30:00+0100",
+        "time": "2012-07-14T23:30:00+01:00",
         "timezone": "Europe/London",
         "location": {
             "latitude": 12.345,
@@ -86,20 +86,20 @@ class TestFlight(object):
 
     def test_start_before_end(self):
         mydoc = deepcopy(doc)
-        # start at the same local time but in UTC not +0100, so 'after'
+        # start at the same local time but in UTC not +01:00, so 'after'
         mydoc['start'] = "2012-07-15T00:00:00Z"
         assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
 
     def test_window_less_than_a_week(self):
         mydoc = deepcopy(doc)
-        mydoc['start'] = "2012-07-07T00:00:00+0100"
+        mydoc['start'] = "2012-07-07T00:00:00+01:00"
         assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
 
     def test_launch_time_within_window(self):
         mydoc = deepcopy(doc)
-        mydoc['launch']['time'] = "2012-07-14T22:00:00+0100"
+        mydoc['launch']['time'] = "2012-07-14T22:00:00+01:00"
         assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
 
@@ -111,6 +111,20 @@ class TestFlight(object):
         mydoc['payloads'].append('a')
         assert_raises(ForbiddenError, flight.validate, mydoc, {},
                 {'roles': []}, {})
+
+    def test_only_validates_flights(self):
+        self.m.ReplayAll()
+        mydoc = {"type": "something_else", "payloads": ["dup", "dup"]}
+        flight.validate(mydoc, {}, {'roles': []}, {})
+        self.m.VerifyAll()
+
+    def test_forbids_type_change(self):
+        other = deepcopy(doc)
+        other['type'] = 'another_type'
+        assert_raises(ForbiddenError, flight.validate, other, doc,
+                {'roles': ['_admin']}, {})
+        assert_raises(ForbiddenError, flight.validate, doc, other,
+                {'roles': ['_admin']}, {})
 
     def test_view_launch_time_including_payloads(self):
         mydoc = deepcopy(doc)

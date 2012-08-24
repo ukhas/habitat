@@ -25,16 +25,18 @@ by a daemon for further processing.
 """
 
 import sys
-import time
 import copy
 import base64
 import hashlib
 import couchdbkit
 import threading
 import Queue
+import time
 import traceback
 import json
 import logging
+
+from .utils import rfc3339
 
 logger = logging.getLogger("habitat.uploader")
 
@@ -70,10 +72,15 @@ class Uploader(object):
     After having created an :class:`Uploader` object, call
     :meth:`payload_telemetry`, :meth:`listener_telemetry` or
     :meth:`listener_information` in any order. It is however recommended that
-    :meth:`listener_information` and :meth:`listener_telemetry` are called once before
-    any other uploads.
+    :meth:`listener_information` and :meth:`listener_telemetry` are called once
+    before any other uploads.
 
     :meth:`flights` returns a list of current flight documents.
+
+    Each method that causes an upload accepts an optional kwarg, time_created,
+    which should be the unix timestamp of when the doc was created, if it is
+    different from the default 'now'. It will add time_uploaded, and turn both
+    times into RFC3339 strings using the local offset.
 
     See the CouchDB schema for more information, both on
     validation/restrictions and data formats.
@@ -103,17 +110,13 @@ class Uploader(object):
         this function once, at startup. In the latter, you might want to
         call it constantly.
 
-        The format of the document produced is described elsewhere (TODO?);
+        The format of the document produced is described elsewhere;
         the actual document will be constructed by :class:`Uploader`.
         *data* must be a dict and should typically look something like
         this::
 
             data = {
-                "time": {
-                    "hour": 12,
-                    "minute": 40,
-                    "second: 12
-                },
+                "time": "12:40:12",
                 "latitude": -35.11,
                 "longitude": 137.567,
                 "altitude": 12
@@ -121,6 +124,8 @@ class Uploader(object):
 
         ``time`` is the GPS time for this point, ``latitude`` and ``longitude``
         are in decimal degrees, and ``altitude`` is in metres.
+
+        ``latitude`` and ``longitude`` are mandatory.
 
         Validation will be performed by the CouchDB server. *data* must not
         contain the key ``callsign`` as that is added by
@@ -175,8 +180,12 @@ class Uploader(object):
         return doc_id
 
     def _set_time(self, thing, time_created):
-        thing["time_uploaded"] = int(round(time.time()))
-        thing["time_created"] = int(round(time_created))
+        time_uploaded = int(round(time.time()))
+        time_created = int(round(time_created))
+
+        to_rfc3339 = rfc3339.timestamp_to_rfc3339_localoffset
+        thing["time_uploaded"] = to_rfc3339(time_uploaded)
+        thing["time_created"] = to_rfc3339(time_created)
 
     def payload_telemetry(self, string, metadata=None, time_created=None):
         """
@@ -257,14 +266,52 @@ class Uploader(object):
         return doc
 
     def flights(self):
-        """Return a list of current flight documents"""
+        """
+        Return a list of flight documents.
+        
+        Finished flights are not included; so the returned list contains
+        active and not yet started flights (i.e., now <= flight.end).
+
+        Only approved flights are included.
+
+        Flights are sorted by end time.
+
+        Active is (flight.start <= now <= flight.end), i.e., within the launch
+        window.
+
+        The key ``_payload_docs`` is added to each flight document and is
+        populated with the documents listed in the payloads array.
+        """
 
         results = []
-        for row in self._db.view("uploader_v1/flights", include_docs=True,
-                                 startkey=int(time.time())):
-            results.append(row["doc"])
+        now = int(time.time())
+
+        for row in self._db.view("flight/end_start_including_payloads",
+                                 include_docs=True, startkey=[now]):
+            end, start, is_pcfg = row["key"]
+            doc = row["doc"]
+
+            if not is_pcfg:
+                doc["_payload_docs"] = []
+                results.append(doc)
+            else:
+                results[-1]["_payload_docs"].append(doc)
+
+        for doc in results:
+            assert [p["_id"] for p in doc["_payload_docs"]] == doc["payloads"]
 
         return results
+
+    def payloads(self):
+        """
+        Returns a list of all payload_configuration docs ever.
+
+        Sorted by name, then time created.
+        """
+
+        view = self._db.view("payload_configuration/name_time_created",
+                             include_docs=True)
+        return [row["doc"] for row in view]
 
 
 class UploaderThread(threading.Thread):
@@ -286,6 +333,7 @@ class UploaderThread(threading.Thread):
      - :meth:`reset_done`
      - :meth:`caught_exception`
      - :meth:`got_flights`
+     - :meth:`got_payloads`
 
     Please note that these must all be thread safe.
 
@@ -348,9 +396,17 @@ class UploaderThread(threading.Thread):
         """
         See :meth:`Uploader.flights`.
         
-        Flight data is passed to the :meth:`got_flights` like a callback.
+        Flight data is passed to :meth:`got_flights`.
         """
         self._do_queue(("flights", [], {}))
+
+    def payloads(self):
+        """
+        See :meth:`Uploader.payloads`.
+        
+        Flight data is passed to :meth:`got_payloads`.
+        """
+        self._do_queue(("payloads", [], {}))
 
     def debug(self, msg):
         """Log a debug message"""
@@ -390,7 +446,15 @@ class UploaderThread(threading.Thread):
         Downloads are initiated by calling :meth:`flights`
         """
         self.debug("Default action: got_flights; discarding")
-    
+
+    def got_payloads(self, payloads):
+        """
+        Called after a successful payloads download, with the data.
+
+        Downloads are initiated by calling :meth:`payloads`
+        """
+        self.debug("Default action: got_payloads; discarding")
+
     def _describe(self, queue_item):
         if queue_item is None:
             return "Shutdown"
@@ -436,13 +500,15 @@ class UploaderThread(threading.Thread):
                 elif func == "reset":
                     self._uploader = None
                     self.reset_done()
-                elif func == "flights":
-                    r = self._uploader.flights(*args, **kwargs)
-                    self.got_flights(r)
                 else:
                     f = getattr(self._uploader, func)
                     r = f(*args, **kwargs)
-                    self.saved_id(func, r)
+
+                    if func in ["flights", "payloads"]:
+                        f = getattr(self, "got_" + func)
+                        f(r)
+                    else:
+                        self.saved_id(func, r)
 
             except:
                 self.caught_exception()

@@ -24,7 +24,7 @@ payload_configuration:
     validate_doc_update: habitat.views.payload_configuration.validate
     views:
         name_time_created: habitat.views.payload_configuration.name_time_created_map
-        callsign_time_created: habitat.views.payload_configuration.callsign_time_created_map
+        callsign_time_created_index: habitat.views.payload_configuration.callsign_time_created_index_map
         
 payload_telemetry:
     validate_doc_update: habitat.views.payload_telemetry.validate

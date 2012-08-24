@@ -22,11 +22,14 @@ payload name and window end time.
 """
 
 from couch_named_python import ForbiddenError, UnauthorizedError, version
-from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
+from ..utils.rfc3339 import rfc3339_to_timestamp
+from .utils import validate_doc, read_json_schema
+from .utils import only_validates
 
 schema = None
 
 @version(1)
+@only_validates("flight")
 def validate(new, old, userctx, secobj):
     """
     Validate this flight document against the schema, then check that
@@ -36,8 +39,7 @@ def validate(new, old, userctx, secobj):
     global schema
     if not schema:
         schema = read_json_schema("flight.json")
-    if 'type' in new and new['type'] == "flight":
-        validate_doc(new, schema)
+    validate_doc(new, schema)
     
     if '_admin' in userctx['roles']:
         return

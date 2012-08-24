@@ -23,8 +23,9 @@ version.
 """
 
 from couch_named_python import ForbiddenError, version
+from ..utils.rfc3339 import rfc3339_to_timestamp
 from .utils import read_json_schema, validate_doc, must_be_admin
-from .utils import rfc3339_to_timestamp
+from .utils import only_validates
 
 schema = None
 
@@ -54,22 +55,29 @@ def _validate_ukhas(sentence):
     else:
         raise ForbiddenError("UKHAS sentences must have fields.")
 
-def _validate_rtty(transmission):
+def _validate_modulation_settings(transmission):
     """
-    For RTTY transmissions, verify that required keys are present.
+    Check that required keys for each modulation type are present.
     """
-    required_keys = ['shift', 'encoding', 'baud', 'parity', 'stop']
-    for k in required_keys:
+    required_keys = {'RTTY': ['shift', 'encoding', 'baud', 'parity', 'stop'],
+                     'DominoEX': ['speed'],
+                     'Hellschreiber': ['variant']}
+
+    modulation = transmission['modulation']
+    if modulation not in required_keys:
+        return
+
+    for k in required_keys[modulation]:
         if k not in transmission:
             raise ForbiddenError(
-                "RTTY transmissions must include '{0}'.".format(k))
+                "{0} transmissions must include '{1}'.".format(modulation, k))
 
 def _validate_filter(f):
     """
     Check that filters have the required keys according to their type.
     """
     required_keys = {
-        'normal': ['callable'],
+        'normal': ['filter'],
         'hotfix': ['code', 'signature', 'certificate']}
     for k in required_keys[f['type']]:
         if k not in f:
@@ -77,6 +85,7 @@ def _validate_filter(f):
                 "{0} filters must include '{1}'.".format(f['type'], k))
 
 @version(1)
+@only_validates("payload_configuration")
 def validate(new, old, userctx, secobj):
     """
     Validate payload_configuration documents against the schema and then
@@ -89,20 +98,19 @@ def validate(new, old, userctx, secobj):
         * Must have at least one field
         * Coordinate fields must have a format
     * If any sentences have filters:
-        * Normal filters must specify a callable
+        * Normal filters must specify a filter path
         * Hotfix filters must specify code, a signature and a certificate
     * If any transmissions have modulation=RTTY:
         * Must also specify shift, encoding, baud, parity and stop.
 
     """
+    if old:
+        must_be_admin(userctx)
+
     global schema
     if not schema:
         schema = read_json_schema("payload_configuration.json")
-    if 'type' in new and new['type'] == "payload_configuration":
-        validate_doc(new, schema)
-
-    if old:
-        must_be_admin(userctx)
+    validate_doc(new, schema)
 
     if 'sentences' in new:
         for sentence in new['sentences']:
@@ -118,8 +126,7 @@ def validate(new, old, userctx, secobj):
 
     if 'transmissions' in new:
         for transmission in new['transmissions']:
-            if transmission['modulation'] == "RTTY":
-                _validate_rtty(transmission)
+            _validate_modulation_settings(transmission)
 
 @version(1)
 def name_time_created_map(doc):
@@ -130,6 +137,9 @@ def name_time_created_map(doc):
 
         [name, time_created] -> null
 
+    In the key, ``time_created`` is emitted as a UNIX timestamp (seconds since
+    epoch).
+
     Used to get a list of all current payload configurations, for display
     purposes or elsewhere where sorting by name is useful.
     """
@@ -138,21 +148,39 @@ def name_time_created_map(doc):
         yield (doc['name'], created), None
 
 @version(1)
-def callsign_time_created_map(doc):
+def callsign_time_created_index_map(doc):
     """
-    View: ``payload_configuration/callsign_time_created``
+    View: ``payload_configuration/callsign_time_created_index``
 
     Emits::
 
-        [callsign, time_created] -> sentence 1
-        [callsign, time_created] -> sentence 2
-        [callsign, time_created] -> ...
+        [callsign, time_created, 1] -> [metadata, sentence 1]
+        [callsign, time_created, 2] -> [metadata, sentence 2]
+        ...
+        [callsign, time_created, n] -> [metadata, sentence n]
+
+    Where ``metadata`` is::
+
+        {
+            "name": doc.name,
+            "time_created": doc.time_created (original string),
+            "metadata": doc.metadata (if present in doc)
+        }
+
+    (In other words, one row per sentence in this document).
+
+    In the key, ``time_created`` is emitted as a UNIX timestamp (seconds since
+    epoch).
 
     Useful to obtain configuration documents for a given callsign if it can't
-    be found via upcoming flights, for example parsing test telemetry.
+    be found via upcoming flights, for example parsing test telemetry or
+    selecting a sentence to copy when making a new document.
     """
     if doc['type'] == "payload_configuration":
         if 'sentences' in doc:
             created = rfc3339_to_timestamp(doc['time_created'])
-            for sentence in doc['sentences']:
-                yield (sentence['callsign'], created), sentence
+            for n, sentence in enumerate(doc['sentences']):
+                m = {"name": doc["name"], "time_created": doc["time_created"]}
+                if "metadata" in doc:
+                    m["metadata"] = doc["metadata"]
+                yield (sentence['callsign'], created, n), (m, sentence)

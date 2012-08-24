@@ -23,7 +23,7 @@ from ...views import listener_telemetry
 
 from ...views.utils import read_json_schema
 
-from couch_named_python import UnauthorizedError
+from couch_named_python import ForbiddenError, UnauthorizedError
 
 from copy import deepcopy
 from nose.tools import assert_raises
@@ -31,8 +31,8 @@ import mox
 
 doc = {
     "type": "listener_telemetry",
-    "time_created": "2012-07-17T21:03:26+0100",
-    "time_uploaded": "2012-07-17T21:03:29+0100",
+    "time_created": "2012-07-17T21:03:26+01:00",
+    "time_uploaded": "2012-07-17T21:03:29+01:00",
     "data": {
         "callsign": "M0RND",
         "latitude": 52.2135,
@@ -62,6 +62,20 @@ class TestListenerInformation(object):
         assert_raises(UnauthorizedError, listener_telemetry.validate,
                 mydoc, doc, {'roles': []}, {})
         listener_telemetry.validate(mydoc, doc, {'roles': ['_admin']}, {})
+
+    def test_only_validates_listener_telemetry(self):
+        self.m.ReplayAll()
+        mydoc = {"type": "something_else"}
+        listener_telemetry.validate(mydoc, {}, {'roles': []}, {})
+        self.m.VerifyAll()
+
+    def test_forbids_type_change(self):
+        other = deepcopy(doc)
+        other['type'] = 'another_type'
+        assert_raises(ForbiddenError, listener_telemetry.validate, doc, other,
+                {'roles': ['_admin']}, {})
+        assert_raises(ForbiddenError, listener_telemetry.validate, other, doc,
+                {'roles': ['_admin']}, {})
 
     def test_view_time_created_callsign_map(self):
         result = list(listener_telemetry.time_created_callsign_map(doc))

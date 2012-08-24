@@ -22,24 +22,26 @@ Contains schema validation and a view by creation time and callsign.
 """
 
 from couch_named_python import version
-from .utils import rfc3339_to_timestamp, must_be_admin, validate_doc
-from .utils import read_json_schema
+from ..utils.rfc3339 import rfc3339_to_timestamp
+from .utils import must_be_admin, validate_doc
+from .utils import read_json_schema, only_validates
 
 schema = None
 
 @version(1)
+@only_validates("listener_telemetry")
 def validate(new, old, userctx, secobj):
     """
     Only allow admins to edit/delete and validate the document against the
     schema for listener_telemetry documents.
     """
+    if old:
+        must_be_admin(userctx)
+
     global schema
     if not schema:
         schema = read_json_schema("listener_telemetry.json")
-    if 'type' in new and new['type'] == "listener_telemetry":
-        if old:
-            must_be_admin(userctx)
-        validate_doc(new, schema)
+    validate_doc(new, schema)
 
 @version(1)
 def time_created_callsign_map(doc):

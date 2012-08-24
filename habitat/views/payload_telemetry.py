@@ -21,8 +21,11 @@ Contains schema validation and a view by flight, payload and received time.
 """
 
 import math
+import hashlib
 from couch_named_python import ForbiddenError, UnauthorizedError, version
-from .utils import rfc3339_to_timestamp, validate_doc, read_json_schema
+from ..utils.rfc3339 import rfc3339_to_timestamp
+from .utils import validate_doc, read_json_schema
+from .utils import only_validates
 
 schema = None
 
@@ -42,6 +45,7 @@ def _check_only_new(new, old):
                 raise ForbiddenError("You may not edit existing items.")
 
 @version(1)
+@only_validates("payload_telemetry")
 def validate(new, old, userctx, secobj):
     """
     Validate this payload_telemetry document against the schema, then perform
@@ -58,11 +62,14 @@ def validate(new, old, userctx, secobj):
     global schema
     if not schema:
         schema = read_json_schema("payload_telemetry.json")
-    if 'type' in new and new['type'] == "payload_telemetry":
-        validate_doc(new, schema)
+    validate_doc(new, schema)
 
     if '_admin' in userctx['roles']:
         return
+
+    expect_id = hashlib.sha256(new['data']['_raw']).hexdigest()
+    if '_id' not in new or new['_id'] != expect_id:
+        raise ForbiddenError("Document ID must be sha256(base64 _raw data)")
 
     if old:
         if new['data'] != old['data'] and 'parser' not in userctx['roles']:
