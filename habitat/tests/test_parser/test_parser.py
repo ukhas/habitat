@@ -295,6 +295,15 @@ class TestParser(object):
         self.parser.parse(doc)
         self.m.VerifyAll()
 
+    def test_uses_provided_config(self):
+        config = {"sentences": [{"callsign": "supply", "protocol": "Mock"}]}
+        assert self.parser._get_config('supply', config) == config
+
+    def test_raises_if_provided_config_doesnt_have_correct_callsign(self):
+        config = {"sentences": [{"callsign": "bad", "protocol": "Mock"}]}
+        assert_raises(parser.CantGetConfig, self.parser._get_config,
+            'good', config)
+
 class TestParserFiltering(object):
     def setup(self):
         self.m = mox.Mox()

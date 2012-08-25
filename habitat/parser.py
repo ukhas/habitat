@@ -176,6 +176,8 @@ class Parser(object):
             logger.debug("Callsign {c!r} not found in configuration doc"
                          .format(c=callsign))
             raise CantGetConfig()
+        elif config:
+            return config
 
         config = self._find_config_doc(callsign)
 
