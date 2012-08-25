@@ -248,6 +248,53 @@ class TestParser(object):
         self.parser.parse(doc)
         self.m.VerifyAll()
 
+    def test_doesnt_use_configs_for_other_protocols(self):
+        # This was a bug: by @danielrichman:
+        # If we have parsermodules A and B, and call parse("some
+        # data"); protocols A and B are similar enough that pre_parse for A
+        # might return a callsing for something actually protocol B, but then
+        # rejects it later in parse, `config = self._get_config(...)` will
+        # remember the old config found.
+
+        # set up a second module
+        second_module = self.m.CreateMock(parser.ParserModule)
+        class MockTwo(parser.ParserModule):
+            def __new__(cls, parser):
+                return second_module
+        mod_config = {"name": "MockTwo", "class": MockTwo}
+        self.parser.modules.append(mod_config)
+
+        # stub out most parse functionality
+        self.m.StubOutWithMock(self.parser, '_get_callsign')
+        self.m.StubOutWithMock(self.parser, '_get_config')
+        self.m.StubOutWithMock(self.parser, '_get_data')
+
+        # fake doc
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'test_id'}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 123
+        
+        # first module gets used, returns valid callsign & config, no data
+        mods = self.parser.modules
+        self.parser._get_callsign("test string",
+            mods[0]).AndReturn("callsign one")
+        self.parser._get_config("callsign one", None).AndReturn("config one")
+        self.parser._get_data("test string", "callsign one", "config one",
+            mods[0]).AndRaise(parser.CantGetData())
+
+        # second module gets tried, should be given None as the config as
+        # the previously found one is bad. the bug is that it would be given
+        # "config one" instead of None.
+        self.parser._get_callsign("test string",
+            mods[1]).AndReturn("callsign two")
+        self.parser._get_config("callsign two", None).AndReturn("config two")
+        self.parser._get_data("test string", "callsign two", "config two",
+            mods[1]).AndRaise(parser.CantGetData())
+
+        self.m.ReplayAll()
+        self.parser.parse(doc)
+        self.m.VerifyAll()
+
 class TestParserFiltering(object):
     def setup(self):
         self.m = mox.Mox()
