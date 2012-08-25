@@ -82,7 +82,7 @@ class Parser(object):
         self.db = self.couch_server[config["couch_db"]]
 
     @statsd.StatsdTimer.wrap('time')
-    def parse(self, doc, config=None):
+    def parse(self, doc, initial_config=None):
         """
         Attempts to parse telemetry information out of a new telemetry
         document *doc*.
@@ -122,6 +122,7 @@ class Parser(object):
                             who=receiver_callsign))
 
         for module in self.modules:
+            config = copy.deepcopy(initial_config)
             try:
                 callsign = self._get_callsign(raw_data, module)
                 config = self._get_config(callsign, config)
