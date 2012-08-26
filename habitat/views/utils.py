@@ -141,5 +141,10 @@ def only_validates(doc_type):
                 # other type: not our business
                 return
 
+        # Be a well behaved decorator!
+        wrapped.__name__ = func.__name__
+        wrapped.__doc__ = func.__doc__
+        wrapped.__dict__.update(func.__dict__)
+
         return wrapped
     return decorator
