@@ -26,6 +26,8 @@ from couch_named_python import version
 @version(1)
 def spacenear_filter(doc, req):
     """Select parsed payload_telemetry and all listener_telemetry documents."""
+    if 'type' not in doc:
+        return False
     if doc['type'] == "listener_telemetry":
         return True
     if doc['type'] == "payload_telemetry":
