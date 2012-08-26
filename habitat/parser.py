@@ -65,7 +65,10 @@ class Parser(object):
         config = copy.deepcopy(config)
         parser_config = config["parser"]
 
-        self.filtering = ParserFiltering(config)
+        self.loadable_manager = loadable_manager.LoadableManager(config)
+        # loadable_manager used by ParserFiltering and ParserModules.
+
+        self.filtering = ParserFiltering(config, self.loadable_manager)
 
         self.modules = []
 
@@ -280,15 +283,13 @@ class ParserFiltering(object):
     """
     Handle filtering of data during parsing.
     """
-    def __init__(self, config):
+    def __init__(self, config, lmgr):
         """
         * Scans ``config["parser"]["certs_dir"]`` for CA and developer
           certificates.
-        * Loads a :class:`habitat.loadable_manager.LoadableManager` for
-          using loaded filters.
         """
         self.config = copy.deepcopy(config)
-        self.loadable_manager = loadable_manager.LoadableManager(config)
+        self.loadable_manager = lmgr
         self.certificate_authorities = []
         self.cert_path = self.config["parser"]["certs_dir"]
         ca_path = os.path.join(self.cert_path, 'ca')

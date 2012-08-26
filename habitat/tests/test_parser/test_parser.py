@@ -28,7 +28,7 @@ import M2Crypto
 from copy import deepcopy
 from nose.tools import assert_raises, eq_
 
-from ... import parser
+from ... import parser, loadable_manager
 
 
 class TestParser(object):
@@ -314,7 +314,8 @@ class TestParserFiltering(object):
             "certs_dir": cert_path}, "loadables": [],
             "couch_uri": "http://localhost:5984", "couch_db": "test"}
 
-        self.fil = parser.ParserFiltering(self.parser_config)
+        lmgr = self.m.CreateMock(loadable_manager.LoadableManager)
+        self.fil = parser.ParserFiltering(self.parser_config, lmgr)
 
     def teardown(self):
         self.m.UnsetStubs()
@@ -366,7 +367,6 @@ class TestParserFiltering(object):
         assert self.fil._filter('test data', {}, str) == 'test data'
 
     def test_calls_loadable_manager_for_normal_filters(self):
-        self.m.StubOutWithMock(self.fil, 'loadable_manager')
         data = 'test data'
         f = {'type': 'normal', 'filter': 'some.func'}
         self.fil.loadable_manager.run(
@@ -376,7 +376,6 @@ class TestParserFiltering(object):
         self.m.VerifyAll()
 
     def test_calls_loadable_manager_for_normal_filters_with_config(self):
-        self.m.StubOutWithMock(self.fil, 'loadable_manager')
         data = 'test data'
         f = {'type': 'normal', 'filter': 'some.func', 'config': 'parameters'}
         self.fil.loadable_manager.run(
@@ -402,7 +401,6 @@ class TestParserFiltering(object):
         assert self.fil._filter('test string', f, str) == 'test string'
 
     def test_sanity_checks_filter_return_type(self):
-        self.m.StubOutWithMock(self.fil, 'loadable_manager')
         cases = [("string", str, True), ("string", dict, False),
                  ({"data": True}, dict, True), ({"data": True}, str, False)]
 
