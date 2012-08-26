@@ -29,7 +29,7 @@ def unparsed_filter(doc, req):
 
     Only select unparsed payload_telemetry documents.
     """
-    if doc['type'] == "payload_telemetry":
+    if 'type' in doc and doc['type'] == "payload_telemetry":
         if 'data' in doc and '_parsed' not in doc['data']:
             return True
     return False
