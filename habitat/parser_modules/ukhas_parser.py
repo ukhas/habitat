@@ -246,7 +246,7 @@ class UKHASParser(ParserModule):
 
         if len(fields) - 1 != len(config["fields"]):
             raise ValueError("Incorrect number of fields (got {0}, expect {1})"
-                    .format(len(fields), len(config["fields"])))
+                    .format(len(fields) - 1, len(config["fields"])))
 
         output = {"payload": fields[0], "_sentence": string}
         for field, field_config in zip(fields[1:], config["fields"]):
