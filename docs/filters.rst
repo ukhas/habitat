@@ -98,3 +98,9 @@ A more complete hotfix example, to fix non-zero-padded time values:
         fixer["data"] = newdata
 
         return fixer["data"]
+
+Filter Utils
+============
+
+Please refer to :doc:`/habitat/habitat/habitat/habitat.utils.filtertools` for
+information on available filter tools such as UKHASChecksumFixer used above.
