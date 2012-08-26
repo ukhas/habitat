@@ -295,9 +295,17 @@ class TestParser(object):
         self.parser.parse(doc)
         self.m.VerifyAll()
 
-    def test_uses_provided_config(self):
+    def test_uses_provided_config_despite_no_id(self):
         config = {"sentences": [{"callsign": "supply", "protocol": "Mock"}]}
-        assert self.parser._get_config('supply', config) == config
+        result = {"id": None, "payload_configuration": config}
+        assert self.parser._get_config('supply', config) == result
+
+    def test_uses_provided_config(self):
+        config = {"sentences": [{"callsign": "supply", "protocol": "Mock"}],
+                  "_id": "some_actual_document"}
+        result = {"id": "some_actual_document",
+                  "payload_configuration": config}
+        assert self.parser._get_config('supply', config) == result
 
     def test_raises_if_provided_config_doesnt_have_correct_callsign(self):
         config = {"sentences": [{"callsign": "bad", "protocol": "Mock"}]}
