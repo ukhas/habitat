@@ -167,7 +167,7 @@
                             "title": "Sentence Field",
                             "description": "One field in the sentence.",
                             "type": "object",
-                            "additionalProperties": false,
+                            "additionalProperties": true,
                             "properties": {
                                 "name": {
                                     "title": "Field Name",
