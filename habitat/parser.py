@@ -91,9 +91,10 @@ class Parser(object):
         document *doc*.
 
         This function attempts to determine which of the loaded parser
-        modules should be used to parse the message, and which config
-        file it should be given to do so (if *config* is specified, no attempt
-        will be made to find any other configuration document).
+        modules should be used to parse the message, and which
+        payload_configuration document it should be given to do so
+        (if *config* is specified, no attempt will be made to find any
+        other configuration document).
 
         The resulting parsed document is returned, or None is returned if no
         data could be parsed.
@@ -178,7 +179,9 @@ class Parser(object):
                          .format(c=callsign))
             raise CantGetConfig()
         elif config:
-            return config
+            if "_id" not in config:
+                config["_id"] = None
+            return {"id": config["_id"], "payload_configuration": config}
 
         config = self._find_config_doc(callsign)
 
