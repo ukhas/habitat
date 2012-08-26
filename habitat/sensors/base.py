@@ -24,17 +24,21 @@ These sensors cover simple ASCII representations of numbers and strings.
 __all__ = ["ascii_int", "ascii_float", "string", "constant"]
 
 
-def ascii_int(data):
+def ascii_int(config, data):
     """
     Parse *data* to an integer.
     """
+    if config.get("optional", False) and data == '':
+        return None
     return int(data)
 
 
-def ascii_float(data):
+def ascii_float(config, data):
     """
     Parse *data* to a float.
     """
+    if config.get("optional", False) and data == '':
+        return None
     return float(data)
 
 
