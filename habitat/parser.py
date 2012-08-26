@@ -109,8 +109,6 @@ class Parser(object):
         From the UKHAS parser module in particular:
 
         * ``_sentence`` gives the ASCII sentence from the UKHAS parser
-        * ``_extra_data`` from the UKHAS parser, where the sentence contained
-          more data than the UKHAS parser was configured for
 
         Parser modules should be wary when outputting field names with
         leading underscores.

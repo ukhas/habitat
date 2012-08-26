@@ -231,10 +231,8 @@ class UKHASParser(ParserModule):
 
         Returns a dictionary of the parsed data, with field names as
         keys and the result as the value. Also inserts a ``payload`` field
-        containing the payload name, an ``_extra_data`` field if more data
-        was in the sentence but not in the configuration, so could not be
-        parsed, and an ``_sentence`` field containing the ASCII sentence
-        that data was parsed from.
+        containing the payload name, and an ``_sentence`` field containing
+        the ASCII sentence that data was parsed from.
 
         :py:exc:`ValueError <exceptions.ValueError>` is raised on invalid
         messages.
