@@ -19,27 +19,33 @@
 Tests the base sensor functions
 """
 
-from nose.tools import raises
+from nose.tools import assert_raises, raises
 from ...sensors import base
 
 
 class TestBaseSensors:
     def test_ascii_ints(self):
-        assert base.ascii_int("12") == 12
-        assert base.ascii_int("012") == 12
+        assert base.ascii_int({}, "12") == 12
+        assert base.ascii_int({}, "012") == 12
 
     @raises(ValueError)
     def test_ascii_ints_with_invalid_strings(self):
-        base.ascii_int("NOT AN INT")
+        base.ascii_int({}, "NOT AN INT")
 
     def test_ascii_floats(self):
-        assert base.ascii_float("12") == 12.0
-        assert base.ascii_float("12.3") == 12.3
-        assert base.ascii_float("0.1") == 0.1
+        assert base.ascii_float({}, "12") == 12.0
+        assert base.ascii_float({}, "12.3") == 12.3
+        assert base.ascii_float({}, "0.1") == 0.1
 
     @raises(ValueError)
     def test_ascii_floats_with_invalid_strings(self):
-        base.ascii_float("NOT A FLOAT")
+        base.ascii_float({}, "NOT A FLOAT")
+
+    def test_optional(self):
+        assert base.ascii_int({"optional": True}, "") == None
+        assert base.ascii_float({"optional": True}, "") == None
+        assert_raises(ValueError, base.ascii_int, {}, "")
+        assert_raises(ValueError, base.ascii_float, {}, "")
 
     def test_strings(self):
         assert base.string("hello") == "hello"
@@ -58,7 +64,3 @@ class TestBaseSensors:
 
     def test_good_empty_constant(self):
         assert base.constant({}, "") == None
-
-    def test_strings(self):
-        assert base.string("hello") == "hello"
-        assert base.string("123") == "123"
