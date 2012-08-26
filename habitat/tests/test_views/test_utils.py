@@ -145,6 +145,7 @@ def test_validate_times():
 def test_only_validates():
     @utils.only_validates("a_document_type")
     def my_validate_func(new, old, userctx, secobj):
+        """my docstring"""
         assert userctx == {'roles': ['test role']}
         assert secobj['secobj'] == True
         assert new['type'] == "a_document_type"
@@ -152,6 +153,9 @@ def test_only_validates():
             assert old == {"type": "a_document_type", "raise": False}
         elif new["raise"]:
             raise ForbiddenError("raising")
+
+    assert my_validate_func.__doc__ == "my docstring"
+    assert my_validate_func.__name__ == "my_validate_func"
 
     doc = {"type": "a_document_type", "raise": False}
     bad = {"type": "a_document_type", "raise": True}
