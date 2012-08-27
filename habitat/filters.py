@@ -63,6 +63,8 @@ def _post_singlefield(config):
 
     if destination.startswith("_"):
         raise ValueError("destination must not start with _")
+    if destination == "payload":
+        raise ValueError("destination must not be payload")
 
     return (source, destination)
 
