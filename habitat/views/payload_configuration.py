@@ -47,11 +47,20 @@ def _validate_ukhas(sentence):
             raise ForbiddenError(
                 "UKHAS sentences must have at least one field.")
 
+        field_names = []
         for field in sentence['fields']:
+            if field['name'][0] == '_':
+                raise ForbiddenError("Field names may not start with _")
+            if field['name'] == 'payload':
+                raise ForbiddenError("Field name may not be 'payload'")
+            field_names.append(field['name'])
             if field['sensor'] == "stdtelem.coordinate":
                 if 'format' not in field:
                     raise ForbiddenError(
                         "Coordinate fields must have formats.")
+
+        if len(field_names) != len(set(field_names)):
+            raise ForbiddenError("Duplicate field names")
     else:
         raise ForbiddenError("UKHAS sentences must have fields.")
 

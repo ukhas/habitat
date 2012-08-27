@@ -45,7 +45,7 @@ base_config = {
     "checksum": "crc16-ccitt",
     "fields": [
         {
-            "name": "message_count",
+            "name": "sentence_id",
             "sensor": "base.ascii_int"
         }, {
             "name": "time",
@@ -206,15 +206,24 @@ class TestUKHASParser:
         assert_raises(ValueError, self.p.parse, sentence,
                 config_format_invalid)
 
-        # A configuration with an invalid field name (should fail)
+        # Configurations with an invalid field names (should fail)
         config_name_invalid = deepcopy(config_checksum_none)
         config_name_invalid["fields"][0]["name"] = "_notallowed"
         assert_raises(ValueError, self.p.parse, sentence, config_name_invalid)
 
+        config_name_invalid["fields"][0]["name"] = "payload"
+        assert_raises(ValueError, self.p.parse, sentence, config_name_invalid)
+
+        # A configuration with a duplicate field name (should fail)
+        config_duplicate_name = deepcopy(config_checksum_none)
+        config_duplicate_name["fields"][1]["name"] = \
+                config_duplicate_name["fields"][0]["name"]
+        assert_raises(ValueError, self.p.parse, sentence, config_duplicate_name)
+
     def test_parse_parses_correct_checksums(self):
         # Correct parser output for the checksum test sentences
         output_checksum_test = {
-            "payload": "habitat", "message_count": 1,
+            "payload": "habitat", "sentence_id": 1,
             "time": "00:00:00",
             "latitude": 0.0, "longitude": 0.0, "altitude": 0,
             "speed": 0.0, "custom_string": "hab"}
@@ -351,7 +360,7 @@ class TestUKHASParser:
 
         # Correct parser output for (most) of the good sentences
         output_good = {
-            "payload": "habitat", "message_count": 123,
+            "payload": "habitat", "sentence_id": 123,
             "time": "12:45:06",
             "latitude": -35.1032, "longitude": 138.8568,
             "altitude": 4285, "speed": 3.6, "custom_string": "hab"}
