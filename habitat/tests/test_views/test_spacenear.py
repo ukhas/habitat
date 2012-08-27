@@ -30,7 +30,7 @@ doc = {
     }
 }
 
-def test_unparsed_filter():
+def test_spacenear_filter():
     fil = spacenear.spacenear_filter
     
     wrongtype = deepcopy(doc)
@@ -51,3 +51,7 @@ def test_unparsed_filter():
     notparsed = deepcopy(doc)
     del notparsed['data']['_parsed']
     assert not fil(notparsed, {})
+
+def test_issue_241():
+    # this should not produce an exception
+    spacenear.spacenear_filter({"_deleted": True}, {})

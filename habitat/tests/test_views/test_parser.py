@@ -47,3 +47,7 @@ def test_unparsed_filter():
     ok = deepcopy(doc)
     del ok['data']['_parsed']
     assert fil(ok, {})
+
+def test_issue_241():
+    # this should not produce an exception
+    parser.unparsed_filter({"_deleted": True}, {})
