@@ -262,11 +262,13 @@ class Parser(object):
                         "payload_configuration": flight["value"]
                     }
 
-        config = self.db.view("payload_configuration/callsign_time_created",
-                              startkey=[callsign], include_docs=True, limit=1
-                              ).first()
+        config = self.db.view(
+            "payload_configuration/callsign_time_created_index",
+            startkey=[callsign, "inf"], include_docs=True, limit=1,
+            descending=True
+            ).first()
         # Note that we check the callsign is in this doc as if no configuration
-        # has this callsign, the firt document returned above will be for the
+        # has this callsign, the first document returned above will be for the
         # closest callsign alphabetically (and thus not useful).
         if config and self._callsign_in_config(callsign, config["doc"]):
             return {
