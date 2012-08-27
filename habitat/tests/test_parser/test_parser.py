@@ -121,8 +121,13 @@ class TestParser(object):
         assert self.parser.db == self.mock_db
 
     def test_find_config_doc_looks_for_flights(self):
-        view_result = [{"key": [5, 3, 0]},
-                       {"key": [5, 3, 1], "value": {
+        view_result = [{"key": [5, 5, 0]}, # this flight has ended
+                       {"key": [5, 5, 1], "value": {
+                           "_id": 456, "sentences": [
+                                {"callsign": "habitat"}
+                            ]}, "id": 654},
+                       {"key": [6, 3, 0]},
+                       {"key": [6, 3, 1], "value": {
                            "_id": 123, "sentences": [
                                 {"callsign": "habitat"}
                             ]}, "id": 321}]
@@ -133,7 +138,7 @@ class TestParser(object):
         self.m.ReplayAll()
         result = self.parser._find_config_doc("habitat")
         assert result == {"id": 123, "flight_id": 321,
-                          "payload_configuration": view_result[1]["value"]}
+                          "payload_configuration": view_result[3]["value"]}
         self.m.VerifyAll()
 
     def test_find_config_doc_fallbacks_to_configs(self):
@@ -148,9 +153,11 @@ class TestParser(object):
         parser.time.time().AndReturn(4)
         self.parser.db.view("flight/end_start_including_payloads",
                             startkey=[4]).AndReturn(flight_result)
-        self.parser.db.view("payload_configuration/callsign_time_created",
-                            startkey=["habitat"], include_docs=True, limit=1
-                           ).AndReturn(mock_view)
+        self.parser.db.view(
+            "payload_configuration/callsign_time_created_index",
+            startkey=["habitat", "inf"], include_docs=True, limit=1,
+            descending=True
+            ).AndReturn(mock_view)
         mock_view.first().AndReturn(config_result)
         self.m.ReplayAll()
         result = self.parser._find_config_doc("habitat")
