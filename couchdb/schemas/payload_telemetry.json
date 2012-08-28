@@ -86,6 +86,12 @@
                         }
                     }
                 },
+                "payload": {
+                    "title": "Payload Callsign",
+                    "description": "The callsign of the payload. Inserted by the parser.",
+                    "type": "number",
+                    "required": false
+                },
                 "sentence_id": {
                     "title": "Sentence ID",
                     "description": "The sentence ID. Used to be known as 'sequence' or 'count'. Inserted by the parser, if configured to do so.",

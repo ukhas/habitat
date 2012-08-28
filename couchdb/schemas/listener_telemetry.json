@@ -75,6 +75,12 @@
                     "description": "The listener's current altitude, in metres above sea level.",
                     "type": "number",
                     "required": false
+                },
+                "chase": {
+                    "title": "Mobile listener flag",
+                    "description": "An optional hint on how to display this listener's telemetry on a map.",
+                    "type": "boolean",
+                    "required": false
                 }
             }
         }
