@@ -50,7 +50,7 @@ doc = {
             "protocol": "UKHAS",
             "checksum": "crc16-ccitt",
             "callsign": "HABITAT",
-            "fields": [{'sensor': 'bla'}],
+            "fields": [{'sensor': 'bla', 'name': 'whatever'}],
             "filters": {
                 "intermediate": [
                     {
@@ -121,6 +121,27 @@ class TestPayloadConfiguration(object):
         assert_raises(ForbiddenError, payload_configuration.validate,
                 mydoc, {}, {'roles': []}, {})
         del sentence['fields']
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+
+    def test_ukhas_field_name_cannot_be_payload(self):
+        mydoc = deepcopy(doc)
+        sentence = mydoc['sentences'][0]
+        sentence['fields'][0]["name"] = "payload"
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+
+    def test_ukhas_field_names_must_not_start_with_underscore(self):
+        mydoc = deepcopy(doc)
+        sentence = mydoc['sentences'][0]
+        sentence['fields'][0]["name"] = "_parsed"
+        assert_raises(ForbiddenError, payload_configuration.validate,
+                mydoc, {}, {'roles': []}, {})
+
+    def test_ukhas_field_forbid_duplicate_field_names(self):
+        mydoc = deepcopy(doc)
+        sentence = mydoc['sentences'][0]
+        sentence['fields'].append({'name': 'whatever', 'sensor': 'blah'})
         assert_raises(ForbiddenError, payload_configuration.validate,
                 mydoc, {}, {'roles': []}, {})
 

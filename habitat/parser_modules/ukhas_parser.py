@@ -142,6 +142,7 @@ class UKHASParser(ParserModule):
         """
 
         try:
+            field_names = ["payload"]
             if config["protocol"] != "UKHAS":
                 raise ValueError(
                     "Configuration document is not for UKHAS parser.")
@@ -154,6 +155,9 @@ class UKHASParser(ParserModule):
                 field["sensor"]
                 if field["name"][0] == "_":
                     raise ValueError("Field name starts with an underscore.")
+                field_names.append(field["name"])
+            if len(field_names) != len(set(field_names)):
+                raise ValueError("Duplicate field name")
         except (KeyError, TypeError):
             raise ValueError("Invalid configuration document.")
 
