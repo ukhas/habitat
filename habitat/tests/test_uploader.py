@@ -381,7 +381,7 @@ class TestUploader(object):
                 "key": [2000, 10, 0]},
             {"doc": {"_id": "pa", "name": "A"}, "key": [2000, 10, 1]},
             {"doc": {"_id": "pb", "name": "B"}, "key": [2000, 10, 1]},
-            {"doc": {"_id": "pc", "name": "C"}, "key": [2000, 10, 1]},
+            {"doc": None, "key": [2000, 10, 1]}, # doc not found
 
             {"doc": {"payloads": ["pd"], "_id": "fb"}, "key": [2100, 40, 0]},
             {"doc": {"_id": "pd", "name": "D"}, "key": [2100, 40, 1]},
@@ -399,8 +399,7 @@ class TestUploader(object):
         assert results == [
             {"payloads": ["pa", "pb", "pc"], "_id": "fa",
              "_payload_docs": [
-                 {"_id": "pa", "name": "A"}, {"_id": "pb", "name": "B"},
-                 {"_id": "pc", "name": "C"},
+                 {"_id": "pa", "name": "A"}, {"_id": "pb", "name": "B"}
              ]},
             {"payloads": ["pd"], "_id": "fb",
              "_payload_docs": [{"_id": "pd", "name": "D"}]},
