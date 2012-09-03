@@ -24,6 +24,7 @@ import json
 import inspect
 import re
 import base64
+import pytz
 
 from couch_named_python import UnauthorizedError, ForbiddenError
 from jsonschema import Validator
@@ -70,6 +71,10 @@ def _validate_base64(data):
 
     return True
 
+def _validate_timezone(data):
+    """Check that a string is a valid Olson specifier"""
+    return data in pytz.all_timezones
+
 def _validate_formats(data, schema):
     """Go through schema checking the formats date-time, time and base64"""
     if 'format' in schema:
@@ -80,6 +85,8 @@ def _validate_formats(data, schema):
             raise ForbiddenError("A time was not in the required format.")
         elif format_name == "base64" and not _validate_base64(data):
             raise ForbiddenError("A string was not valid base64.")
+        elif format_name == "timezone" and not _validate_timezone(data):
+            raise ForbiddenError("A string was not a valid timezone.")
     if 'properties' in schema and isinstance(schema['properties'], dict):
         try:
             for key, value in data.items():
