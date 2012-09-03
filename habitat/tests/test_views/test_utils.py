@@ -142,6 +142,24 @@ def test_validate_times():
                  2: {"one": "g@h", "two": bad_time}}]
         assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
 
+def test_validate_timezones():
+    schema = copy.deepcopy(test_format_schema)
+    schema["items"]["additionalProperties"]["properties"]["two"]["format"] = \
+            "timezone"
+
+    good = [{1: {"one": "a@b", "two": "Europe/London"},
+             2: {"one": "c@d", "two": "Etc/GMT+2"}},
+            {1: {"one": "e@f", "two": "UTC"},
+             2: {"one": "g@h", "two": "America/New_York"}}]
+    utils.validate_doc(good, schema)
+
+    for bad_timezone in ["", "blah", "Europe/blah", "Etc/GMT+100"]:
+        bad =  [{1: {"one": "a@b", "two": "Europe/London"},
+                 2: {"one": "c@d", "two": "Etc/GMT+2"}},
+                {1: {"one": "e@f", "two": "UTC"},
+                 2: {"one": "g@h", "two": bad_timezone}}]
+        assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
+
 def test_only_validates():
     @utils.only_validates("a_document_type")
     def my_validate_func(new, old, userctx, secobj):
