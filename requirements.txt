@@ -4,4 +4,5 @@ jsonschema==0.5
 couch-named-python==0.1.6dev
 statsd-client==1.0.2
 PyYAML==3.10
+pytz==2012b
 -e git://github.com/ukhas/M2Crypto.git#egg=M2Crypto
