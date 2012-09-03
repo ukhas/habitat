@@ -21,6 +21,8 @@ Basic sensor functions.
 These sensors cover simple ASCII representations of numbers and strings.
 """
 
+import math
+
 __all__ = ["ascii_int", "ascii_float", "string", "constant"]
 
 
@@ -39,7 +41,10 @@ def ascii_float(config, data):
     """
     if config.get("optional", False) and data == '':
         return None
-    return float(data)
+    val = float(data)
+    if math.isnan(val) or math.isinf(val):
+        raise ValueError("Cannot accept nan, inf or -inf")
+    return val
 
 
 def string(data):
@@ -47,6 +52,7 @@ def string(data):
     Returns *data* as a string.
     """
     return str(data)
+
 
 def constant(config, data):
     """
