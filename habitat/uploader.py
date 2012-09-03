@@ -280,7 +280,8 @@ class Uploader(object):
         window.
 
         The key ``_payload_docs`` is added to each flight document and is
-        populated with the documents listed in the payloads array.
+        populated with the documents listed in the payloads array, provided
+        they exist. If they don't, that _id will be skipped.
         """
 
         results = []
@@ -294,11 +295,8 @@ class Uploader(object):
             if not is_pcfg:
                 doc["_payload_docs"] = []
                 results.append(doc)
-            else:
+            elif doc is not None:
                 results[-1]["_payload_docs"].append(doc)
-
-        for doc in results:
-            assert [p["_id"] for p in doc["_payload_docs"]] == doc["payloads"]
 
         return results
 
