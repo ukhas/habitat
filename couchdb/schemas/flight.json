@@ -71,6 +71,7 @@
                     "title": "Launch Timezone",
                     "description": "The timezone the launch occurred in, as an Olson specifer (e.g. Europe/London).",
                     "type": "string",
+                    "format": "timezone",
                     "required": true
                 },
                 "location": {
