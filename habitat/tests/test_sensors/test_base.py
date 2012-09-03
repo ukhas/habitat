@@ -64,3 +64,10 @@ class TestBaseSensors:
 
     def test_good_empty_constant(self):
         assert base.constant({}, "") == None
+
+    def test_float_rejects_nan_inf(self):
+        # see github issue #248
+        assert_raises(ValueError, base.ascii_float, {}, "nan")
+        assert_raises(ValueError, base.ascii_float, {}, "NaN")
+        assert_raises(ValueError, base.ascii_float, {}, "inf")
+        assert_raises(ValueError, base.ascii_float, {}, "-inf")
