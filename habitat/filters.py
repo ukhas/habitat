@@ -230,7 +230,7 @@ def zero_pad_times(config, data):
         checksum = "*{0}".format(checksum)
 
     # check field exists
-    if len(fields) < config["field"]:
+    if len(fields) <= config["field"]:
         raise ValueError("Configured field index is not in sentence.")
 
     # must use colons

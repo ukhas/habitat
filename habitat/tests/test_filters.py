@@ -150,6 +150,10 @@ class TestFilters:
         data = "$$A,1,120604\n"
         assert_raises(ValueError, f.zero_pad_times, {}, data)
 
+        data = "$$A,B,1:2:3\n"
+        config = {"field": 3}
+        assert_raises(ValueError, f.zero_pad_times, config, data)
+
         data = "$$HABE,528,12:6:43,52.3903,-2.2947,10899*0F\n"
         fixed = "$$HABE,528,12:06:43,52.3903,-2.2947,10899*3F\n"
         config = {"checksum": "xor"}
