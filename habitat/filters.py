@@ -33,7 +33,7 @@ import math
 
 __all__ = ["semicolons_to_commas", "numeric_scale", "simple_map",
            "invalid_always", "invalid_location_zero", "invalid_gps_lock",
-           "zero_pad_coordinates"]
+           "zero_pad_coordinates", "zero_pad_times"]
 
 
 def semicolons_to_commas(config, data):
@@ -204,3 +204,49 @@ def zero_pad_coordinates(config, data):
         fmtstr = "{{0}}.{{1:0{0}n}}".format(config["width"])
         data[field] = float(fmtstr.format(*parts))
     return data
+
+def zero_pad_times(config, data):
+    """
+    Intermediate filter that zero pads times which have been incorrectly
+    transmitted as e.g. `12:3:8` instead of `12:03:08`. Only works when colons
+    are used as delimiters.
+
+    The field position to change is `config["field"]` and defaults to 2 (which
+    is typical with $$PAYLOAD,ID,TIME). The checksum in use is
+    `config["checksum"]` and defaults to `crc16-ccitt`.
+    """
+    # set defaults
+    if "field" not in config:
+        config["field"] = 2
+    if "checksum" not in config:
+        config["checksum"] = "crc16-ccitt"
+
+    # get at individual fields, removing newline and checksum
+    fields = data.split(",")
+    checksum = ""
+    fields[-1] = fields[-1].strip()
+    if '*' in fields[-1]:
+        fields[-1], checksum = fields[-1].split("*")
+        checksum = "*{0}".format(checksum)
+
+    # check field exists
+    if len(fields) < config["field"]:
+        raise ValueError("Configured field index is not in sentence.")
+
+    # must use colons
+    timefield = fields[config["field"]]
+    if ":" not in timefield:
+        raise ValueError("Can only zero pad times that use a colon delimiter")
+
+    # reformat the time
+    timeparts = [int(x) for x in timefield.split(":")]
+    timefield = "{0:02n}:{1:02n}".format(timeparts[0], timeparts[1])
+    if len(timeparts) == 3:
+        timefield = "{0}:{1:02n}".format(timefield, timeparts[2])
+    fields[config["field"]] = timefield
+
+    # add checksum and newline back
+    fields[-1] = "{0}{1}\n".format(fields[-1], checksum)
+    new = ",".join(fields)
+    # fix checksum
+    return filtertools.UKHASChecksumFixer.fix(config["checksum"], data, new)

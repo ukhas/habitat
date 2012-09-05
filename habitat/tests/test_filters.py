@@ -19,7 +19,7 @@
 Tests common filters
 """
 
-from nose.tools import assert_raises
+from nose.tools import assert_raises, eq_
 from .. import filters as f
 
 
@@ -118,3 +118,39 @@ class TestFilters:
         data = {"latitude": 51.1, "longitude": 1.21}
         config = {"fields": ["latitude", "a"]}
         assert_raises(ValueError, f.zero_pad_coordinates, config, data)
+
+    def test_zero_pad_times(self):
+        data = "$$A,1,12:8:3\n"
+        fixed = "$$A,1,12:08:03\n"
+        config = {"checksum": "none"}
+        assert f.zero_pad_times(config, data) == fixed
+
+        data = "$$A,1,2:3\n"
+        fixed = "$$A,1,02:03\n"
+        config = {"checksum": "none"}
+        assert f.zero_pad_times(config, data) == fixed
+
+        data = "$$A,1,2,3,1:2:3\n"
+        fixed = "$$A,1,2,3,01:02:03\n"
+        config = {"checksum": "none", "field": 4}
+        assert f.zero_pad_times(config, data) == fixed
+
+        data = "$$A,1,2:3:4*1503\n"
+        fixed = "$$A,1,02:03:04*CF8C\n"
+        assert f.zero_pad_times({}, data) == fixed
+
+        data = "$$A,1,2:3:4*45\n"
+        fixed = "$$A,1,02:03:04*75\n"
+        config = {"checksum": "xor"}
+        assert f.zero_pad_times(config, data) == fixed
+
+        data = "$$A\n"
+        assert_raises(ValueError, f.zero_pad_times, {}, data)
+
+        data = "$$A,1,120604\n"
+        assert_raises(ValueError, f.zero_pad_times, {}, data)
+
+        data = "$$HABE,528,12:6:43,52.3903,-2.2947,10899*0F\n"
+        fixed = "$$HABE,528,12:06:43,52.3903,-2.2947,10899*3F\n"
+        config = {"checksum": "xor"}
+        assert f.zero_pad_times(config, data) == fixed
