@@ -32,7 +32,8 @@ from .utils import filtertools
 import math
 
 __all__ = ["semicolons_to_commas", "numeric_scale", "simple_map",
-           "invalid_always", "invalid_location_zero", "invalid_gps_lock"]
+           "invalid_always", "invalid_location_zero", "invalid_gps_lock",
+           "zero_pad_coordinates"]
 
 
 def semicolons_to_commas(config, data):
@@ -176,4 +177,30 @@ def invalid_gps_lock(config, data):
     if data[source] not in ok_list:
         data["_fix_invalid"] = True
 
+    return data
+
+def zero_pad_coordinates(config, data):
+    """
+    Post filter that inserts zeros after the decimal point in coordinates, to
+    fix the common error of having the integer and fractional parts of a
+    decimal degree value as two ints and outputting them using something like
+    `sprintf("%i.%i", int_part, frac_part);`, resulting in values that should
+    be 51.0002 being output as 51.2 or similar.
+
+    The fields to change is the list `config["fields"]` and the correct
+    post-decimal-point width is `config["width"]`. By default fields is
+    `["latitude", "longitude"]` and width is 5.
+    """
+    if "fields" not in config:
+        config["fields"] = ["latitude", "longitude"]
+    if "width" not in config:
+        config["width"] = 5
+    for field in config["fields"]:
+        if field not in data:
+            raise ValueError(
+                "Field for filtering could not be found: {0}".format(field))
+    for field in config["fields"]:
+        parts = [int(x) for x in str(data[field]).split(".")]
+        fmtstr = "{{0}}.{{1:0{0}n}}".format(config["width"])
+        data[field] = float(fmtstr.format(*parts))
     return data

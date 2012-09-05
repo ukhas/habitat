@@ -19,6 +19,7 @@
 Tests common filters
 """
 
+from nose.tools import assert_raises
 from .. import filters as f
 
 
@@ -87,3 +88,33 @@ class TestFilters:
                 {"gps_lock": "barry", "_fix_invalid": True}
         assert f.invalid_gps_lock(config, {"gps_lock": "steve"}) == \
                 {"gps_lock": "steve"}
+
+    def test_zero_pad_coordinates(self):
+        data = {"latitude": 51.2, "longitude": 1.512}
+        fixed = {"latitude": 51.00002, "longitude": 1.00512}
+        assert f.zero_pad_coordinates({}, data) == fixed
+
+        data = {"latitude": 51.12345, "longitude": 1.54321}
+        fixed = {"latitude": 51.12345, "longitude": 1.54321}
+        assert f.zero_pad_coordinates({}, data) == fixed
+
+        data = {"latitude": 51.00001, "longitude": 1.00015}
+        fixed = {"latitude": 51.00001, "longitude": 1.00015}
+        assert f.zero_pad_coordinates({}, data) == fixed
+
+        data = {"latitude": 51.1, "longitude": 1.21}
+        fixed = {"latitude": 51.0001, "longitude": 1.0021}
+        config = {"width": 4}
+        assert f.zero_pad_coordinates(config, data) == fixed
+
+        data = {"latitude": 51.1, "longitude": 1.21}
+        fixed = {"latitude": 51.0001, "longitude": 1.21}
+        config = {"width": 4, "fields": ["latitude"]}
+        assert f.zero_pad_coordinates(config, data) == fixed
+
+        data = {"latitude": 51.1}
+        assert_raises(ValueError, f.zero_pad_coordinates, {}, data)
+
+        data = {"latitude": 51.1, "longitude": 1.21}
+        config = {"fields": ["latitude", "a"]}
+        assert_raises(ValueError, f.zero_pad_coordinates, config, data)
