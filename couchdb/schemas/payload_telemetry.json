@@ -89,7 +89,7 @@
                 "payload": {
                     "title": "Payload Callsign",
                     "description": "The callsign of the payload. Inserted by the parser.",
-                    "type": "number",
+                    "type": "string",
                     "required": false
                 },
                 "sentence_id": {
