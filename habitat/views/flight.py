@@ -66,53 +66,75 @@ def validate(new, old, userctx, secobj):
         if len(payloads) != len(set(payloads)):
             raise ForbiddenError("Duplicate entries in payloads list")
 
-@version(1)
+@version(2)
 def end_start_including_payloads_map(doc):
     """
     View: ``flight/end_start_including_payloads``
 
     Emits::
 
-        [end_time, start_time, 0] -> [linked payload_configuration id 1, ...]
-        [end_time, start_time, 1] -> {linked payload_configuration doc 1}
-        [end_time, start_time, 1] -> {...}
+        [end_time, start_time, flight_id, 0] -> [payload_configuration ids]
+        [end_time, start_time, flight_id, 1] -> {linked payload_configuration doc 1}
+        [end_time, start_time, flight_id, 1] -> {linked payload_configuration doc 2}
+        ...
+
+    Or, when a flight has no payloads::
+
+        [end_time, start_time, flight_id, 0] -> null
 
     Times are all UNIX timestamps (and therefore in UTC).
     
-    Sort by flight window end time, start time, created time.
+    Sorts by flight window end time then start time.
+
     If the flight has payloads, emit it with the list of payloads, and emit
-    a link for each payload so that they get included with include_docs.
+    a link for each payload so that they get included with include_docs. If a
+    flight does not have payloads, it is emitted by itself.
 
     Only shows approved flights.
 
-    Used by the parser to find active flights and the configurations to use to
-    decode telemetry from them.
+    Used by the parser to find active flights and get the configurations used
+    to decode telemetry from them.
 
     May otherwise be used to find upcoming flights and their associated
     payloads, though typically the view ``launch_time_including_payloads``
     would be more useful as it sorts by launch time.
 
     Query using ``startkey=[current_timestamp]`` to get all flights whose
-    windows have not yet ended.
+    windows have not yet ended. Use ``include_docs=true`` to have the linked
+    payload_configuration documents fetched and returned as the ``"doc"`` key
+    for that row, otherwise the row's value will just contain an object that
+    holds the linked ID. See the 
+    `CouchDB documentation <http://wiki.apache.org/couchdb/Introduction_to_CouchDB_views#Linked_documents>`_
+    for details on linked documents.
     """
-    if doc['type'] == "flight":
-        if 'payloads' in doc and doc['approved']:
-            et = rfc3339_to_timestamp(doc['end'])
-            st = rfc3339_to_timestamp(doc['start'])
-            yield (et, st, 0), doc['payloads']
-            for payload in doc['payloads']:
-                yield (et, st, 1), {'_id': payload}
+    if doc['type'] != "flight" or not doc['approved']:
+        return
+    flight_id = doc['_id']
+    et = rfc3339_to_timestamp(doc['end'])
+    st = rfc3339_to_timestamp(doc['start'])
+    if 'payloads' in doc:
+        yield (et, st, flight_id, 0), doc['payloads']
+        for payload in doc['payloads']:
+            yield (et, st, flight_id, 1), {'_id': payload}
+    else:
+        yield (et, st, flight_id, 0), None
 
-@version(1)
+
+@version(2)
 def launch_time_including_payloads_map(doc):
     """
     View: ``flight/launch_time_including_payloads``
 
     Emits::
 
-        [launch_time, 0] -> [linked payload_configuration id 1, ...]
-        [launch_time, 1] -> {linked payload_configuration doc 1}
-        [launch_time, 1] -> {...}
+        [launch_time, flight_id, 0] -> [payload_configuration ids]
+        [launch_time, flight_id, 1] -> {linked payload_configuration doc 1}
+        [launch_time, flight_id, 1] -> {linked payload_configuration doc 2}
+        ...
+
+    Or, when a flight has no payloads::
+        
+        [launch_time, flight_id, 0] -> null
 
     Times are all UNIX timestamps (and therefore in UTC).
 
@@ -124,13 +146,23 @@ def launch_time_including_payloads_map(doc):
     upcoming flights.
 
     Query using ``startkey=[current_timestamp]`` to get all upcoming flights.
+    Use ``include_docs=true`` to have the linked
+    payload_configuration documents fetched and returned as the ``"doc"`` key
+    for that row, otherwise the row's value will just contain an object that
+    holds the linked ID. See the 
+    `CouchDB documentation <http://wiki.apache.org/couchdb/Introduction_to_CouchDB_views#Linked_documents>`_
+    for details on linked documents.
     """
-    if doc['type'] == "flight":
-        if doc['approved']:
-            lt = rfc3339_to_timestamp(doc['launch']['time'])
-            yield (lt, 0), None
-            for payload in doc['payloads']:
-                yield (lt, 1), {'_id': payload}
+    if doc['type'] != "flight" or not doc['approved']:
+        return
+    flight_id = doc['_id']
+    lt = rfc3339_to_timestamp(doc['launch']['time'])
+    if 'payloads' in doc:
+        yield (lt, flight_id, 0), doc['payloads']
+        for payload in doc['payloads']:
+            yield (lt, flight_id, 1), {'_id': payload}
+    else:
+        yield (lt, flight_id, 0), None
 
 @version(1)
 def all_name_map(doc):
