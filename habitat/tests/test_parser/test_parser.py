@@ -164,6 +164,12 @@ class TestParser(object):
         eq_(result, {"id": 123, "payload_configuration": config_result["doc"]})
         self.m.VerifyAll()
 
+    def test_is_ok_with_configs_without_sentences(self):
+        # issue #255: KeyError because sentences is optional in
+        # payload_configuration documents
+        config = {"not_sentences": None}
+        self.parser._callsign_in_config("habitat", config)
+
     def test_doesnt_parse_if_no_callsign_found(self):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="

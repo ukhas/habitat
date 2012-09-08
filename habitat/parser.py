@@ -279,7 +279,7 @@ class Parser(object):
         return None
 
     def _callsign_in_config(self, callsign, config):
-        return callsign in (s["callsign"] for s in config["sentences"])
+        return callsign in (s["callsign"] for s in config.get("sentences", []))
 
 
 class ParserFiltering(object):
