@@ -334,7 +334,7 @@ class ParserFiltering(object):
             if filter_type in sentence["filters"]:
                 for f in sentence["filters"][filter_type]:
                     data = self._filter(data, f, result_type)
-                    statsd.increment("filtes.{0}".format(filter_type))
+                    statsd.increment("filters.{0}".format(filter_type))
         return data
 
     def _filter(self, data, f, result_type):
