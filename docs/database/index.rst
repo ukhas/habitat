@@ -44,7 +44,8 @@ database, for example to the parser. Validation functions check all new
 incoming documents to ensure they meet whatever requirements are imposed,
 making sure that only valid documents are stored in the database.
 
-For more comprehensive information, please refer to the CouchDB documentation.
+For more comprehensive information, please refer to the 
+`CouchDB documentation <http://wiki.apache.org/couchdb/Introduction_to_CouchDB_views>`_.
 
 Included Views
 ==============
@@ -61,6 +62,7 @@ Python
 .. code-block:: python
 
     import couchdbkit
+    db = couchdbkit.Server("http://habitat.habhub.org")["habitat"]
     flights = db.view("flight/launch_time_including_payloads", include_docs=True)
     for flight in flights:
         print "Flight '{0}' launches at {1}!".format(
