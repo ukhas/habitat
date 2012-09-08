@@ -74,6 +74,7 @@ class ParserDaemon(object):
         if doc:
             self._save_updated_doc(doc)
 
+    @statsd.StatsdTimer.wrap('save_time')
     def _save_updated_doc(self, doc, attempts=0):
         """
         Save doc to the database, retrying with a merge in the event of
