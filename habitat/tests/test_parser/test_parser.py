@@ -121,13 +121,13 @@ class TestParser(object):
         assert self.parser.db == self.mock_db
 
     def test_find_config_doc_looks_for_flights(self):
-        view_result = [{"key": [5, 5, 0]}, # this flight has ended
-                       {"key": [5, 5, 1], "doc": {
+        view_result = [{"key": [5, 5, 654, 0]}, # this flight has ended
+                       {"key": [5, 5, 654, 1], "doc": {
                            "_id": 456, "sentences": [
                                 {"callsign": "habitat"}
                             ]}, "id": 654},
-                       {"key": [6, 3, 0]},
-                       {"key": [6, 3, 1], "doc": {
+                       {"key": [6, 3, 321, 0]},
+                       {"key": [6, 3, 321, 1], "doc": {
                            "_id": 123, "sentences": [
                                 {"callsign": "habitat"}
                             ]}, "id": 321}]
@@ -142,8 +142,8 @@ class TestParser(object):
         self.m.VerifyAll()
 
     def test_find_config_doc_fallbacks_to_configs(self):
-        flight_result = [{"key": [5, 3, 0]},
-                         {"key": [5, 3, 1], "doc": {
+        flight_result = [{"key": [5, 3, 321, 0]},
+                         {"key": [5, 3, 321, 1], "doc": {
                              "_id": 123, "sentences": [{"callsign": "bla"}]},
                           "id": 321}]
         config_result = {"id": 123, "doc": {
