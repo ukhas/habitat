@@ -30,6 +30,7 @@ from nose.tools import assert_raises
 import mox
 
 doc = {
+    "_id": "fid",
     "type": "flight",
     "approved": False,
     "start": "2012-07-14T22:54:23+01:00",
@@ -132,11 +133,21 @@ class TestFlight(object):
         mydoc['payloads'] = ['a', 'b']
         result = list(flight.launch_time_including_payloads_map(mydoc))
         expected = [
-            ((1342305000, 0), None),
-            ((1342305000, 1), {'_id': 'a'}),
-            ((1342305000, 1), {'_id': 'b'})
+            ((1342305000, "fid", 0), ['a', 'b']),
+            ((1342305000, "fid", 1), {'_id': 'a'}),
+            ((1342305000, "fid", 1), {'_id': 'b'})
         ]
 
+        assert result == expected
+
+    def test_view_launch_time_without_payloads(self):
+        mydoc = deepcopy(doc)
+        mydoc['approved'] = True
+        result = list(flight.launch_time_including_payloads_map(mydoc))
+        expected = [
+            ((1342305000, "fid", 0), None)
+        ]
+        
         assert result == expected
 
     def test_view_end_start_including_payloads(self):
@@ -145,11 +156,21 @@ class TestFlight(object):
         mydoc['payloads'] = ['a', 'b']
         result = list(flight.end_start_including_payloads_map(mydoc))
         expected = [
-            ((1342306800, 1342302863, 0), ['a', 'b']),
-            ((1342306800, 1342302863, 1), {'_id': 'a'}),
-            ((1342306800, 1342302863, 1), {'_id': 'b'})
+            ((1342306800, 1342302863, "fid", 0), ['a', 'b']),
+            ((1342306800, 1342302863, "fid", 1), {'_id': 'a'}),
+            ((1342306800, 1342302863, "fid", 1), {'_id': 'b'})
         ]
 
+        assert result == expected
+
+    def test_view_end_start_without_payloads(self):
+        mydoc = deepcopy(doc)
+        mydoc['approved'] = True
+        result = list(flight.end_start_including_payloads_map(mydoc))
+        expected = [
+            ((1342306800, 1342302863, "fid", 0), None)
+        ]
+        
         assert result == expected
 
     def test_view_name(self):
