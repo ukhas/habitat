@@ -252,14 +252,14 @@ class Parser(object):
         """
         t = int(time.time())
         flights = self.db.view("flight/end_start_including_payloads",
-                               startkey=[t])
+                               include_docs=True, startkey=[t])
         for flight in flights:
             if flight["key"][1] < t and flight["key"][2] == 1:
-                if self._callsign_in_config(callsign, flight["value"]):
+                if self._callsign_in_config(callsign, flight["doc"]):
                     return {
-                        "id": flight["value"]["_id"],
+                        "id": flight["doc"]["_id"],
                         "flight_id": flight["id"],
-                        "payload_configuration": flight["value"]
+                        "payload_configuration": flight["doc"]
                     }
 
         config = self.db.view(
