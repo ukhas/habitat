@@ -122,28 +122,28 @@ class TestParser(object):
 
     def test_find_config_doc_looks_for_flights(self):
         view_result = [{"key": [5, 5, 0]}, # this flight has ended
-                       {"key": [5, 5, 1], "value": {
+                       {"key": [5, 5, 1], "doc": {
                            "_id": 456, "sentences": [
                                 {"callsign": "habitat"}
                             ]}, "id": 654},
                        {"key": [6, 3, 0]},
-                       {"key": [6, 3, 1], "value": {
+                       {"key": [6, 3, 1], "doc": {
                            "_id": 123, "sentences": [
                                 {"callsign": "habitat"}
                             ]}, "id": 321}]
         self.m.StubOutWithMock(parser, 'time')
         parser.time.time().AndReturn(4)
         self.parser.db.view("flight/end_start_including_payloads",
-                            startkey=[4]).AndReturn(view_result)
+            include_docs=True, startkey=[4]).AndReturn(view_result)
         self.m.ReplayAll()
         result = self.parser._find_config_doc("habitat")
         assert result == {"id": 123, "flight_id": 321,
-                          "payload_configuration": view_result[3]["value"]}
+                          "payload_configuration": view_result[3]["doc"]}
         self.m.VerifyAll()
 
     def test_find_config_doc_fallbacks_to_configs(self):
         flight_result = [{"key": [5, 3, 0]},
-                         {"key": [5, 3, 1], "value": {
+                         {"key": [5, 3, 1], "doc": {
                              "_id": 123, "sentences": [{"callsign": "bla"}]},
                           "id": 321}]
         config_result = {"id": 123, "doc": {
@@ -152,7 +152,7 @@ class TestParser(object):
         mock_view = self.m.CreateMock(couchdbkit.ViewResults)
         parser.time.time().AndReturn(4)
         self.parser.db.view("flight/end_start_including_payloads",
-                            startkey=[4]).AndReturn(flight_result)
+            include_docs=True, startkey=[4]).AndReturn(flight_result)
         self.parser.db.view(
             "payload_configuration/callsign_time_created_index",
             startkey=["habitat", "inf"], include_docs=True, limit=1,
@@ -163,6 +163,12 @@ class TestParser(object):
         result = self.parser._find_config_doc("habitat")
         eq_(result, {"id": 123, "payload_configuration": config_result["doc"]})
         self.m.VerifyAll()
+
+    def test_is_ok_with_configs_without_sentences(self):
+        # issue #255: KeyError because sentences is optional in
+        # payload_configuration documents
+        config = {"not_sentences": None}
+        self.parser._callsign_in_config("habitat", config)
 
     def test_doesnt_parse_if_no_callsign_found(self):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
