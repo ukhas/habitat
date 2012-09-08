@@ -289,13 +289,14 @@ class Uploader(object):
 
         for row in self._db.view("flight/end_start_including_payloads",
                                  include_docs=True, startkey=[now]):
-            end, start, is_pcfg = row["key"]
+            end, start, flight_id, is_pcfg = row["key"]
             doc = row["doc"]
 
             if not is_pcfg:
                 doc["_payload_docs"] = []
                 results.append(doc)
             elif doc is not None:
+                assert flight_id == results[-1]["_id"]
                 results[-1]["_payload_docs"].append(doc)
 
         return results

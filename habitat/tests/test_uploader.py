@@ -378,19 +378,20 @@ class TestUploader(object):
                           include_docs=True, startkey=[1300001912]).AndReturn([
             # Lots of keys ommitted
             {"doc": {"payloads": ["pa", "pb", "pc"], "_id": "fa"},
-                "key": [2000, 10, 0]},
-            {"doc": {"_id": "pa", "name": "A"}, "key": [2000, 10, 1]},
-            {"doc": {"_id": "pb", "name": "B"}, "key": [2000, 10, 1]},
-            {"doc": None, "key": [2000, 10, 1]}, # doc not found
+                "key": [2000, 10, "fa", 0]},
+            {"doc": {"_id": "pa", "name": "A"}, "key": [2000, 10, "fa", 1]},
+            {"doc": {"_id": "pb", "name": "B"}, "key": [2000, 10, "fa", 1]},
+            {"doc": None, "key": [2000, 10, "fa", 1]}, # doc not found
 
-            {"doc": {"payloads": ["pd"], "_id": "fb"}, "key": [2100, 40, 0]},
-            {"doc": {"_id": "pd", "name": "D"}, "key": [2100, 40, 1]},
+            {"doc": {"payloads": ["pd"], "_id": "fb"},
+                "key": [2100, 40, "fb", 0]},
+            {"doc": {"_id": "pd", "name": "D"}, "key": [2100, 40, "fb", 1]},
 
             {"doc": {"payloads": ["pa", "pc", "pd"], "_id": "fc"},
-                "key": [2200, 10, 0]},
-            {"doc": {"_id": "pa", "name": "A"}, "key": [2200, 10, 1]},
-            {"doc": {"_id": "pc", "name": "C"}, "key": [2200, 10, 1]},
-            {"doc": {"_id": "pd", "name": "D"}, "key": [2200, 10, 1]},
+                "key": [2200, 10, "fc", 0]},
+            {"doc": {"_id": "pa", "name": "A"}, "key": [2200, 10, "fc", 1]},
+            {"doc": {"_id": "pc", "name": "C"}, "key": [2200, 10, "fc", 1]},
+            {"doc": {"_id": "pd", "name": "D"}, "key": [2200, 10, "fc", 1]},
         ])
 
         self.mocker.ReplayAll()
