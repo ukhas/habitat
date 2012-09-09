@@ -35,7 +35,3 @@ payload_telemetry:
 parser:
     filters:
         unparsed: habitat.views.parser.unparsed_filter
-
-spacenearus:
-    filters:
-        spacenear: habitat.views.spacenear.spacenear_filter
