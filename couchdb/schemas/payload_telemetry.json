@@ -129,7 +129,7 @@
                 },
                 "_fix_invalid": {
                     "title": "Fix Invalid",
-                    "description": "Optional (i.e., False if it is not present) flag that indicates that the values of time, latitude, longitude and altitude should not be used.",
+                    "description": "Flag that indicates that the values of time, latitude, longitude and altitude should not be used. Inserted by the parser, if configured to do so.",
                     "type": "boolean",
                     "required": false
                 }
