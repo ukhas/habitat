@@ -1,7 +1,7 @@
 crcmod==1.7
 couchdbkit==0.6.3
 jsonschema==0.5
-couch-named-python==0.2.1
+couch-named-python==0.2.2
 statsd-client==1.0.2
 PyYAML==3.10
 pytz==2012b
