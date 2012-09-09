@@ -29,7 +29,6 @@ habitat related design documents.
     habitat.views.payload_configuration
     habitat.views.habitat
     habitat.views.parser
-    habitat.views.spacenear
     habitat.views.utils
 """
 
@@ -40,5 +39,4 @@ from . import payload_telemetry
 from . import payload_configuration
 from . import habitat
 from . import parser
-from . import spacenear
 from . import utils
