@@ -47,11 +47,8 @@ def load_config():
     return config
 
 
-def _get_logging_level(config, key):
-    if key not in config:
-        return None
-
-    value = config[key].upper()
+def _get_logging_level(value):
+    value = value.upper()
 
     if value == "NONE":
         return None
@@ -64,6 +61,20 @@ class null_logger(logging.Handler):
     pass
 
 
+_format_email = \
+"""%(levelname)s from logger %(name)s (thread %(threadName)s)
+
+Time:       %(asctime)s
+Location:   %(pathname)s:%(lineno)d
+Module:     %(module)s
+Function:   %(funcName)s
+
+%(message)s"""
+
+_format_string = \
+"[%(asctime)s] %(levelname)s %(name)s %(threadName)s: %(message)s"
+
+
 def setup_logging(config, daemon_name):
     """
     **setup_logging** initalises the :py:mod:`Python logging module <logging>`.
@@ -72,9 +83,6 @@ def setup_logging(config, daemon_name):
     Handlers, depending on the values provided for ``log_file_level`` and
     ``log_stderr_level`` in *config*.
     """
-
-    formatstring = "[%(asctime)s] %(levelname)s %(name)s %(threadName)s: " + \
-                   "%(message)s"
 
     root_logger = logging.getLogger()
 
@@ -86,12 +94,15 @@ def setup_logging(config, daemon_name):
     logging.getLogger("restkit").setLevel(logging.WARNING)
 
     have_handlers = False
-    stderr_level = _get_logging_level(config, "log_stderr_level")
-    file_level = _get_logging_level(config, "log_file_level")
+    levels = config["log_levels"]
+
+    stderr_level = _get_logging_level(levels.get("stderr", "NONE"))
+    file_level = _get_logging_level(levels.get("file", "NONE"))
+    email_level = _get_logging_level(levels.get("email", "NONE"))
 
     if stderr_level != None:
         stderr_handler = logging.StreamHandler()
-        stderr_handler.setFormatter(logging.Formatter(formatstring))
+        stderr_handler.setFormatter(logging.Formatter(_format_string))
         stderr_handler.setLevel(stderr_level)
         root_logger.addHandler(stderr_handler)
         have_handlers = True
@@ -99,9 +110,23 @@ def setup_logging(config, daemon_name):
     if file_level != None:
         file_name = config[daemon_name]["log_file"]
         file_handler = logging.handlers.WatchedFileHandler(file_name)
-        file_handler.setFormatter(logging.Formatter(formatstring))
+        file_handler.setFormatter(logging.Formatter(_format_string))
         file_handler.setLevel(file_level)
         root_logger.addHandler(file_handler)
+        have_handlers = True
+
+    if email_level != None:
+        emails_to = config["log_emails"]["to"]
+        emails_from = config["log_emails"]["from"]
+        email_server = config["log_emails"]["server"]
+        if not isinstance(emails_to, list):
+            emails_to = [emails_to]
+
+        mail_handler = logging.handlers.SMTPHandler(
+                email_server, emails_from, emails_to, daemon_name)
+        mail_handler.setLevel(logging.ERROR)
+        mail_handler.setFormatter(logging.Formatter(_format_email))
+        root_logger.addHandler(mail_handler)
         have_handlers = True
 
     if not have_handlers:
