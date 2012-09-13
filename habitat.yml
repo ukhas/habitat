@@ -9,6 +9,7 @@ log_emails:
         - "daniel@kraken.habhub.org"
         - "adam@kraken.habhub.org"
     from: "habitat@kraken.habhub.org"
+    server: localhost
 parserdaemon:
     log_file:
 parser:

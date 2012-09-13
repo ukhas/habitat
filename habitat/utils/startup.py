@@ -58,7 +58,8 @@ def _get_logging_level(value):
 
 class null_logger(logging.Handler):
     """A python logging handler that discards log messages silently."""
-    pass
+    def emit(self, record):
+        pass
 
 
 _format_email = \
@@ -124,7 +125,7 @@ def setup_logging(config, daemon_name):
 
         mail_handler = logging.handlers.SMTPHandler(
                 email_server, emails_from, emails_to, daemon_name)
-        mail_handler.setLevel(logging.ERROR)
+        mail_handler.setLevel(email_level)
         mail_handler.setFormatter(logging.Formatter(_format_email))
         root_logger.addHandler(mail_handler)
         have_handlers = True
@@ -134,7 +135,7 @@ def setup_logging(config, daemon_name):
         # If we're meant to be totally silent...
         root_logger.addHandler(null_logger())
 
-    logger.info("Log initalised")
+    logger.info("Log initialised")
 
 
 def main(main_class):
