@@ -1,7 +1,15 @@
 couch_uri: "http://localhost:5984"
 couch_db: habitat
-log_stderr_level: DEBUG
-log_file_level: NONE
+log_levels:
+    stderr: DEBUG
+    file: NONE
+    email: ERROR
+log_emails:
+    to:
+        - "daniel@kraken.habhub.org"
+        - "adam@kraken.habhub.org"
+    from: "habitat@kraken.habhub.org"
+    server: localhost
 parserdaemon:
     log_file:
 parser:

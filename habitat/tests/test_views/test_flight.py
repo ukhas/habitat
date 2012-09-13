@@ -176,5 +176,4 @@ class TestFlight(object):
     def test_view_name(self):
         mydoc = deepcopy(doc)
         result = list(flight.all_name_map(mydoc))
-        print result
         assert result == [("Test Launch", None)]
