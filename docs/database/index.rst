@@ -56,6 +56,53 @@ the source documentation for each: :doc:`/habitat/habitat/habitat.views`.
 Using Views: Example
 ====================
 
+Simple Example
+--------------
+
+In this simple example we just fetch the list of `payload_configuration`
+documents and print out payload names. The full configuration document is
+available as `payload["doc"]`.
+
+Python
+~~~~~~
+
+.. code-block:: python
+
+    import couchdbkit
+    db = couchdbkit.Server("http://habitat.habhub.org")["habitat"]
+    payloads = db.view("payload_configuration/name_time_created", include_docs=True)
+    for payload in payloads:
+        print "Payload: {0}".format(payload["key"][0])
+
+
+Javascript
+~~~~~~~~~~
+
+.. code-block:: html
+
+    <script src="jquery.couch.js"></script>
+
+.. code-block:: javascript
+
+    db = $.couch.db("habitat")
+    db.view("payload_configuration/name_time_created", include_docs: true, success: function(data) {
+        for(payload in data) {
+            console.log("Payload: " + payload.key[0]);
+        }
+    });
+
+
+View Collation
+--------------
+
+A more complicated example, which demonstrates
+`view collation <http://wiki.apache.org/couchdb/View_collation>`_. The
+`flight/launch_time_including_payloads` view returns both `flight` documents
+and the associated `payload_configuration` documents, indicated by the second
+item in the key (0 for `flight`, 1 for `payload_configuration`). This code
+snippet fetches all the flights and prints their name and launch time and the
+name of each payload in them.
+
 Python
 ------
 
@@ -65,19 +112,9 @@ Python
     db = couchdbkit.Server("http://habitat.habhub.org")["habitat"]
     flights = db.view("flight/launch_time_including_payloads", include_docs=True)
     for flight in flights:
-        print "Flight '{0}' launches at {1}!".format(
-            flight["doc"]["name"], flight["doc"]["launch"]["time"])
-
-Javascript
-----------
-
-.. code-block:: html
-
-    <script src="jquery.couch.js"></script>
-
-.. code-block:: javascript
-
-    db = $.couch.db("habitat")
-    db.view("flight/launch_time_including_payloads", success: function(data) {
-        console.log(data.rows[0]);
-    });
+        if flight["key"][1] == 0:
+            print "Flight {0} launches at {1}!".format(
+                flight["doc"]["name"], flight["doc"]["launch"]["time"])
+            print "  Payloads:"
+        else:
+            print "    {0}".format(flight["doc"]["name"])
