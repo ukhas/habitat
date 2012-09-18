@@ -104,7 +104,7 @@ snippet fetches all the flights and prints their name and launch time and the
 name of each payload in them.
 
 Python
-------
+~~~~~~
 
 .. code-block:: python
 
