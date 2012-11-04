@@ -40,8 +40,8 @@
                     "format": "base64",
                     "required": false
                 },
-                "_string": {
-                    "title": "Raw Data String",
+                "_sentence": {
+                    "title": "Raw Data Sentence",
                     "description": "The ASCII representation of the raw data, if the data is all printable. Inserted by the parser.",
                     "type": "string",
                     "required": false
