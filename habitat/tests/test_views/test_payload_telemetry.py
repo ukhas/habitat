@@ -25,6 +25,7 @@ from ...views.utils import read_json_schema
 
 from couch_named_python import ForbiddenError, UnauthorizedError
 
+import json
 from copy import deepcopy
 from nose.tools import assert_raises
 import mox
@@ -147,3 +148,89 @@ class TestPayloadTelemetry(object):
         mydoc['data']['_parsed']['flight'] = "fedcba"
         result = list(view(mydoc))
         assert result == [(('abcdef', 1342555406), None)]
+
+    def test_add_listener_update_new_doc(self):
+        doc_id = \
+            "cd4eaf118a9668d4349e7053a6bb388952ccf0c28eb4f2542290d1a3629f9415"
+        protodoc = {
+            "data": {"_raw": "JCRURVNUCg=="},
+            "receivers": {"habitat": {
+                "time_created": "2012-12-27T12:02:00Z",
+                "time_uploaded": "2012-12-27T12:02:01Z",
+                "here_is_some": "metadata"}}}
+        req = {"body": json.dumps(protodoc), "id": doc_id}
+        result = payload_telemetry.add_listener_update(None, req)
+        doc = result[0]
+
+        assert result[1] == "OK"
+        assert doc["_id"] == doc_id
+        assert doc["type"] == "payload_telemetry"
+        assert doc["data"]["_raw"] == "JCRURVNUCg=="
+        assert len(doc["receivers"]) == 1
+        assert "habitat" in doc["receivers"]
+        recv = doc["receivers"]["habitat"]
+        assert recv["time_created"] == "2012-12-27T12:02:00Z"
+        assert recv["time_uploaded"] == "2012-12-27T12:02:01Z"
+        assert recv["here_is_some"] == "metadata"
+        assert "time_server" in recv
+        payload_telemetry.validate(doc, None, {'roles': []}, {})
+
+    def test_add_listener_update_merge(self):
+        doc_id = \
+            "cd4eaf118a9668d4349e7053a6bb388952ccf0c28eb4f2542290d1a3629f9415"
+        protodoc = {
+            "data": {"_raw": "JCRURVNUCg=="},
+            "receivers": {"habitat": {
+                "time_created": "2012-12-27T12:02:00Z",
+                "time_uploaded": "2012-12-27T12:02:01Z",
+                "here_is_some": "metadata"}}}
+        req = {"body": json.dumps(protodoc), "id": doc_id}
+        olddoc = {
+            "_id": doc_id,
+            "_rev": "123abc",
+            "type": "payload_telemetry",
+            "data": {"_raw": "JCRURVNUCg=="},
+            "receivers": {"first": {
+                "time_created": "2012-12-27T12:01:58Z",
+                "time_uploaded": "2012-12-27T12:01:59Z",
+                "other": "data"}}}
+        result = payload_telemetry.add_listener_update(olddoc, req)
+        doc = result[0]
+
+        assert result[1] == "OK"
+        assert doc["_id"] == doc_id
+        assert doc["type"] == "payload_telemetry"
+        assert doc["data"]["_raw"] == "JCRURVNUCg=="
+        assert len(doc["receivers"]) == 2
+        assert "first" in doc["receivers"]
+        assert doc["receivers"]["first"] == olddoc["receivers"]["first"]
+        assert "habitat" in doc["receivers"]
+        recv = doc["receivers"]["habitat"]
+        assert recv["time_created"] == "2012-12-27T12:02:00Z"
+        assert recv["time_uploaded"] == "2012-12-27T12:02:01Z"
+        assert recv["here_is_some"] == "metadata"
+        assert "time_server" in recv
+        payload_telemetry.validate(doc, olddoc, {'roles': []}, {})
+
+    def test_add_listener_update_sanity_checks(self):
+        f = payload_telemetry.add_listener_update
+
+        # no data
+        assert_raises(ForbiddenError, f, None, {"body":
+            '{"not data": {}, "receivers": {"habitat": {}}}'})
+
+        # no data._raw
+        assert_raises(ForbiddenError, f, None, {"body": 
+            '{"data": {"not _raw": true}, "receivers": {"habitat":{}}}'})
+
+        # no receivers
+        assert_raises(ForbiddenError, f, None, {"body":
+            '{"data": {"_raw": "a"}, "not receivers": {"habitat": {}}}'})
+
+        # no one in receivers
+        assert_raises(ForbiddenError, f, None, {"body":
+            '{"data": {"_raw": "a"}, "receivers": {}}'})
+
+        # too many in receivers
+        assert_raises(ForbiddenError, f, None, {"body":
+            '{"data": {"_raw": "a"}, "receivers": {"a": {}, "b": {}}}'})
