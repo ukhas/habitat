@@ -176,7 +176,7 @@ def add_listener_update(doc, req):
                     "time_created": "<RFC3339 timestamp>",
                     "time_uploaded": "<RFC3339 timestamp>",
                     <other keys as desired, for instance
-                     latest_telemetry, latest_info, frequency, etc>
+                     latest_listener_telemetry, latest_listener_info, etc>
                 }
             }
         }
@@ -189,6 +189,10 @@ def add_listener_update(doc, req):
     uploaders should retry the same request until the conflict is resolved.
     """
     protodoc = json.loads(req["body"])
+    if "data" not in protodoc or "_raw" not in protodoc["data"]:
+        raise ForbiddenError("doc.data._raw is required")
+    if "receivers" not in protodoc or len(protodoc["receivers"]) != 1:
+        raise ForbiddenError("doc.receivers must exist and have one receiver")
     callsign = protodoc["receivers"].keys()[0]
     protodoc["receivers"][callsign]["time_server"] = now_to_rfc3339_utcoffset()
     if not doc:

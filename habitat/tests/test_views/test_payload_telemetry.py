@@ -211,3 +211,26 @@ class TestPayloadTelemetry(object):
         assert recv["here_is_some"] == "metadata"
         assert "time_server" in recv
         payload_telemetry.validate(doc, olddoc, {'roles': []}, {})
+
+    def test_add_listener_update_sanity_checks(self):
+        f = payload_telemetry.add_listener_update
+
+        # no data
+        assert_raises(ForbiddenError, f, None, {"body":
+            '{"not data": {}, "receivers": {"habitat": {}}}'})
+
+        # no data._raw
+        assert_raises(ForbiddenError, f, None, {"body": 
+            '{"data": {"not _raw": true}, "receivers": {"habitat":{}}}'})
+
+        # no receivers
+        assert_raises(ForbiddenError, f, None, {"body":
+            '{"data": {"_raw": "a"}, "not receivers": {"habitat": {}}}'})
+
+        # no one in receivers
+        assert_raises(ForbiddenError, f, None, {"body":
+            '{"data": {"_raw": "a"}, "receivers": {}}'})
+
+        # too many in receivers
+        assert_raises(ForbiddenError, f, None, {"body":
+            '{"data": {"_raw": "a"}, "receivers": {"a": {}, "b": {}}}'})
