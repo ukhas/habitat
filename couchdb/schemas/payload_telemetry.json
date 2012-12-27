@@ -161,13 +161,13 @@
                         "format": "date-time",
                         "required": true
                     },
-                    "latest_telemtry": {
+                    "latest_listener_telemtry": {
                         "title": "Receiver Latest Telemtry",
                         "description": "A CouchDB document ID for this receiver's most recent listener_telemetry document.",
                         "type": "string",
                         "required": false
                     },
-                    "latest_info": {
+                    "latest_listener_information": {
                         "title": "Receiver Latest Info",
                         "description": "A CouchDB document ID for this receiver's most recent listener_information document.",
                         "type": "string",
