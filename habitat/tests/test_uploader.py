@@ -25,6 +25,7 @@ import copy
 import uuid
 import threading
 import time
+import json
 
 import couchdbkit
 import couchdbkit.resource
@@ -346,6 +347,13 @@ class TestUploader(object):
         for doc in [telemetry_doc, telemetry_time_doc,
                     info_doc, info_time_doc, ptlm]:
             validate_all(doc)
+
+    def test_update_func_likes_doc(self):
+        req = {
+            "body": json.dumps(payload_telemetry_doc_ish),
+            "id": payload_telemetry_doc_id
+        }
+        views.payload_telemetry.add_listener_update(None, req)
 
     def test_flights(self):
         uploader.time.time().AndReturn(1300001912.2143)
