@@ -508,12 +508,14 @@ class ExtractorManager(object):
     def __init__(self, uploader):
         """uploader: an :class:`Uploader` or :class:`UploaderThread` object"""
         self.uploader = uploader
+        self._lock = threading.RLock()
         self._extractors = []
 
     def add(self, extractor):
         """Add the extractor object to the manager"""
-        self._extractors.append(extractor)
-        extractor.manager = self
+        with self._lock:
+            self._extractors.append(extractor)
+            extractor.manager = self
 
     def push(self, b, **kwargs):
         """
@@ -531,8 +533,9 @@ class ExtractorManager(object):
 
         assert len(b) == 1 and isinstance(b, str)
 
-        for e in self._extractors:
-            e.push(b, **kwargs)
+        with self._lock:
+            for e in self._extractors:
+                e.push(b, **kwargs)
 
     def skipped(self, n):
         """
@@ -544,8 +547,9 @@ class ExtractorManager(object):
         dropped, say, due to the start bit being flipped. It also causes
         Extractors to 'give up' after a certain amount of time has passed.
         """
-        for e in self._extractors:
-            e.skipped(n)
+        with self._lock:
+            for e in self._extractors:
+                e.skipped(n)
 
     def status(self, msg):
         """Logging method, called by Extractors when something happens"""
