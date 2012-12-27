@@ -38,7 +38,7 @@
                     "description": "The raw transmitted data, as a base64 string. Must be uploaded by listeners.",
                     "type": "string",
                     "format": "base64",
-                    "required": false
+                    "required": true
                 },
                 "_sentence": {
                     "title": "Raw Data Sentence",
