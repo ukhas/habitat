@@ -21,9 +21,10 @@ Contains schema validation and a view by flight, payload and received time.
 """
 
 import math
+import json
 import hashlib
 from couch_named_python import ForbiddenError, UnauthorizedError, version
-from ..utils.rfc3339 import rfc3339_to_timestamp
+from ..utils.rfc3339 import rfc3339_to_timestamp, now_to_rfc3339_utcoffset
 from .utils import validate_doc, read_json_schema
 from .utils import only_validates
 
@@ -150,3 +151,48 @@ def payload_time_map(doc):
 
     parsed = doc['data']['_parsed']
     yield (parsed['payload_configuration'], estimated_time), None
+
+@version(1)
+def add_listener_update(doc, req):
+    """
+    Update function: ``payload_telemetry/_update/add_listener``
+
+    Given a prototype payload_telemetry JSON document in the request body,
+    containing just the _raw telemetry string and one entry in receivers,
+    create the document or merge this listener into it as appropriate.
+
+    Used by listeners when a new payload telemetry string has been received.
+
+    Usage::
+
+        PUT /habitat/_design/payload_telemetry/_update/add_listener/<doc ID>
+
+        {
+            "data": {
+                "_raw": "<base64 raw telemetry data>"
+            },
+            "receivers": {
+                "<receiver callsign>": {
+                    "time_created": "<RFC3339 timestamp>",
+                    "time_uploaded": "<RFC3339 timestamp>",
+                    <other keys as desired, for instance
+                     latest_telemetry, latest_info, frequency, etc>
+                }
+            }
+        }
+
+    The document ID should be sha256(doc["data"]["_raw"]) in hexadecimal.
+
+    Returns "OK" if everything was fine, otherwise CouchDB will raise an error.
+    Errors might occur in validation (in which case the validation error is
+    returned) or because of a save conflict. In the event of a save conflict,
+    uploaders should retry the same request until the conflict is resolved.
+    """
+    protodoc = json.loads(req["body"])
+    callsign = protodoc["receivers"].keys()[0]
+    protodoc["receivers"][callsign]["time_server"] = now_to_rfc3339_utcoffset()
+    if not doc:
+        doc = {"_id": req["id"], "type": "payload_telemetry",
+               "data": {"_raw": protodoc["data"]["_raw"]}, "receivers": {}}
+    doc["receivers"][callsign] = protodoc["receivers"][callsign]
+    return doc, "OK"
