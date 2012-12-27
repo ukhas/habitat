@@ -29,6 +29,9 @@ import copy
 import base64
 import hashlib
 import couchdbkit
+import couchdbkit.exceptions
+import restkit
+import restkit.errors
 import threading
 import Queue
 import time
@@ -39,21 +42,6 @@ import logging
 from .utils import rfc3339
 
 logger = logging.getLogger("habitat.uploader")
-
-
-class CollisionError(Exception):
-    """
-    Payload telemetry sha256 hash collision.
-
-    Raised if two strings (in ``payload_telemetry`` docs) have the same
-    sha256 hash yet are different.
-
-    Odds you will ever see this error: approximately one in one hundred and
-    sixteen quattuorvigintillion (about a thousand times more likely than
-    selecting one particular atom at random out of all the atoms in the
-    universe).
-    """
-    pass
 
 
 class UnmergeableError(Exception):
@@ -228,42 +216,28 @@ class Uploader(object):
                     receiver_info["latest_" + doc_type] = \
                             self._latest[doc_type]
 
-        doc_id = hashlib.sha256(base64.b64encode(string)).hexdigest()
-
-        try:
-            self._set_time(receiver_info, time_created)
-            doc = self._payload_telemetry_new(string, receiver_info)
-            self._db[doc_id] = doc
-            return doc_id
-        except couchdbkit.exceptions.ResourceConflict:
-            for i in xrange(self._max_merge_attempts):
-                try:
-                    doc = self._db[doc_id]
-                    self._set_time(receiver_info, time_created)
-                    self._payload_telemetry_merge(doc, string, receiver_info)
-                    self._db[doc_id] = doc
-                except couchdbkit.exceptions.ResourceConflict:
-                    continue
-                else:
-                    return doc_id
-
+        for i in xrange(self._max_merge_attempts):
+            try:
+                self._set_time(receiver_info, time_created)
+                doc_id = self._payload_telemetry_update(string, receiver_info)
+            except couchdbkit.exceptions.ResourceConflict:
+                continue
+            except restkit.errors.Unauthorized:
+                raise UnmergeableError
+            else:
+                return doc_id
+        else:
             raise UnmergeableError
 
-    def _payload_telemetry_new(self, string, receiver_info):
-        doc = {
+    def _payload_telemetry_update(self, string, receiver_info):
+        doc_id = hashlib.sha256(base64.b64encode(string)).hexdigest()
+        doc_ish = {
             "data": {"_raw": base64.b64encode(string)},
-            "receivers": {self._callsign: receiver_info},
-            "type": "payload_telemetry"
+            "receivers": {self._callsign: receiver_info}
         }
-
-        return doc
-
-    def _payload_telemetry_merge(self, doc, string, receiver_info):
-        if doc["data"]["_raw"] != base64.b64encode(string):
-            raise CollisionError
-
-        doc["receivers"][self._callsign] = receiver_info
-        return doc
+        url = "_design/payload_telemetry/_update/add_listener/" + doc_id
+        self._db.res.put(url, payload=doc_ish).skip_body()
+        return doc_id
 
     def flights(self):
         """
