@@ -27,6 +27,8 @@ import threading
 import time
 
 import couchdbkit
+import couchdbkit.resource
+import restkit.errors
 
 from ..utils import rfc3339
 from .. import views
@@ -62,11 +64,10 @@ info_time_doc["time_uploaded"] = to_rfc3339(1300001290)
 
 payload_telemetry_string = "asdf blah \x12 binar\x04\x00"
 payload_telemetry_metadata = {"frequency": 434075000, "misc": "Hi"}
-payload_telemetry_doc = {
+payload_telemetry_doc_ish = {
     "data": {
         "_raw": "YXNkZiBibGFoIBIgYmluYXIEAA=="
     },
-    "type": "payload_telemetry",
     "receivers": {
         "TESTCALL": {
             "time_created": to_rfc3339(1300001234),
@@ -76,30 +77,6 @@ payload_telemetry_doc = {
         }
     }
 }
-payload_telemetry_doc_existing = {
-    "data": {
-        "_raw": "YXNkZiBibGFoIBIgYmluYXIEAA==",
-        "some_parsed_data": 12345
-    },
-    "type": "payload_telemetry",
-    "receivers": {
-        "SOMEONEELSE": {
-            "time_created": to_rfc3339(1300000200),
-            "time_uploaded": to_rfc3339(1300000240),
-            "frequency": 434074000,
-            "asdf": "World"
-        }
-    }
-}
-payload_telemetry_doc_merged = copy.deepcopy(payload_telemetry_doc_existing)
-payload_telemetry_doc_merged["receivers"]["TESTCALL"] = \
-    copy.deepcopy(payload_telemetry_doc["receivers"]["TESTCALL"])
-payload_telemetry_doc_merged["receivers"]["TESTCALL"]["time_uploaded"] = \
-        to_rfc3339(1300001235)
-payload_telemetry_doc_existing_collision = \
-    copy.deepcopy(payload_telemetry_doc_existing)
-payload_telemetry_doc_existing_collision["data"]["_raw"] = "cGluZWFwcGxlcw=="
-
 payload_telemetry_doc_id = "cf4511bba32c4273a13d8f2e39501a96" \
                            "9ec664a4dc5c67bc556b514410087309"
 
@@ -160,7 +137,10 @@ class TestUploader(object):
 
         fake_server = self.mocker.CreateMock(couchdbkit.Server)
         self.fake_db = self.mocker.CreateMock(couchdbkit.Database)
+        self.fake_res = self.mocker.CreateMock(
+                couchdbkit.resource.CouchdbResource)
 
+        self.fake_db.res = self.fake_res
         uploader.couchdbkit.Server("http://server/").AndReturn(fake_server)
         fake_server.__getitem__("habitat").AndReturn(self.fake_db)
 
@@ -219,11 +199,18 @@ class TestUploader(object):
         doc_id = self.uploader.listener_telemetry(telemetry_data)
         assert self.docs[doc_id]["type"] == "listener_telemetry"
 
+    def expect_ptlm_update_func(self, doc_id, payload):
+        resp = self.mocker.CreateMock(couchdbkit.resource.CouchDBResponse)
+        url = "_design/payload_telemetry/_update/add_listener/" + doc_id
+        self.fake_db.res.put(url, payload=payload).AndReturn(resp)
+        resp.skip_body()
+
     def test_pushes_payload_telemetry_simple(self):
         uploader.time.time().AndReturn(1300001234.3)
         uploader.time.time().AndReturn(1300001234.3)
-        self.fake_db.__setitem__(payload_telemetry_doc_id,
-                                 payload_telemetry_doc)
+        self.expect_ptlm_update_func(payload_telemetry_doc_id,
+                payload_telemetry_doc_ish)
+
         self.mocker.ReplayAll()
 
         doc_id = self.uploader.payload_telemetry(payload_telemetry_string,
@@ -241,7 +228,7 @@ class TestUploader(object):
         del doc_metadata["latest_listener_information"]
 
         try:
-            assert doc == payload_telemetry_doc
+            assert doc == payload_telemetry_doc_ish
             assert self.docs[listener_telemetry_id]["type"] == \
                     "listener_telemetry"
             assert self.docs[listener_information_id]["type"] == \
@@ -256,88 +243,80 @@ class TestUploader(object):
 
         uploader.time.time().AndReturn(1300001234.0)
         uploader.time.time().AndReturn(1300001234.0)
-        self.fake_db.__setitem__(payload_telemetry_doc_id,
-                                 mox.Func(self.ptlm_with_listener_docs))
+        self.expect_ptlm_update_func(payload_telemetry_doc_id,
+                mox.Func(self.ptlm_with_listener_docs))
         self.mocker.ReplayAll()
 
         self.uploader.payload_telemetry(payload_telemetry_string,
                                         payload_telemetry_metadata)
         self.mocker.VerifyAll()
 
-    def test_ptlm_merges_payload_conflicts(self):
+    def test_ptlm_retries_conflicts(self):
         uploader.time.time().AndReturn(1300001234.0)
         uploader.time.time().AndReturn(1300001234.0)
-        self.fake_db.__setitem__(payload_telemetry_doc_id,
-                                 payload_telemetry_doc) \
+        url = "_design/payload_telemetry/_update/add_listener/" + \
+                payload_telemetry_doc_id
+        self.fake_db.res.put(url, payload=payload_telemetry_doc_ish) \
              .AndRaise(couchdbkit.exceptions.ResourceConflict)
-        self.fake_db.__getitem__(payload_telemetry_doc_id) \
-             .AndReturn(payload_telemetry_doc_existing)
+
         uploader.time.time().AndReturn(1300001235.0)
-        self.fake_db.__setitem__(payload_telemetry_doc_id,
-                                 payload_telemetry_doc_merged)
+        doc = copy.deepcopy(payload_telemetry_doc_ish)
+        doc["receivers"]["TESTCALL"]["time_uploaded"] = to_rfc3339(1300001235)
+        self.expect_ptlm_update_func(payload_telemetry_doc_id, doc)
+
         self.mocker.ReplayAll()
 
         self.uploader.payload_telemetry(payload_telemetry_string,
                                         payload_telemetry_metadata)
         self.mocker.VerifyAll()
 
-    def test_ptlm_refuses_to_merge_collision(self):
+    def test_ptlm_doesnt_retry_other_errors(self):
         uploader.time.time().AndReturn(1300001234.0)
         uploader.time.time().AndReturn(1300001234.0)
-        self.fake_db.__setitem__(payload_telemetry_doc_id,
-                                 payload_telemetry_doc) \
-             .AndRaise(couchdbkit.exceptions.ResourceConflict)
-        self.fake_db.__getitem__(payload_telemetry_doc_id) \
-             .AndReturn(payload_telemetry_doc_existing_collision)
-        uploader.time.time().AndReturn(1300001235.0)
+        url = "_design/payload_telemetry/_update/add_listener/" + \
+                payload_telemetry_doc_id
+        self.fake_db.res.put(url, payload=payload_telemetry_doc_ish) \
+                .AndRaise(restkit.errors.Unauthorized)
+
         self.mocker.ReplayAll()
 
         try:
             self.uploader.payload_telemetry(payload_telemetry_string,
                                             payload_telemetry_metadata)
-        except uploader.CollisionError:
+        except uploader.UnmergeableError:
             pass
         else:
-            raise AssertionError("Did not raise CollisionError")
+            raise AssertionError("Did not raise UnmergeableError")
 
         self.mocker.VerifyAll()
 
     def add_mock_conflicts(self, n):
+        url = "_design/payload_telemetry/_update/add_listener/" + \
+                payload_telemetry_doc_id
+
         uploader.time.time().AndReturn(1300001234.0)
         uploader.time.time().AndReturn(1300001234.0)
-        self.fake_db.__setitem__(payload_telemetry_doc_id,
-                                 payload_telemetry_doc) \
+
+        self.fake_db.res.put(url, payload=payload_telemetry_doc_ish) \
              .AndRaise(couchdbkit.exceptions.ResourceConflict)
 
-        doc = payload_telemetry_doc_existing
-        doc_merged = payload_telemetry_doc_merged
-
         for i in xrange(n):
-            self.fake_db.__getitem__(payload_telemetry_doc_id).AndReturn(doc)
+            doc = copy.deepcopy(payload_telemetry_doc_ish)
+            doc["receivers"]["TESTCALL"]["time_uploaded"] = \
+                    to_rfc3339(1300001235 + i)
             uploader.time.time().AndReturn(1300001235.0 + i)
-            self.fake_db.__setitem__(payload_telemetry_doc_id, doc_merged) \
-                .AndRaise(couchdbkit.exceptions.ResourceConflict)
-
-            doc = copy.deepcopy(doc)
-            doc_merged = copy.deepcopy(doc_merged)
-
-            new_call = "listener_{0}".format(i)
-            new_info = {"time_created": to_rfc3339(1300001000 + i),
-                        "time_uploaded": to_rfc3339(1300001001 + i)}
-            doc["receivers"][new_call] = new_info
-            doc_merged["receivers"][new_call] = new_info
-
-            doc_merged["receivers"]["TESTCALL"]["time_uploaded"] = \
-                to_rfc3339(1300001236 + i)
-
-        return (doc, doc_merged)
+            self.fake_db.res.put(url, payload=doc) \
+                 .AndRaise(couchdbkit.exceptions.ResourceConflict)
 
     def test_merges_multiple_conflicts(self):
-        (final_doc, final_doc_merged) = self.add_mock_conflicts(14)
+        self.add_mock_conflicts(14)
 
-        self.fake_db.__getitem__(payload_telemetry_doc_id).AndReturn(final_doc)
+        doc = copy.deepcopy(payload_telemetry_doc_ish)
+        doc["receivers"]["TESTCALL"]["time_uploaded"] = \
+                to_rfc3339(1300001235 + 14)
+
         uploader.time.time().AndReturn(1300001235.0 + 14)
-        self.fake_db.__setitem__(payload_telemetry_doc_id, final_doc_merged)
+        self.expect_ptlm_update_func(payload_telemetry_doc_id, doc)
         self.mocker.ReplayAll()
 
         self.uploader.payload_telemetry(payload_telemetry_string,
@@ -346,7 +325,7 @@ class TestUploader(object):
         self.mocker.VerifyAll()
 
     def test_gives_up_after_many_conflicts(self):
-        self.add_mock_conflicts(20)
+        self.add_mock_conflicts(19)
         self.mocker.ReplayAll()
 
         try:
@@ -360,17 +339,13 @@ class TestUploader(object):
         self.mocker.VerifyAll()
 
     def test_uploaded_docs_pass_validation(self):
-        ptlm_with_id = copy.deepcopy(payload_telemetry_doc)
-        ptlm_with_id['_id'] = payload_telemetry_doc_id
+        ptlm = copy.deepcopy(payload_telemetry_doc_ish)
+        ptlm['_id'] = payload_telemetry_doc_id
+        ptlm['type'] = "payload_telemetry"
 
         for doc in [telemetry_doc, telemetry_time_doc,
-                    info_doc, info_time_doc, ptlm_with_id]:
+                    info_doc, info_time_doc, ptlm]:
             validate_all(doc)
-
-        ptlm_with_id_merged = copy.deepcopy(payload_telemetry_doc_merged)
-        ptlm_with_id_merged['_id'] = payload_telemetry_doc_id
-
-        validate_all(ptlm_with_id_merged, payload_telemetry_doc_existing)
 
     def test_flights(self):
         uploader.time.time().AndReturn(1300001912.2143)
