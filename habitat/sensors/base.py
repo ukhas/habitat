@@ -32,7 +32,7 @@ def ascii_int(config, data):
     """
     if config.get("optional", False) and data == '':
         return None
-    return int(data)
+    return int(data, config.get("base", 10))
 
 
 def ascii_float(config, data):

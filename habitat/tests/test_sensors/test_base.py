@@ -28,6 +28,10 @@ class TestBaseSensors:
         assert base.ascii_int({}, "12") == 12
         assert base.ascii_int({}, "012") == 12
 
+    def test_ascii_int_bases(self):
+        assert base.ascii_int({"base": 2}, "010101") == 21
+        assert base.ascii_int({"base": 16}, "deadbeef") == 3735928559
+
     @raises(ValueError)
     def test_ascii_ints_with_invalid_strings(self):
         base.ascii_int({}, "NOT AN INT")
