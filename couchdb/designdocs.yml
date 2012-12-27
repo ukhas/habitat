@@ -31,6 +31,8 @@ payload_telemetry:
     views:
         flight_payload_time: habitat.views.payload_telemetry.flight_payload_time_map
         payload_time: habitat.views.payload_telemetry.payload_time_map
+    updates:
+        add_listener: habitat.views.payload_telemetry.add_listener_update
 
 parser:
     filters:
