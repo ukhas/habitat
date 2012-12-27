@@ -67,6 +67,55 @@ class TestPayloadTelemetry(object):
                 mydoc, doc, {'roles': []}, {})
         payload_telemetry.validate(mydoc, doc, {'roles': ['parser']}, {})
 
+    def test_tolerant_of_float_changes(self):
+        old = deepcopy(doc)
+        old['data']['value'] = 123.456
+        old['data']['recurse'] = {"test_list": [0.00001, 1e20, 4.4],
+                                  "value": 1.52142e10}
+        
+        # these changes should be allowed
+        new = deepcopy(doc)
+        new['data']['value'] = 123.4560000000001
+        new['data']['recurse'] = \
+            {"test_list": [0.000010000000000000005, 1e20 - 1e5, 4.4 - 1e-15],
+             "value": 1.52142e10 + 1e-4}
+
+        # check that they are actually different first
+        assert old['data']['value'] != new['data']['value']
+        assert all(old['data']['recurse']['test_list'][i] != 
+                   new['data']['recurse']['test_list'][i] for i in range(3))
+        assert old['data']['recurse']['value'] != \
+                new['data']['recurse']['value']
+
+        payload_telemetry.validate(new, old, {'roles': []}, {})
+
+        # these should be outside of tolerance
+        new = deepcopy(old)
+        new['data']['value'] = 123.4560001
+        assert_raises(UnauthorizedError, payload_telemetry.validate,
+                new, old, {'roles': []}, {})
+
+        new = deepcopy(old)
+        new['data']['recurse']['test_list'][2] = 1e20 + 1e10
+        assert_raises(UnauthorizedError, payload_telemetry.validate,
+                new, old, {'roles': []}, {})
+
+        # and some quick checks that the func doesn't miss anything dumb
+        new = deepcopy(old)
+        new['data']['recurse']['new_key'] = True
+        assert_raises(UnauthorizedError, payload_telemetry.validate,
+                new, old, {'roles': []}, {})
+
+        new = deepcopy(old)
+        new['data']['recurse']['test_list'].append(4)
+        assert_raises(UnauthorizedError, payload_telemetry.validate,
+                new, old, {'roles': []}, {})
+
+        new = deepcopy(old)
+        new['data']['value'] = []
+        assert_raises(UnauthorizedError, payload_telemetry.validate,
+                new, old, {'roles': []}, {})
+
     def test_may_only_add_receivers(self):
         mydoc = deepcopy(doc)
         del mydoc['receivers']['M0RND']

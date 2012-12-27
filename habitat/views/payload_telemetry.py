@@ -45,6 +45,46 @@ def _check_only_new(new, old):
             if new[k] != old[k]:
                 raise ForbiddenError("You may not edit existing items.")
 
+def _is_equal_relaxed_floats(a, b):
+    """
+    Check that a == b, allowing small float differences
+    """
+
+    if isinstance(a, list) or isinstance(a, dict):
+        # recursion
+        if isinstance(a, list):
+            if not isinstance(b, list):
+                return False
+            keys_iter = xrange(len(a))
+        else:
+            if not isinstance(b, dict):
+                return False
+            keys_iter = a
+
+        if len(a) != len(b):
+            return False
+
+        return all(_is_equal_relaxed_floats(a[i], b[i]) for i in keys_iter)
+
+    elif isinstance(a, float) or isinstance(b, float):
+        if not (isinstance(a, float) or isinstance(a, int)) or \
+           not (isinstance(b, float) or isinstance(b, int)):
+            return False
+
+        # fast path
+        if a == b:
+            return True
+
+        # relaxed float comparison.
+        # Doubles provide 15-17 bits of precision. Converting to decimal and
+        # back should not introduce an error larger than 1e-15, really.
+        tolerance = max(a, b) * 1e-14
+        return abs(a - b) < tolerance
+
+    else:
+        # string, int, bool, None, ...
+        return a == b
+
 @version(1)
 @only_validates("payload_telemetry")
 def validate(new, old, userctx, secobj):
@@ -73,7 +113,8 @@ def validate(new, old, userctx, secobj):
         raise ForbiddenError("Document ID must be sha256(base64 _raw data)")
 
     if old:
-        if new['data'] != old['data'] and 'parser' not in userctx['roles']:
+        if 'parser' not in userctx['roles'] and \
+           not _is_equal_relaxed_floats(new['data'], old['data']):
             raise UnauthorizedError("Only the parser may add data to an"
                                     " existing document.")
         for receiver in old['receivers']:
