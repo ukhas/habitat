@@ -35,7 +35,7 @@ from . import loadable_manager
 from .utils import dynamicloader, rfc3339
 
 logger = logging.getLogger("habitat.parser")
-statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat.parser'})
+statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat'})
 
 __all__ = ['Parser', 'ParserModule']
 
@@ -84,7 +84,7 @@ class Parser(object):
         self.couch_server = couchdbkit.Server(config["couch_uri"])
         self.db = self.couch_server[config["couch_db"]]
 
-    @statsd.StatsdTimer.wrap('time')
+    @statsd.StatsdTimer.wrap('parser.time')
     def parse(self, doc, initial_config=None):
         """
         Attempts to parse telemetry information out of a new telemetry
@@ -138,21 +138,22 @@ class Parser(object):
             logger.info("{module} parsed data from {callsign} successfully"
                         .format(module=module["name"], callsign=callsign))
             logger.debug("Parsed data: " + json.dumps(data, indent=2))
-            statsd.increment("parsed")
+            statsd.increment("parser.parsed")
             if "_protocol" in data:
-                statsd.increment("protocol.{0}".format(data['_protocol']))
+                statsd.increment(
+                    "parser.protocol.{0}".format(data['_protocol']))
             return doc
         else:
             logger.info("All attempts to parse failed")
-            statsd.increment("failed")
+            statsd.increment("parser.failed")
             return None
 
     def _get_debug(self, raw_data):
         if self.ascii_exp.search(raw_data):
-            statsd.increment("ascii_doc")
+            statsd.increment("parser.ascii_doc")
             return 'ascii', raw_data
         else:
-            statsd.increment("binary_doc")
+            statsd.increment("parser.binary_doc")
             return 'b64', base64.b64encode(raw_data)
 
     def _get_callsign(self, raw_data, module):
@@ -165,7 +166,7 @@ class Parser(object):
         except (ValueError, KeyError) as e:
             logger.debug("Exception in {module} {where}: {e}"
                          .format(e=e, module=module['name'], where=where))
-            statsd.increment("parse_exception")
+            statsd.increment("parser.parse_exception")
             raise CantGetCallsign()
         return callsign
 
@@ -188,7 +189,7 @@ class Parser(object):
         if not config:
             logger.debug("No configuration doc for {callsign!r} found"
                          .format(callsign=callsign))
-            statsd.increment("no_config_doc")
+            statsd.increment("parser.no_config_doc")
             raise CantGetConfig()
 
         return config
@@ -211,7 +212,7 @@ class Parser(object):
             except (ValueError, KeyError) as e:
                 logger.debug("Exception in {module} {where}: {e}"
                              .format(module=module['name'], e=e, where=where))
-                statsd.increment("parse_exception")
+                statsd.increment("parser.parse_exception")
                 continue
 
             data["_protocol"] = module["name"]
@@ -334,7 +335,7 @@ class ParserFiltering(object):
             if filter_type in sentence["filters"]:
                 for f in sentence["filters"][filter_type]:
                     data = self._filter(data, f, result_type)
-                    statsd.increment("filters.{0}".format(filter_type))
+                    statsd.increment("parser.filters.{0}".format(filter_type))
         return data
 
     def _filter(self, data, f, result_type):
@@ -391,10 +392,10 @@ class ParserFiltering(object):
             sig = base64.b64decode(f["signature"])
             ok = cert.get_pubkey().get_rsa().verify(digest, sig, 'sha256')
         except (TypeError, M2Crypto.RSA.RSAError):
-            statsd.increment("filters.hotfix.invalid_signature")
+            statsd.increment("parser.filters.hotfix.invalid_signature")
             raise ValueError("Hotfix signature is not valid")
         if not ok:
-            statsd.increment("filters.hotfix.invalid_signature")
+            statsd.increment("parser.filters.hotfix.invalid_signature")
             raise ValueError("Hotfix signature is not valid")
 
     def _compile_hotfix(self, f):
@@ -407,7 +408,7 @@ class ParserFiltering(object):
             code = compile(body, "<filter>", "exec")
             exec code in env
         except (SyntaxError, AttributeError, TypeError):
-            statsd.increment("filters.hotfix.compile_error")
+            statsd.increment("parser.filters.hotfix.compile_error")
             raise ValueError("Hotfix code didn't compile: " + repr(f))
         return env
 
@@ -420,7 +421,7 @@ class ParserFiltering(object):
         env = self._compile_hotfix(f)
 
         logger.debug("Executing a hotfix")
-        statsd.increment("filters.hotfix.executed")
+        statsd.increment("parser.filters.hotfix.executed")
 
         return env["f"](data)
 
