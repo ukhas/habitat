@@ -28,7 +28,7 @@ from . import parser
 from .utils import immortal_changes
 
 logger = logging.getLogger("habitat.parser_daemon")
-statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat.parser_daemon'})
+statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat'})
 
 __all__ = ['ParserDaemon']
 
@@ -74,7 +74,7 @@ class ParserDaemon(object):
         if doc:
             self._save_updated_doc(doc)
 
-    @statsd.StatsdTimer.wrap('save_time')
+    @statsd.StatsdTimer.wrap('parser_daemon.save_time')
     def _save_updated_doc(self, doc, attempts=0):
         """
         Save doc to the database, retrying with a merge in the event of
@@ -86,18 +86,18 @@ class ParserDaemon(object):
         try:
             self.db.save_doc(latest)
             logger.debug("Saved doc {0} successfully".format(doc["_id"]))
-            statsd.increment("saved")
+            statsd.increment("parser_daemon.saved")
         except couchdbkit.exceptions.ResourceConflict:
             attempts += 1
             if attempts >= 30:
                 err = "Could not save doc {0} after {1} conflicts." \
                         .format(doc["_id"], attempts)
                 logger.error(err)
-                statsd.increment("save_error")
+                statsd.increment("parser_daemon.save_error")
                 raise RuntimeError(err)
             else:
                 logger.debug("Save conflict, trying again (#{0})" \
                     .format(attempts))
-                statsd.increment("save_conflict")
+                statsd.increment("parser_daemon.save_conflict")
                 self._save_updated_doc(doc, attempts)
 
