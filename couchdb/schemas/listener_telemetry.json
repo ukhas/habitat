@@ -76,6 +76,12 @@
                     "type": "number",
                     "required": false
                 },
+                "speed": {
+                    "title": "Listener Speed",
+                    "description": "The listener's current speed, in metres per second.",
+                    "type": "number",
+                    "required": false
+                },
                 "chase": {
                     "title": "Mobile listener flag",
                     "description": "An optional hint on how to display this listener's telemetry on a map.",
