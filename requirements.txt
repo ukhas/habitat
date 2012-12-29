@@ -1,5 +1,6 @@
 crcmod==1.7
 couchdbkit==0.6.3
+restkit==4.2.0
 jsonschema==0.5
 couch-named-python==0.2.2
 statsd-client==1.0.2
