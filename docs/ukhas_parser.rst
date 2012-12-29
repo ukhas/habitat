@@ -157,12 +157,14 @@ is used to define how the coordinate should be parsed. Options are:
 
 * ``dd.dddd``: decimal degrees, with any number of digits after the
   decimal point. Leading zeros are allowed.
-* ``ddmm.mm``: degrees and decimal minutes, with the first two digits
-  taken as the degrees and the rest as the minutes. Degrees must be
-  padded to two digits, so for instance 2 degrees and 12.3 minutes
-  should be transmitted as ``0212.3``.
+* ``ddmm.mm``: degrees and decimal minutes, with the two digits just before the
+  decimal point representing the number of minutes and all digits before those
+  two representing the number of degrees.
 
 In both cases, the number can be prefixed by a space or + or - sign.
+
+Please note that the the options reflect the style of coordinate (degrees only
+vs degrees and minutes), not the number of digits in either case.
 
 Units
 -----
