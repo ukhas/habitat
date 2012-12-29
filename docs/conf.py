@@ -31,7 +31,8 @@ class Mock(object):
 
 MOCK_MODULES = [
     'M2Crypto', 'crcmod', 'couchdbkit', 'jsonschema', 'yaml',
-    'couch_named_python', 'statsd', 'pytz'
+    'couch_named_python', 'statsd', 'pytz', 'couchdbkit.exceptions',
+    'restkit', 'restkit.errors'
 ]
 
 for mod in MOCK_MODULES:
