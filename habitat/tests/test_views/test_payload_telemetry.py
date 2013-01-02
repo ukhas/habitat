@@ -198,6 +198,22 @@ class TestPayloadTelemetry(object):
         result = list(view(mydoc))
         assert result == [(('abcdef', 1342555406), None)]
 
+    def test_view_time(self):
+        mydoc = deepcopy(doc)
+        view = payload_telemetry.time_map
+        result = list(view(mydoc))
+        assert result == []
+        mydoc['data']['_parsed'] = {
+            "time_parsed": "2012-07-17T22:05:00+01:00",
+            "payload_configuration": "abcdef",
+            "configuration_sentence_index": 0
+        }
+        result = list(view(mydoc))
+        assert result == [(1342555406, False)]
+        mydoc['data']['_parsed']['flight'] = "fedcba"
+        result = list(view(mydoc))
+        assert result == [(1342555406, True)]
+
     def test_add_listener_update_new_doc(self):
         doc_id = \
             "cd4eaf118a9668d4349e7053a6bb388952ccf0c28eb4f2542290d1a3629f9415"

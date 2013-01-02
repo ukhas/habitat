@@ -194,6 +194,31 @@ def payload_time_map(doc):
     yield (parsed['payload_configuration'], estimated_time), None
 
 @version(1)
+def time_map(doc):
+    """
+    View: ``payload_telemetry/time``
+
+    Emits::
+
+        estimated_time_received -> is_flight_telemetry
+
+    Useful to get recent telemetry uploaded to habitat.
+
+    This can also be used to make a simple map application. It's worth noting
+    that such a technique is a bit of a bodge, since estimated_time_received
+    will not necessarily (but could) update if another receiver is added to
+    the doc, so asking this view for all telemetry since
+    min(the last poll, the most recent telemetry I have) is not infallible.
+    That said, doing a proper sync is quite difficult.
+    """
+    if doc['type'] != "payload_telemetry" or '_parsed' not in doc['data']:
+        return
+
+    estimated_time = _estimate_time_received(doc['receivers'])
+    parsed = doc['data']['_parsed']
+    yield estimated_time, ('flight' in parsed)
+
+@version(1)
 def add_listener_update(doc, req):
     """
     Update function: ``payload_telemetry/_update/add_listener``
