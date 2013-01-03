@@ -312,3 +312,13 @@ class TestPayloadTelemetry(object):
         assert result["data"]["_raw"] == "WyJhIiwgImIiLCB7ImMiOiAiZCJ9XQ=="
         assert "testsuite" in result["receivers"]
         payload_telemetry.validate(doc, None, {'roles': []}, {})
+
+    def test_http_post_time_created(self):
+        formdata = {"transmit_time": "13-01-03 23:08:14"}
+        req = {"form": formdata, "query": {}}
+        result, status = payload_telemetry.http_post_update(None, req)
+        assert status == "OK"
+        print result
+        assert result["receivers"]["HTTP POST"]["time_created"] == (
+                "2013-01-03T23:08:14Z")
+        payload_telemetry.validate(doc, None, {'roles': []}, {})

@@ -22,10 +22,13 @@ Contains schema validation and a view by flight, payload and received time.
 
 import math
 import json
+import time
 import base64
 import hashlib
+import datetime
 from couch_named_python import ForbiddenError, UnauthorizedError, version
 from ..utils.rfc3339 import rfc3339_to_timestamp, now_to_rfc3339_utcoffset
+from ..utils.rfc3339 import timestamp_to_rfc3339_utcoffset
 from .utils import validate_doc, read_json_schema
 from .utils import only_validates
 
@@ -277,6 +280,20 @@ def http_post_update(doc, req):
     base64 encoded and used as the _raw field for a new payload telemetry
     document. The query string is checked for a ``from`` parameter which will
     be used as the receiver callsign if found.
+
+    If the form data contains a "transmit_time" field which can be parsed as a
+    timestamp in the format "yy-mm-dd hh:mm:ss" it will be used for the
+    ``time_created`` field in the receiver section. This is specifically useful
+    for RockBLOCKs.
+
+    Usage::
+
+        POST /habitat/_design/payload_telemetry/_update/http_post?from=callsign
+        
+        data=hello&imei=whatever&so=forth
+
+    Returns "OK" if everything was fine, otherwise CouchDB will return a
+    (hopefully instructive) error.
     """
     rawdata = base64.b64encode(json.dumps(req["form"]))
     receiver = req["query"]["from"] if "from" in req["query"] else "HTTP POST"
@@ -284,6 +301,14 @@ def http_post_update(doc, req):
     doc = {"_id": doc_id, "type": "payload_telemetry",
            "data": {"_raw": rawdata}, "receivers": {}}
     ts = now_to_rfc3339_utcoffset()
-    doc["receivers"][receiver] = {"time_created": ts, "time_uploaded": ts,
+    tc = ts
+    if "transmit_time" in req["form"]:
+        try:
+            fmt = "%y-%m-%d %H:%M:%S"
+            tc = datetime.datetime.strptime(req["form"]["transmit_time"], fmt)
+            tc = timestamp_to_rfc3339_utcoffset(time.mktime(tc.timetuple()))
+        except ValueError:
+            tc = ts
+    doc["receivers"][receiver] = {"time_created": tc, "time_uploaded": ts,
                                   "time_server": ts}
     return doc, "OK"
