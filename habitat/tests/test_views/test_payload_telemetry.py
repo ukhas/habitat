@@ -299,3 +299,16 @@ class TestPayloadTelemetry(object):
         # too many in receivers
         assert_raises(ForbiddenError, f, None, {"body":
             '{"data": {"_raw": "a"}, "receivers": {"a": {}, "b": {}}}'})
+
+    def test_http_post_update(self):
+        formdata = ["a", "b", {"c": "d"}] #lists are ordered, for easier tests
+        querydata = {"from": "testsuite"}
+        req = {"form": formdata, "query": querydata}
+        
+        result, status = payload_telemetry.http_post_update(None, req)
+        assert status == "OK"
+        assert result["_id"] == (
+            "8820cb227172406f72b95310b4c66f841a188175bd855ffe4c0180100f742650")
+        assert result["data"]["_raw"] == "WyJhIiwgImIiLCB7ImMiOiAiZCJ9XQ=="
+        assert "testsuite" in result["receivers"]
+        payload_telemetry.validate(doc, None, {'roles': []}, {})

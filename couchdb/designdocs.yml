@@ -34,6 +34,7 @@ payload_telemetry:
         time: habitat.views.payload_telemetry.time_map
     updates:
         add_listener: habitat.views.payload_telemetry.add_listener_update
+        http_post: habitat.views.payload_telemetry.http_post_update
 
 parser:
     filters:

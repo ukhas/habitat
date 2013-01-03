@@ -22,6 +22,7 @@ Contains schema validation and a view by flight, payload and received time.
 
 import math
 import json
+import base64
 import hashlib
 from couch_named_python import ForbiddenError, UnauthorizedError, version
 from ..utils.rfc3339 import rfc3339_to_timestamp, now_to_rfc3339_utcoffset
@@ -265,4 +266,24 @@ def add_listener_update(doc, req):
         doc = {"_id": req["id"], "type": "payload_telemetry",
                "data": {"_raw": protodoc["data"]["_raw"]}, "receivers": {}}
     doc["receivers"][callsign] = protodoc["receivers"][callsign]
+    return doc, "OK"
+
+@version(1)
+def http_post_update(doc, req):
+    """
+    Update function: ``payload_telemetry/_update/http_post``
+
+    Converts all the HTTP POST form parameters into a JSON string which is then
+    base64 encoded and used as the _raw field for a new payload telemetry
+    document. The query string is checked for a ``from`` parameter which will
+    be used as the receiver callsign if found.
+    """
+    rawdata = base64.b64encode(json.dumps(req["form"]))
+    receiver = req["query"]["from"] if "from" in req["query"] else "HTTP POST"
+    doc_id = hashlib.sha256(rawdata).hexdigest()
+    doc = {"_id": doc_id, "type": "payload_telemetry",
+           "data": {"_raw": rawdata}, "receivers": {}}
+    ts = now_to_rfc3339_utcoffset()
+    doc["receivers"][receiver] = {"time_created": ts, "time_uploaded": ts,
+                                  "time_server": ts}
     return doc, "OK"
