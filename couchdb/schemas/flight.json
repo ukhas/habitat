@@ -149,25 +149,30 @@
             "description": "Configuration for the APRS import daemon: telemetry for listed callsigns is downloaded and associated with the flight.",
             "type": "object",
             "required": false,
+            "additionalProperties": false,
             "properties": {
                 "payloads": {
                     "title": "Payloads",
                     "description": "A list of payload APRS callsigns to retreieve and save as payload_telemetry documents.",
-                    "type": "list",
+                    "type": "array",
+                    "required": false,
                     "items": {
                         "title": "Callsign",
                         "description": "An APRS callsign",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[A-Z0-9]{4,6}(\\-[0-9]{1,2})?$"
                     }
                 },
                 "chasers": {
                     "title": "Chasers", 
                     "description": "A list of payload APRS callsigns to retreieve and save as listener_telemetry documents with the chase property set to true.",
-                    "type": "list",
+                    "type": "array",
+                    "required": false,
                     "items": {
                         "title": "Callsign",
                         "description": "An APRS callsign",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[A-Z0-9]{4,6}(\\-[0-9]{1,2})?$"
                     }
                 }
             }
