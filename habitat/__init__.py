@@ -37,6 +37,7 @@ See http://habitat.habhub.org for more information.
     habitat.uploader
     habitat.utils
     habitat.views
+    habitat.aprs_daemon
 """
 
 __name__ = "habitat"
@@ -54,3 +55,4 @@ from . import sensors
 from . import uploader
 from . import utils
 from . import views
+from . import aprs_daemon

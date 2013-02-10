@@ -40,7 +40,7 @@ def validate(new, old, userctx, secobj):
     if not schema:
         schema = read_json_schema("flight.json")
     validate_doc(new, schema)
-    
+
     if '_admin' in userctx['roles']:
         return
 
@@ -83,7 +83,7 @@ def end_start_including_payloads_map(doc):
         [end_time, start_time, flight_id, 0] -> null
 
     Times are all UNIX timestamps (and therefore in UTC).
-    
+
     Sorts by flight window end time then start time.
 
     If the flight has payloads, emit it with the list of payloads, and emit
@@ -103,7 +103,7 @@ def end_start_including_payloads_map(doc):
     windows have not yet ended. Use ``include_docs=true`` to have the linked
     payload_configuration documents fetched and returned as the ``"doc"`` key
     for that row, otherwise the row's value will just contain an object that
-    holds the linked ID. See the 
+    holds the linked ID. See the
     `CouchDB documentation <http://wiki.apache.org/couchdb/Introduction_to_CouchDB_views#Linked_documents>`_
     for details on linked documents.
     """
@@ -133,13 +133,13 @@ def launch_time_including_payloads_map(doc):
         ...
 
     Or, when a flight has no payloads::
-        
+
         [launch_time, flight_id, 0] -> null
 
     Times are all UNIX timestamps (and therefore in UTC).
 
     Sort by flight launch time.
-    
+
     Only shows approved flights.
 
     Used by the calendar and other interface elements to show a list of
@@ -149,7 +149,7 @@ def launch_time_including_payloads_map(doc):
     Use ``include_docs=true`` to have the linked
     payload_configuration documents fetched and returned as the ``"doc"`` key
     for that row, otherwise the row's value will just contain an object that
-    holds the linked ID. See the 
+    holds the linked ID. See the
     `CouchDB documentation <http://wiki.apache.org/couchdb/Introduction_to_CouchDB_views#Linked_documents>`_
     for details on linked documents.
     """
@@ -176,7 +176,7 @@ def all_name_map(doc):
     Sort by flight name.
 
     Show all flights, even those unapproved.
-    
+
     Used where the UI must show all the flights in some usefully searchable
     sense, for instance when creating a new flight document based on some old
     or unapproved one, or when approving new flight documents.

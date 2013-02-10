@@ -12,6 +12,11 @@ log_emails:
     server: localhost
 parserdaemon:
     log_file:
+aprsdaemon:
+    api_key: ""
+    flight_check_interval: 300
+    aprs_pull_interval: 30
+    log_file:
 parser:
     certs_dir: "certs"
     modules:
