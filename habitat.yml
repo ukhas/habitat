@@ -1,9 +1,9 @@
-couch_uri: "http://localhost:5984"
+couch_uri: "http://beta.habitat.habhub.org"
 couch_db: habitat
 log_levels:
     stderr: DEBUG
     file: NONE
-    email: ERROR
+    email: NONE
 log_emails:
     to:
         - "daniel@kraken.habhub.org"
@@ -13,7 +13,11 @@ log_emails:
 parserdaemon:
     log_file:
 aprsdaemon:
-    api_key: ""
+    server: "first.aprs.net"
+    port: 14580
+    login:
+        callsign: ""
+        password: ""
     flight_check_interval: 300
     aprs_pull_interval: 30
     log_file:

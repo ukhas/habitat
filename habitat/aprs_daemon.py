@@ -1,4 +1,4 @@
-# Copyright 2010, 2011, 2012 (C) Adam Greig, Daniel Richman
+# Copyright 2013 (C) Rossen Georgiev
 #
 # This file is part of habitat.
 #
@@ -17,15 +17,16 @@
 
 """
 Run the APRS importer as a daemon watching flight docs in CouchDB
+and listening for position data on aprs-is
 """
 
-import logging
 import couchdbkit
 import copy
+import logging
 import statsd
 import time
 
-from .utils import immortal_changes
+from . import aprs
 
 logger = logging.getLogger("habitat.aprs_daemon")
 statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat'})
@@ -55,31 +56,47 @@ class APRSDaemon(object):
         self.couch_server = couchdbkit.Server(config["couch_uri"])
         self.db = self.couch_server[config["couch_db"]]
 
+        self.aprs = aprs.aprs(self.config['aprsdaemon']['server'],
+                              self.config['aprsdaemon']['port'],
+                              self.config['aprsdaemon']['login']['callsign'],
+                              self.config['aprsdaemon']['login']['password'])
+
+
     def run(self):
 
         self.fetch_active_flights()
-        print self.callsigns
+
+        # halt if there is an error on first connection attempt
+        try:
+            self.aprs.connect()
+        except Exception, e:
+            print e
+            return
+
+        self.aprs.consumer(self.habitat_upload, blocking=True, immortal=True)
+
+    def habitat_upload(self, data):
+        return
 
     def fetch_active_flights(self):
         """
-        Pulls all active flights from habitat
+        Pulls all active flights from habitat and listens for them on aprs servers
         """
         self.callsigns = {}
 
+        # get the current active flights
         for flight in self.db.view("flight/end_start_including_payloads", include_docs=True, startkey=[time.time()]).all():
             if flight['key'][3] == 1 and flight['doc'].has_key('aprs') and len(flight['doc']['aprs']) > 0:
                 current = flight['doc']['aprs']
 
+                # separate payloads
                 if current.has_key['payloads']:
                     self.callsigns.update({cs: 0 for cs in current['payloads']})
 
+                # separate chaser callsigns
                 if current.has_key['chasers']:
                     self.callsigns.update({cs: 1 for cs in current['chasers']})
 
-    def _couch_callback(self, result):
-        """
-        Handle a new result from the CouchDB _changes feed. Passes the doc off
-        to APRS.parse, then saves the result.
-        """
-        self.last_seq = result['seq']
-        print result
+        # updates aprs.net filter
+        self.aprs.callsign_filter([x[0] for x in self.callsigns] + ['LZ1DEV'])
+
