@@ -19,7 +19,6 @@ aprsdaemon:
         callsign: ""
         password: ""
     flight_check_interval: 300
-    aprs_pull_interval: 30
     log_file:
 parser:
     certs_dir: "certs"

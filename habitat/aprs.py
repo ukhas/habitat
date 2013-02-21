@@ -52,7 +52,7 @@ class aprs:
 
         self.filter = "b/%s" % "/".join(callsigns)
 
-        logger.debug("Setting filter to: %s" % self.filter)
+        logger.info("Setting filter to: %s" % self.filter)
 
         if self._connected:
             self.sock.sendall("#filter %s\r\n" % self.filter)
@@ -83,11 +83,21 @@ class aprs:
             blocking = kwargs['blocking']
 
         if not self._connected:
-            logger.debug("Attempting connection to %s:%s" % (self.server[0], self.server[1]))
-            self._connect(blocking)
-            logger.debug("Sending login information")
-            self._send_login()
-            logger.debug("Login successful")
+            while True:
+                try:
+                    logger.info("Attempting connection to %s:%s" % (self.server[0], self.server[1]))
+                    self._connect()
+
+                    logger.info("Sending login information")
+                    self._send_login()
+
+                    logger.info("Login successful")
+                    break
+                except:
+                    if not blocking:
+                        raise
+
+                time.sleep(30) # attempt to reconnect after 30 seconds
 
     def close(self):
         """
@@ -149,29 +159,27 @@ class aprs:
                 break
 
 
-    def _connect(self, blocking=False):
+    def _connect(self):
         """
         Attemps to open a connection to the server, retrys if it fails
         """
 
-        while True:
-            try:
-                self.sock = socket.create_connection(self.server, 15) # 15 seconds connection timeout
-                self.sock.settimeout(5) # 5 second timeout to recieve server banner
+        try:
+            self.sock = socket.create_connection(self.server, 15) # 15 seconds connection timeout
+            self.sock.settimeout(5) # 5 second timeout to recieve server banner
 
-                if self.sock.recv(512)[0] != "#":
-                    raise ConnectionError("invalid banner from server")
+            if self.sock.recv(512)[0] != "#":
+                raise ConnectionError("invalid banner from server")
 
-                self.sock.setblocking(True)
+            self.sock.setblocking(True)
+        except Exception, e:
+            self.close()
 
-                break;
-            except Exception, e:
-                if e == "timed out":
-                    raise ConnectionError("no banner from server")
-                elif not blocking:
-                    raise ConnectionError(e)
+            if e == "timed out":
+                raise ConnectionError("no banner from server")
+            else:
+                raise ConnectionError(e)
 
-                time.sleep(30) # attempt to reconnect after 30 seconds
 
         self._connected = True
 
@@ -339,7 +347,7 @@ class aprs:
         if len(raw_sentence) is 0:
             return False
 
-        logger.debug("Parsing: %s" % raw_sentence)
+        logger.info("Parsing: %s" % raw_sentence)
 
         (header, body) = raw_sentence.split(':')
         (source, path) = header.split('>')
@@ -347,7 +355,7 @@ class aprs:
         # TODO, validate SOURCE callsign and parse path
         # aprs.net should do that for us
 
-        parsed = { 'source': source, 'path': path.split(',') }
+        parsed = { 'raw': raw_sentence, 'source': source, 'path': path.split(',') }
 
         # attempt to parse the body
 
@@ -380,7 +388,7 @@ class aprs:
                 else: # '/' local ddhhss format
                     timestamp = utc.strptime("{0} {1} {2}".format(utc.year, utc.month, ts), "%Y %m %d%M%S")
 
-                parsed.update({ 'timestamp': timestamp.isoformat() })
+                parsed.update({ 'timestamp': timestamp.isoformat() + 'Z' })
 
                 # remove datetime from the body for further parsing
                 body = body[7:]
@@ -397,6 +405,9 @@ class aprs:
                 symbol,
                 comment
                 ) = re.match(r"^(\d{2})([0-7 ][0-9 ]\.[0-9 ]{2})([NnSs])(.)(\d{3})([0-7 ][0-9 ]\.[0-9 ]{2})([EeWw])([\x21-\x7b\x7d])(.*)$", body).groups()
+
+                logger.debug("Parsing as normal uncompressed format")
+
 
                 # optional format extention - bearing, speed and altitude (feet)
                 extra = re.findall(r"^([0-9]{3})/([0-9]{3})(/A=([0-9]{6})/?)?(.*)$", comment)
@@ -430,7 +441,7 @@ class aprs:
             timestamp = timestamp + datetime.timedelta(hours=math.floor(parsed['latitude']/7.5))
             parsed['timestamp'] = timestamp.isoformat()
 
-        logger.debug("Parsed ok.")
+        logger.info("Parsed ok.")
         return parsed
 
 # Exceptions
@@ -448,7 +459,9 @@ class ParseError(GenericError):
         self.packet = packet
 
 class LoginError(GenericError):
-    pass
+    def __init__(self, message):
+        logger.error("%s: %s" % (self.__class__.__name__, message))
+        self.message = message
 
 class ConnectionError(GenericError):
     pass

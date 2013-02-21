@@ -25,6 +25,9 @@ import copy
 import logging
 import statsd
 import time
+import base64
+import datetime
+import hashlib
 
 from . import aprs
 
@@ -65,24 +68,108 @@ class APRSDaemon(object):
     def run(self):
 
         self.fetch_active_flights()
-
-        # halt if there is an error on first connection attempt
-        try:
-            self.aprs.connect()
-        except Exception, e:
-            print e
-            return
-
+        self.aprs.connect(blocking=True)
         self.aprs.consumer(self.habitat_upload, blocking=True, immortal=True)
 
     def habitat_upload(self, data):
-        return
+        source_callsign = data['source']
+
+        if self.callsigns.has_key(source_callsign):
+            attempts = 0
+            while True:
+                try:
+                    if self.callsigns[source_callsign] is 0: # payload callsign
+                        result = self._save_payload_telemetry_doc(data)
+                    else: # 1, chaser callsign
+                        result = self._save_listener_telemetry_doc(data)
+
+                    if not result.has_key('ok') and result['ok'] is not True:
+                        raise Exception(result)
+
+                    logger.debug("Saved doc %s successfully" % result['id'])
+                    break
+                except couchdbkit.exceptions.ResourceConflict:
+                    if attempts >= 10:
+                        err = "Could not save doc after {1} conflicts." \
+                                .format(doc["_id"], attempts)
+                        logger.error(err)
+                        break;
+                    else:
+                        logger.debug("Save conflict, trying again (#{0})" \
+                            .format(attempts))
+                        time.sleep(0.1)
+                except Exception, e:
+                    logger.error(e)
+
+                attempt += 1
+        else:
+            logger.debug("no active flight for '%s'" % data['source'])
+
+    def _save_listener_telemetry_doc(self, data):
+        doc = {
+                'type': "listener_telemetry",
+                'time_created': datetime.datetime.utcnow().isoformat() + 'Z',
+                'time_uploaded': datetime.datetime.utcnow().isoformat() + 'Z',
+                'data': {
+                    'callsign': data['source'],
+                    'latitude': data['latitude'],
+                    'longitude': data['longitude'],
+                    'chase': True
+                },
+              }
+
+        if data.has_key('altitude'):
+            doc['data'].update({'altitude': data['altitude']})
+
+        if data.has_key('speed'):
+            doc['data'].update({'speed': data['speed']})
+
+        return self.db.save_doc(doc)
+
+    def _save_payload_telemetry_doc(self, data):
+        doc = {
+                'type': "payload_telemetry",
+                'data': {
+                    '_raw': base64.b64encode(data['raw']),
+                    '_sentence': data['raw'],
+                    '_protocol': "APRS",
+                    'payload': data['source'],
+                    'latitude': data['latitude'],
+                    'longitude': data['longitude'],
+                    '_fix_invalid': True
+                },
+                'receivers': {
+                   data['path'][-2]: { # reciever callsign
+                    'time_created': datetime.datetime.utcnow().isoformat() + 'Z',
+                    'time_uploaded': datetime.datetime.utcnow().isoformat() + 'Z',
+                    }
+                }
+              }
+
+        if data.has_key('altitude'):
+            doc['data'].update({'altitude': data['altitude']})
+
+        if data.has_key('bearing'):
+            doc['data'].update({'bearing': data['bearing']})
+
+        if data.has_key('speed'):
+            doc['data'].update({'speed': data['speed']})
+
+        if data.has_key('comment') and not not data['comment']:
+            doc['data'].update({'comment': data['comment']})
+
+        doc.update({'_id': hashlib.sha256(doc['data']['_raw']).hexdigest()})
+
+        return self.db.save_doc(doc)
 
     def fetch_active_flights(self):
         """
         Pulls all active flights from habitat and listens for them on aprs servers
         """
+        logger.info("Checking for active flights")
+
         self.callsigns = {}
+        flight_count = 0
 
         # get the current active flights
         for flight in self.db.view("flight/end_start_including_payloads", include_docs=True, startkey=[time.time()]).all():
@@ -97,6 +184,10 @@ class APRSDaemon(object):
                 if current.has_key['chasers']:
                     self.callsigns.update({cs: 1 for cs in current['chasers']})
 
+                flight_count += 1
+
+        logger.info("%d active flights with %d callsigns" % (flight_count, len(self.callsigns)))
+
         # updates aprs.net filter
-        self.aprs.callsign_filter([x[0] for x in self.callsigns] + ['LZ1DEV'])
+        self.aprs.callsign_filter([x for x in self.callsigns])
 
