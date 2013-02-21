@@ -64,12 +64,20 @@ class APRSDaemon(object):
                               self.config['aprsdaemon']['login']['callsign'],
                               self.config['aprsdaemon']['login']['password'])
 
+        self.next_update = 0
+
 
     def run(self):
 
         self.fetch_active_flights()
-        self.aprs.connect(blocking=True)
-        self.aprs.consumer(self.habitat_upload, blocking=True, immortal=True)
+        self.aprs.connect(blocking=True) # keeps trying to connect until success
+
+        while True:
+            if time.time() > self.next_update:
+                self.fetch_active_flights()
+
+            self.aprs.consumer(self.habitat_upload, blocking=False, immortal=True)
+            time.sleep(1)
 
     def habitat_upload(self, data):
         source_callsign = data['source']
@@ -109,14 +117,19 @@ class APRSDaemon(object):
         """
         Pulls all active flights from habitat and listens for them on aprs servers
         """
+        self.next_update = time.time() + self.config['aprsdaemon']['flight_check_interval']
+
         logger.info("Checking for active flights")
 
-        self.callsigns = {'LZ*':0}
+        self.callsigns = {}
         flight_count = 0
 
         # get the current active flights
         for flight in self.db.view("flight/end_start_including_payloads", include_docs=True, startkey=[time.time()]).all():
-            if flight['key'][3] == 1 and 'aprs' in flight['doc'] and len(flight['doc']['aprs']):
+            if (flight['key'][3] == 1                # is flight doc
+                and 'aprs' in flight['doc']          # flight doc contains 'aprs' attribute
+                and flight['key'][3] < time.time()   # we are past start time, so inside the flight window
+                and len(flight['doc']['aprs'])):      # contains some callsigns
 
                 # separate payloads
                 if 'payloads' in flight['doc']['aprs']:
