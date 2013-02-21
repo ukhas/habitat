@@ -20,6 +20,7 @@ import time
 import datetime
 import re
 import math
+import copy
 import logging
 import statsd
 
@@ -41,6 +42,7 @@ class aprs:
         self.filter = "b/" # empty bud filter
 
         self._connected = False;
+        self.buf =''
 
     def callsign_filter(self, callsigns):
         """
@@ -79,7 +81,7 @@ class aprs:
 
         blocking = False  # when true, func wont return until connection is established
 
-        if kwargs.has_key('blocking'):
+        if 'blocking' in kwargs:
             blocking = kwargs['blocking']
 
         if not self._connected:
@@ -106,6 +108,7 @@ class aprs:
         """
 
         self._connected = False
+        self.buf = ''
 
         if self.sock is not None:
             self.sock.close()
@@ -150,6 +153,8 @@ class aprs:
                 else:
                     self.connect(blocking=blocking)
                     continue
+            except GenericError:
+                continue
             except:
                 if not immortal:
                     raise
@@ -220,32 +225,44 @@ class aprs:
         except socket.error, e:
             raise ConnectionDrop("connection dropped")
 
-        buf = ''
-
         while True:
             short_buf = ''
 
             try:
-                short_buf = self.sock.recv(128)
+                short_buf = self.sock.recv(64)
+
+                # sock.recv returns empty if the connection drops
+                if not short_buf:
+                    raise ConnectionDrop("connection dropped")
             except socket.error, e:
                 if "Resource temporarily unavailable" in e:
-                    if blocking:
-                        time.sleep(0.5)
-                        continue
-                    else:
-                        if len(buf) == 0:
+                    if not blocking:
+                        if len(self.buf) == 0:
                             break;
+            except Exception:
                 raise
 
-            # sock.recv returns empty if the connection drops
-            if not short_buf:
-                raise ConnectionDrop("connection dropped")
+            self.buf += short_buf
 
-            buf += short_buf
-
-            if "\r\n" in buf:
-                (line, buf) = buf.split("\r\n", 1)
+            if "\r\n" in self.buf:
+                line, self.buf = self.buf.split("\r\n", 1)
                 yield line
+
+            time.sleep(0.5)
+
+    def _get_reciever(self, path):
+        path.reverse()
+
+        # reciever callsign is always after q construct
+        try:
+            while True:
+                item = path.pop()
+                if item in ['qAR','qAr','qAZ','qAC','qAX','qAU','qAI']:
+                    break
+
+            return path.pop()
+        except:
+            return "UNKNOWN"
 
     def _parse(self, raw_sentence):
         """
@@ -344,33 +361,46 @@ class aprs:
                     speed: 38 kntos
                     altitude: 1563 feet
         """
-        if len(raw_sentence) is 0:
-            return False
 
         logger.info("Parsing: %s" % raw_sentence)
 
-        (header, body) = raw_sentence.split(':')
-        (source, path) = header.split('>')
+        if len(raw_sentence) < 14:
+            raise ParseError("packet is too short to be valid", raw_sentence)
+
+        (header, body) = raw_sentence.split(':',1)
+        (source, path) = header.split('>',1)
 
         # TODO, validate SOURCE callsign and parse path
         # aprs.net should do that for us
 
-        parsed = { 'raw': raw_sentence, 'source': source, 'path': path.split(',') }
+        path = path.split(',')
+        dest = path[0]
+        path = path[1:]
+        reciever = self._get_reciever(copy.deepcopy(path))
 
-        # attempt to parse the body
+        parsed = {
+                    'raw': raw_sentence,
+                    'source': source,
+                    'destination': dest,
+                    'reciever': reciever,
+                    'path': path
+                 }
 
         packet_type = body[0]
         body = body[1:]
+
+        # attempt to parse the body
 
         # Mic-encoded body
         if packet_type in ("\x27","\x60"):
             raise ParseError("packet seems to be Mic-Encoded, unable to parse", raw_sentence)
 
-        # regular or compressed
+        # status messages
+        elif packet_type == '>':
+            raise ParseError("status messages are not supported", raw_sentence)
 
-        if packet_type in('!','=','/','@'):
-            if len(body) < 14:
-                raise ParseError("failed, packet is too short to be valid", raw_sentence)
+        # regular or compressed
+        elif packet_type in ('!','=','/','@'):
 
             # try to parse timestamp
             ts = re.findall(r"^[0-9]{6}[hz\/]$", body[0:7])
@@ -408,7 +438,6 @@ class aprs:
 
                 logger.debug("Parsing as normal uncompressed format")
 
-
                 # optional format extention - bearing, speed and altitude (feet)
                 extra = re.findall(r"^([0-9]{3})/([0-9]{3})(/A=([0-9]{6})/?)?(.*)$", comment)
 
@@ -432,14 +461,16 @@ class aprs:
 
                 parsed.update({'latitude': latitude, 'longitude': longitude})
 
-            except (ValueError, AttributeError), e:
+                # once we have latitude, and we can aproximate local timezone, if we need
+                if form not in ('h','z',''):
+                    timestamp = timestamp + datetime.timedelta(hours=math.floor(parsed['latitude']/7.5))
+                    parsed['timestamp'] = timestamp.isoformat()
+
+            except Exception, e:
                 # failed to match normal sentence sentence
                 raise ParseError("unknown format", raw_sentence)
-
-        # once we have latitude, and we can aproximate local timezone, if we need
-        if form not in ('h','z',''):
-            timestamp = timestamp + datetime.timedelta(hours=math.floor(parsed['latitude']/7.5))
-            parsed['timestamp'] = timestamp.isoformat()
+        else:
+            raise ParseError("format is not supported", raw_sentence)
 
         logger.info("Parsed ok.")
         return parsed

@@ -74,7 +74,7 @@ class APRSDaemon(object):
     def habitat_upload(self, data):
         source_callsign = data['source']
 
-        if self.callsigns.has_key(source_callsign):
+        if source_callsign in self.callsigns:
             attempts = 0
             while True:
                 try:
@@ -83,7 +83,7 @@ class APRSDaemon(object):
                     else: # 1, chaser callsign
                         result = self._save_listener_telemetry_doc(data)
 
-                    if not result.has_key('ok') and result['ok'] is not True:
+                    if 'ok' not in result and result['ok'] is not True:
                         raise Exception(result)
 
                     logger.debug("Saved doc %s successfully" % result['id'])
@@ -105,6 +105,34 @@ class APRSDaemon(object):
         else:
             logger.debug("no active flight for '%s'" % data['source'])
 
+    def fetch_active_flights(self):
+        """
+        Pulls all active flights from habitat and listens for them on aprs servers
+        """
+        logger.info("Checking for active flights")
+
+        self.callsigns = {'LZ*':0}
+        flight_count = 0
+
+        # get the current active flights
+        for flight in self.db.view("flight/end_start_including_payloads", include_docs=True, startkey=[time.time()]).all():
+            if flight['key'][3] == 1 and 'aprs' in flight['doc'] and len(flight['doc']['aprs']):
+
+                # separate payloads
+                if 'payloads' in flight['doc']['aprs']:
+                    self.callsigns.update({cs: 0 for cs in current['payloads']})
+
+                # separate chaser callsigns
+                if 'chasers' in flight['doc']['aprs']:
+                    self.callsigns.update({cs: 1 for cs in current['chasers']})
+
+                flight_count += 1
+
+        logger.info("%d active flight(s) with %d callsign(s)" % (flight_count, len(self.callsigns)))
+
+        # updates aprs.net filter
+        self.aprs.callsign_filter([x for x in self.callsigns])
+
     def _save_listener_telemetry_doc(self, data):
         doc = {
                 'type': "listener_telemetry",
@@ -118,10 +146,10 @@ class APRSDaemon(object):
                 },
               }
 
-        if data.has_key('altitude'):
+        if 'altitude' in data:
             doc['data'].update({'altitude': data['altitude']})
 
-        if data.has_key('speed'):
+        if 'speed' in data:
             doc['data'].update({'speed': data['speed']})
 
         return self.db.save_doc(doc)
@@ -146,48 +174,20 @@ class APRSDaemon(object):
                 }
               }
 
-        if data.has_key('altitude'):
+        if 'altitude' in data:
             doc['data'].update({'altitude': data['altitude']})
 
-        if data.has_key('bearing'):
+        if 'bearing' in data:
             doc['data'].update({'bearing': data['bearing']})
 
-        if data.has_key('speed'):
+        if 'speed' in data:
             doc['data'].update({'speed': data['speed']})
 
-        if data.has_key('comment') and not not data['comment']:
+        if 'comment' in data and not not data['comment']:
             doc['data'].update({'comment': data['comment']})
 
         doc.update({'_id': hashlib.sha256(doc['data']['_raw']).hexdigest()})
 
         return self.db.save_doc(doc)
 
-    def fetch_active_flights(self):
-        """
-        Pulls all active flights from habitat and listens for them on aprs servers
-        """
-        logger.info("Checking for active flights")
-
-        self.callsigns = {}
-        flight_count = 0
-
-        # get the current active flights
-        for flight in self.db.view("flight/end_start_including_payloads", include_docs=True, startkey=[time.time()]).all():
-            if flight['key'][3] == 1 and flight['doc'].has_key('aprs') and len(flight['doc']['aprs']) > 0:
-                current = flight['doc']['aprs']
-
-                # separate payloads
-                if current.has_key['payloads']:
-                    self.callsigns.update({cs: 0 for cs in current['payloads']})
-
-                # separate chaser callsigns
-                if current.has_key['chasers']:
-                    self.callsigns.update({cs: 1 for cs in current['chasers']})
-
-                flight_count += 1
-
-        logger.info("%d active flights with %d callsigns" % (flight_count, len(self.callsigns)))
-
-        # updates aprs.net filter
-        self.aprs.callsign_filter([x for x in self.callsigns])
 
