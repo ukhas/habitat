@@ -165,6 +165,49 @@ def launch_time_including_payloads_map(doc):
         yield (lt, flight_id, 0), None
 
 @version(1)
+def unapproved_name_including_payloads_map(doc):
+    """
+    View: ``flight/unapproved_name_including_payloads``
+
+    Emits::
+
+        [name, flight_id, 0] -> [payload_configuration ids]
+        [name, flight_id, 1] -> {linked payload_configuration doc 1}
+        [name, flight_id, 1] -> {linked payload_configuration doc 2}
+        ...
+
+    Or, when a flight has no payloads::
+        
+        [name, flight_id, 0] -> null
+
+    Times are all UNIX timestamps (and therefore in UTC).
+
+    Sort by flight name.
+    
+    Only shows unapproved flights.
+
+    Used by the administration approval interface to list unapproved flights.
+
+    Use ``include_docs=true`` to have the linked
+    payload_configuration documents fetched and returned as the ``"doc"`` key
+    for that row, otherwise the row's value will just contain an object that
+    holds the linked ID. See the 
+    `CouchDB documentation <http://wiki.apache.org/couchdb/Introduction_to_CouchDB_views#Linked_documents>`_
+    for details on linked documents.
+    """
+    if doc['type'] != "flight" or doc['approved']:
+        return
+    flight_id = doc['_id']
+    name = doc['name'])
+    if 'payloads' in doc:
+        yield (name, flight_id, 0), doc['payloads']
+        for payload in doc['payloads']:
+            yield (name, flight_id, 1), {'_id': payload}
+    else:
+        yield (name, flight_id, 0), None
+
+
+@version(1)
 def all_name_map(doc):
     """
     View: ``flight/all_name``

@@ -3,6 +3,7 @@ flight:
     views:
         end_start_including_payloads: habitat.views.flight.end_start_including_payloads_map
         launch_time_including_payloads: habitat.views.flight.launch_time_including_payloads_map
+        unapproved_name_including_payloads: habitat.views.flight.unapproved_name_including_payloads_map
         all_name_time_created: habitat.views.flight.all_name_map
 
 habitat:

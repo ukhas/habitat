@@ -173,6 +173,30 @@ class TestFlight(object):
         
         assert result == expected
 
+    def test_view_unapproved_name_including_payloads(self):
+        mydoc = deepcopy(doc)
+        mydoc['approved'] = False
+        mydoc['payloads'] = ['a', 'b']
+        result = list(flight.unapproved_name_including_payloads_map(mydoc))
+        expected = [
+                (("Test Launch", "fid", 0), ['a', 'b']),
+                (("Test Launch", "fid", 1), {'_id': 'a'}),
+                (("Test Launch", "fid", 1), {'_id': 'b'})
+        ]
+
+        assert result == expected
+
+    def test_view_unapproved_name_without_payloads(self):
+        mydoc = deepcopy(doc)
+        mydoc['approved'] = False
+        result = list(flight.unapproved_name_including_payloads_map(mydoc))
+        expected = [
+                (("Test Launch", "fid", 0), None)
+        ]
+
+        assert result == expected
+
+
     def test_view_name(self):
         mydoc = deepcopy(doc)
         result = list(flight.all_name_map(mydoc))
