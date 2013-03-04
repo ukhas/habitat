@@ -198,7 +198,7 @@ def unapproved_name_including_payloads_map(doc):
     if doc['type'] != "flight" or doc['approved']:
         return
     flight_id = doc['_id']
-    name = doc['name'])
+    name = doc['name']
     if 'payloads' in doc:
         yield (name, flight_id, 0), doc['payloads']
         for payload in doc['payloads']:
