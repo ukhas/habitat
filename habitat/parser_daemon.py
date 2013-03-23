@@ -21,6 +21,7 @@ Run the Parser as a daemon connected to CouchDB's _changes feed.
 
 import logging
 import couchdbkit
+import restkit
 import copy
 import statsd
 
@@ -100,4 +101,7 @@ class ParserDaemon(object):
                     .format(attempts))
                 statsd.increment("parser_daemon.save_conflict")
                 self._save_updated_doc(doc, attempts)
-
+        except restkit.errors.Unauthorized as e:
+            logger.warn("Could not save doc {0}, unauthorized: {1}" \
+                .format(doc["_id"], e))
+            return
