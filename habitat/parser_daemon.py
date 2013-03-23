@@ -102,6 +102,6 @@ class ParserDaemon(object):
                 statsd.increment("parser_daemon.save_conflict")
                 self._save_updated_doc(doc, attempts)
         except restkit.errors.Unauthorized as e:
-            logger.error("Could not save doc {0}, unauthorized: {1}" \
+            logger.warn("Could not save doc {0}, unauthorized: {1}" \
                 .format(doc["_id"], e))
             return
