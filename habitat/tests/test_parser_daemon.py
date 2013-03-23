@@ -21,6 +21,7 @@ Unit tests for the Parser's Sink class.
 
 import mox
 import couchdbkit
+import restkit
 
 from copy import deepcopy
 from nose.tools import assert_raises
@@ -134,3 +135,11 @@ class TestParserDaemon(object):
         assert_raises(RuntimeError, self.daemon._save_updated_doc, parsed_doc)
         self.m.VerifyAll()
 
+    def test_saving_quits_after_unauthorized(self):
+        doc = {"_id": "id", "not_valid": True, "data": {}}
+        self.daemon.db.__getitem__('id').AndReturn(doc)
+        self.daemon.db.save_doc(doc).AndRaise(
+            restkit.errors.Unauthorized())
+        self.m.ReplayAll()
+        self.daemon._save_updated_doc(doc)
+        self.m.VerifyAll()
