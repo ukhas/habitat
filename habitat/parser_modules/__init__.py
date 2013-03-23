@@ -22,6 +22,8 @@ Parser modules for specific protocols.
     :toctree: habitat
 
     habitat.parser_modules.ukhas_parser
+    habitat.parser_modules.rockblock_binary_parser
 """
 
 from . import ukhas_parser
+from . import rockblock_binary_parser

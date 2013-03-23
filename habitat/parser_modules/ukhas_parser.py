@@ -138,7 +138,7 @@ class UKHASParser(ParserModule):
         This method checks that the *config* dict contains all the
         required information.
 
-        Raises :py:exc:`ValueError <exceptions.ValueError>` otherwise.
+        Raises :py:exc:`ValueError <exceptions_raw.ValueError>` otherwise.
         """
 
         try:
@@ -149,7 +149,7 @@ class UKHASParser(ParserModule):
             if config["checksum"] not in checksum_algorithms:
                 raise ValueError("Specified checksum algorithm is invalid.")
             if len(config["fields"]) < 1:
-                raise ValueError("Less than one fields are defined.")
+                raise ValueError("No fields are defined.")
             for field in config["fields"]:
                 field["name"]
                 field["sensor"]
@@ -157,7 +157,7 @@ class UKHASParser(ParserModule):
                     raise ValueError("Field name starts with an underscore.")
                 field_names.append(field["name"])
             if len(field_names) != len(set(field_names)):
-                raise ValueError("Duplicate field name")
+                raise ValueError("Duplicate field name.")
         except (KeyError, TypeError):
             raise ValueError("Invalid configuration document.")
 
@@ -210,7 +210,7 @@ class UKHASParser(ParserModule):
             error_type = type(e)
             raise error_type("(field {f}): {e!s}".format(f=name, e=e))
 
-        return [name, data]
+        return name, data
 
     def pre_parse(self, string):
         """
