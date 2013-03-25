@@ -38,8 +38,7 @@ import time
 import traceback
 import json
 import logging
-
-from .utils import rfc3339
+import strict_rfc3339
 
 logger = logging.getLogger("habitat.uploader")
 
@@ -171,7 +170,7 @@ class Uploader(object):
         time_uploaded = int(round(time.time()))
         time_created = int(round(time_created))
 
-        to_rfc3339 = rfc3339.timestamp_to_rfc3339_localoffset
+        to_rfc3339 = strict_rfc3339.timestamp_to_rfc3339_localoffset
         thing["time_uploaded"] = to_rfc3339(time_uploaded)
         thing["time_created"] = to_rfc3339(time_created)
 

@@ -22,7 +22,7 @@ Contains schema validation and a view by creation time and callsign.
 """
 
 from couch_named_python import version
-from ..utils.rfc3339 import rfc3339_to_timestamp
+from strict_rfc3339 import rfc3339_to_timestamp
 from .utils import must_be_admin, validate_doc
 from .utils import read_json_schema, only_validates
 

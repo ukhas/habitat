@@ -6,4 +6,5 @@ couch-named-python==0.2.2
 statsd-client==1.0.2
 PyYAML==3.10
 pytz==2012b
+strict-rfc3339==0.3
 -e git://github.com/ukhas/M2Crypto.git#egg=M2Crypto
