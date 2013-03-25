@@ -212,12 +212,12 @@ class TestParser(object):
         config = {'payload_configuration': config}
         config['id'] = 'test'
         self.m.StubOutWithMock(self.parser, '_find_config_doc')
-        self.m.StubOutWithMock(parser, 'rfc3339')
+        self.m.StubOutWithMock(parser, 'strict_rfc3339')
         self.mock_module.pre_parse('test string').AndReturn('callsign')
         self.parser._find_config_doc('callsign').AndReturn(config)
         self.mock_module.parse('test string',
             config['payload_configuration']['sentences'][0]).AndReturn({})
-        parser.rfc3339.now_to_rfc3339_utcoffset().AndReturn("thetime")
+        parser.strict_rfc3339.now_to_rfc3339_utcoffset().AndReturn("thetime")
         self.m.ReplayAll()
         result = self.parser.parse(doc)
         assert result['data']['_parsed']

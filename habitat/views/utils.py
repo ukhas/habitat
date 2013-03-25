@@ -28,7 +28,7 @@ import pytz
 
 from couch_named_python import UnauthorizedError, ForbiddenError
 from jsonschema import Validator
-from ..utils.rfc3339 import validate_rfc3339
+from strict_rfc3339 import validate_rfc3339
 
 timestr_regex = re.compile(r"(\d\d):(\d\d):(\d\d)")
 
