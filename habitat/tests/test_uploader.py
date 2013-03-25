@@ -30,13 +30,12 @@ import json
 import couchdbkit
 import couchdbkit.resource
 import restkit.errors
+from strict_rfc3339 import timestamp_to_rfc3339_localoffset as to_rfc3339
 
-from ..utils import rfc3339
 from .. import views
 
 from .. import uploader
 
-to_rfc3339 = rfc3339.timestamp_to_rfc3339_localoffset
 
 telemetry_data = {"latitude": 0.1234, "longitude": 1.345,
                   "some_data": 123, "_flag": True}

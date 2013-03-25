@@ -26,7 +26,6 @@ Various utilities for general use by ``habitat``.
     habitat.utils.filtertools
     habitat.utils.startup
     habitat.utils.immortal_changes
-    habitat.utils.rfc3339
 """
 
 from . import checksums
@@ -34,4 +33,3 @@ from . import dynamicloader
 from . import filtertools
 from . import startup
 from . import immortal_changes
-from . import rfc3339

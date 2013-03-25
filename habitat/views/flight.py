@@ -22,7 +22,7 @@ payload name and window end time.
 """
 
 from couch_named_python import ForbiddenError, UnauthorizedError, version
-from ..utils.rfc3339 import rfc3339_to_timestamp
+from strict_rfc3339 import rfc3339_to_timestamp
 from .utils import validate_doc, read_json_schema
 from .utils import only_validates
 
