@@ -183,6 +183,8 @@ class Parser(object):
         elif config:
             if "_id" not in config:
                 config["_id"] = None
+            logger.debug("payload_configuration provided (id: {0})"
+                    .format(config["_id"]))
             return {"id": config["_id"], "payload_configuration": config}
 
         config = self._find_config_doc(callsign)
@@ -192,6 +194,14 @@ class Parser(object):
                          .format(callsign=callsign))
             statsd.increment("parser.no_config_doc")
             raise CantGetConfig()
+
+        if "flight_id" in config:
+            logger.debug("Selected payload_configuration {0} from flight {1} "
+                         "for {2!r}"
+                    .format(config["id"], config["flight_id"], callsign))
+        else:
+            logger.debug("Selected payload_configuration {0} for {1!r}"
+                    .format(config["id"], callsign))
 
         return config
 
