@@ -313,8 +313,8 @@ class ParserFiltering(object):
         Apply all the module's pre filters, in order, to the data and
         return the resulting filtered data.
         """
-        sentence = {"filters": module}
-        return self._apply_filters(raw_data, sentence, "pre-filters", str)
+        sentence = {"filters": {'pre': module.get('pre-filters', {})}}
+        return self._apply_filters(raw_data, sentence, "pre", str)
 
     def intermediate_filter(self, raw_data, sentence):
         """
@@ -334,17 +334,21 @@ class ParserFiltering(object):
     def _apply_filters(self, data, sentence, filter_type, result_type):
         if "filters" in sentence:
             if filter_type in sentence["filters"]:
-                for f in sentence["filters"][filter_type]:
-                    data = self._filter(data, f, result_type)
+                for index, f in enumerate(sentence["filters"][filter_type]):
+                    whence = (filter_type, index)
+                    data = self._filter(data, f, result_type, whence)
                     statsd.increment("parser.filters.{0}".format(filter_type))
         return data
 
-    def _filter(self, data, f, result_type):
+    def _filter(self, data, f, result_type, filter_whence):
         """
         Load and run a filter from a dictionary specifying type, the
         relevant filter/code and maybe a config.
         Returns the filtered data, or leaves the data untouched
         if the filter could not be run.
+
+        filter_whence is used merely for logging, and should be a tuple:
+        (filter_type, filter_index); e.g. ("intermediate", 4).
         """
         rollback = data
         data = copy.deepcopy(data)
@@ -352,8 +356,10 @@ class ParserFiltering(object):
         try:
             if f["type"] == "normal":
                 fil = 'filters.' + f['filter']
+                filter_whence += ("normal", fil)
                 data = self.loadable_manager.run(fil, f, data)
             elif f["type"] == "hotfix":
+                filter_whence += ("hotfix", )
                 data = self._hotfix_filter(data, f)
             else:
                 raise ValueError("Invalid filter type")
@@ -361,8 +367,9 @@ class ParserFiltering(object):
             if not data or not isinstance(data, result_type):
                 raise ValueError("Hotfix returned no output or "
                                  "output of wrong type")
-        except:
-            logger.exception("Error while applying filter " + repr(f))
+        except Exception as e:
+            logger.debug("Error while applying filter {0}: {1}"
+                    .format(filter_whence, e))
             return rollback
         else:
             return data

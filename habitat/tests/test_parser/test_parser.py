@@ -357,8 +357,10 @@ class TestParserFiltering(object):
         self.m.StubOutWithMock(self.fil, '_filter')
         data = 'test data'
         module = {'pre-filters': ['f1', 'f2']}
-        self.fil._filter('test data', 'f1', str).AndReturn('filtered data')
-        self.fil._filter('filtered data', 'f2', str).AndReturn('result')
+        self.fil._filter('test data', 'f1', str, ('pre', 0))\
+                .AndReturn('filtered data')
+        self.fil._filter('filtered data', 'f2', str, ('pre', 1))\
+                .AndReturn('result')
         self.m.ReplayAll()
         assert self.fil.pre_filter(data, module) == 'result'
         self.m.VerifyAll()
@@ -367,8 +369,10 @@ class TestParserFiltering(object):
         self.m.StubOutWithMock(self.fil, '_filter')
         data = 'test data'
         config = {'filters': {'intermediate': ['f1', 'f2']}}
-        self.fil._filter(data, 'f1', str).AndReturn('filtered data')
-        self.fil._filter('filtered data', 'f2', str).AndReturn('result')
+        self.fil._filter(data, 'f1', str, ('intermediate', 0))\
+                .AndReturn('filtered data')
+        self.fil._filter('filtered data', 'f2', str, ('intermediate', 1))\
+                .AndReturn('result')
         self.m.ReplayAll()
         assert self.fil.intermediate_filter(data, config) == 'result'
         self.m.VerifyAll()
@@ -377,15 +381,16 @@ class TestParserFiltering(object):
         self.m.StubOutWithMock(self.fil, '_filter')
         data = {'test': 2}
         config = {'filters': {'post': ['f1', 'f2']}}
-        self.fil._filter(data, 'f1', dict).AndReturn({'test': 3})
-        self.fil._filter({'test': 3}, 'f2', dict)\
+        self.fil._filter(data, 'f1', dict, ('post', 0))\
+                .AndReturn({'test': 3})
+        self.fil._filter({'test': 3}, 'f2', dict, ('post', 1))\
                 .AndReturn({'result': True})
         self.m.ReplayAll()
         assert self.fil.post_filter(data, config) == {'result': True}
         self.m.VerifyAll()
 
     def test_filters_must_have_type(self):
-        assert self.fil._filter('test data', {}, str) == 'test data'
+        assert self.fil._filter('test data', {}, str, ('x', 0)) == 'test data'
 
     def test_calls_loadable_manager_for_normal_filters(self):
         data = 'test data'
@@ -393,7 +398,7 @@ class TestParserFiltering(object):
         self.fil.loadable_manager.run(
             'filters.some.func', f, 'test data').AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.fil._filter(data, f, str) == 'filtered'
+        assert self.fil._filter(data, f, str, ('x', 0)) == 'filtered'
         self.m.VerifyAll()
 
     def test_calls_loadable_manager_for_normal_filters_with_config(self):
@@ -402,7 +407,7 @@ class TestParserFiltering(object):
         self.fil.loadable_manager.run(
             'filters.some.func', f, 'test data').AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.fil._filter(data, f, str) == 'filtered'
+        assert self.fil._filter(data, f, str, ('x', 0)) == 'filtered'
         self.m.VerifyAll()
 
     def test_calls_hotfix_filter(self):
@@ -411,15 +416,16 @@ class TestParserFiltering(object):
         f = {'type': 'hotfix'}
         self.fil._hotfix_filter('test data', f).AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.fil._filter(data, f, str) == 'filtered'
+        assert self.fil._filter(data, f, str, ('x', 0)) == 'filtered'
         self.m.VerifyAll()
 
     def test_skips_unknown_filter_types(self):
-        assert self.fil._filter('tdta', {'type': '?'}, str) == 'tdta'
+        assert self.fil._filter('tdta', {'type': '?'}, str, ('x', 0)) == 'tdta'
 
     def test_unimportable_normal_filters(self):
         f = {'filter': 'fakefakefake.fakepath.is.fake', 'type': 'normal'}
-        assert self.fil._filter('test string', f, str) == 'test string'
+        assert self.fil._filter('test string', f, str, ('x', 0)) == \
+                'test string'
 
     def test_sanity_checks_filter_return_type(self):
         cases = [("string", str, True), ("string", dict, False),
@@ -437,7 +443,7 @@ class TestParserFiltering(object):
                     data_in).AndReturn(filter_return)
 
             self.m.ReplayAll()
-            assert self.fil._filter(data_in, config, want_type) == \
+            assert self.fil._filter(data_in, config, want_type, ('x', 0)) == \
                     expect_result
             self.m.VerifyAll()
             self.m.ResetAll()
@@ -448,7 +454,8 @@ class TestParserFiltering(object):
             assert config == 'config'
             return 'filtered'
         f = {'callable': fil, 'config': 'config', 'type': 'normal'}
-        assert self.fil._filter('test string', f, str) == 'test string'
+        assert self.fil._filter('test string', f, str, ('x', 0)) == \
+                'test string'
 
     def test_hotfix_filters(self):
         self.m.StubOutWithMock(self.fil, '_sanity_check_hotfix')
@@ -484,7 +491,7 @@ class TestParserFiltering(object):
         self.fil._verify_certificate(f, 'got_cert')
         self.fil._compile_hotfix(f).AndReturn(env)
         self.m.ReplayAll()
-        assert self.fil._filter('unfiltered', f, str) == 'unfiltered'
+        assert self.fil._filter('unfiltered', f, str, ('x', 0)) == 'unfiltered'
         self.m.VerifyAll()
 
     def test_handles_hotfix_syntax_error(self):
