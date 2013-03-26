@@ -211,8 +211,9 @@ class Parser(object):
                 where = "post filter"
                 data = self.filtering.post_filter(data, sentence)
             except (ValueError, KeyError) as e:
-                logger.debug("Exception in {module} {where}: {e}"
-                             .format(module=module['name'], e=e, where=where))
+                logger.debug("Exception in {module}: {etype}: {e}"
+                    .format(module=module['name'], where=where,
+                            etype=type(e).__name__, e=e))
                 statsd.increment("parser.parse_exception")
                 continue
 
@@ -368,8 +369,8 @@ class ParserFiltering(object):
                 raise ValueError("Hotfix returned no output or "
                                  "output of wrong type")
         except Exception as e:
-            logger.debug("Error while applying filter {0}: {1}"
-                    .format(filter_whence, e))
+            logger.debug("Error while applying filter {0}: {1}: {2}"
+                    .format(filter_whence, type(e).__name__, e))
             return rollback
         else:
             return data
