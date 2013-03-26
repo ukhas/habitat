@@ -449,15 +449,6 @@ class TestParserFiltering(object):
             self.m.VerifyAll()
             self.m.ResetAll()
 
-    def test_incorrect_num_args_normal_filters(self):
-        def fil(data, config, too, many, args):
-            assert data == 'test string'
-            assert config == 'config'
-            return 'filtered'
-        f = {'callable': fil, 'config': 'config', 'type': 'normal'}
-        assert self.fil._filter('test string', f, str, ('x', 0)) == \
-                'test string'
-
     def test_hotfix_filters(self):
         self.m.StubOutWithMock(self.fil, '_sanity_check_hotfix')
         self.m.StubOutWithMock(self.fil, '_get_certificate')
