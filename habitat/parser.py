@@ -33,7 +33,7 @@ import time
 import strict_rfc3339
 
 from . import loadable_manager
-from .utils import dynamicloader
+from .utils import dynamicloader, quick_traceback
 
 logger = logging.getLogger("habitat.parser")
 statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat'})
@@ -211,9 +211,9 @@ class Parser(object):
                 where = "post filter"
                 data = self.filtering.post_filter(data, sentence)
             except (ValueError, KeyError) as e:
-                logger.debug("Exception in {module}: {etype}: {e}"
+                logger.debug("Exception in {module} {where}: {e}"
                     .format(module=module['name'], where=where,
-                            etype=type(e).__name__, e=e))
+                            e=quick_traceback.oneline(e)))
                 statsd.increment("parser.parse_exception")
                 continue
 
@@ -368,9 +368,9 @@ class ParserFiltering(object):
             if not data or not isinstance(data, result_type):
                 raise ValueError("Hotfix returned no output or "
                                  "output of wrong type")
-        except Exception as e:
-            logger.debug("Error while applying filter {0}: {1}: {2}"
-                    .format(filter_whence, type(e).__name__, e))
+        except:
+            logger.debug("Error while applying filter {0}: {1}"
+                    .format(filter_whence, quick_traceback.oneline()))
             return rollback
         else:
             return data
