@@ -40,6 +40,13 @@
                     "format": "base64",
                     "required": true
                 },
+                "_fallbacks": {
+                    "title": "Fallback Data",
+                    "description": "When out of band data is provided by the receiver, such as a callsign or a rough position, it can be placed here and will be used to provide data not parsed from _raw. In particular the `payload' key may be used to indicate a callsign.",
+                    "type": "object",
+                    "required": false,
+                    "additionalProperties": true
+                },
                 "_sentence": {
                     "title": "Raw Data Sentence",
                     "description": "The ASCII representation of the raw data, if the data is all printable. Inserted by the parser.",
