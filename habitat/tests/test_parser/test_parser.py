@@ -21,6 +21,7 @@ Unit tests for the Parser's Sink class.
 
 import os
 import mox
+import logging
 
 import couchdbkit
 import M2Crypto
@@ -552,3 +553,13 @@ class TestParserFiltering(object):
         f = {'certificate': '../../dots.pem', 'code': '', 'signature': ''}
         assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
 
+    def test_filter_failures_do_not_produce_errors_in_the_log(self):
+        # see issue #299
+        self.m.StubOutWithMock(parser.logger, 'exception')
+
+        f = {'type': 'normal', 'filter': 'x'}
+        self.fil.loadable_manager.run('filters.x', f, 'test data')\
+                .AndRaise(KeyError)
+        self.m.ReplayAll()
+        assert self.fil._filter('asdf', f, str, ('x', 0)) == 'asdf'
+        self.m.VerifyAll()
