@@ -35,10 +35,11 @@ import restkit.errors
 import threading
 import Queue
 import time
-import traceback
 import json
 import logging
 import strict_rfc3339
+
+from .utils import quick_traceback
 
 logger = logging.getLogger("habitat.uploader")
 
@@ -406,10 +407,7 @@ class UploaderThread(threading.Thread):
 
     def caught_exception(self):
         """Called when the Uploader throws an exception"""
-        (exc_type, exc_value, discard_tb) = sys.exc_info()
-        exc_tb = traceback.format_exception_only(exc_type, exc_value)
-        info = exc_tb[-1].strip()
-        self.warning("Caught " + info)
+        self.warning("Caught " + quick_traceback.oneline())
 
     def got_flights(self, flights):
         """
