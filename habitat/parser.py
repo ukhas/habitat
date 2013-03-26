@@ -159,16 +159,17 @@ class Parser(object):
 
     def _get_callsign(self, raw_data, module):
         """Attempt to find a callsign from the data."""
+        raw_data = self.filtering.pre_filter(raw_data, module)
+
         try:
-            where = "pre_filter"
-            raw_data = self.filtering.pre_filter(raw_data, module)
-            where = "pre_parse"
             callsign = module["module"].pre_parse(raw_data)
         except (ValueError, KeyError) as e:
-            logger.debug("Exception in {module} {where}: {e}"
-                         .format(e=e, module=module['name'], where=where))
+            logger.debug("Exception in {module} pre parse: {e}"
+                         .format(module=module['name'],
+                                 e=quick_traceback.oneline(e)))
             statsd.increment("parser.parse_exception")
             raise CantGetCallsign()
+
         return callsign
 
     def _get_config(self, callsign, config=None):
@@ -203,19 +204,19 @@ class Parser(object):
                 continue
             if sentence["protocol"] != module["name"]:
                 continue
+
+            data = self.filtering.intermediate_filter(raw_data, sentence)
+
             try:
-                where = "intermediate filter"
-                data = self.filtering.intermediate_filter(raw_data, sentence)
-                where = "main parse"
                 data = module["module"].parse(data, sentence)
-                where = "post filter"
-                data = self.filtering.post_filter(data, sentence)
             except (ValueError, KeyError) as e:
-                logger.debug("Exception in {module} {where}: {e}"
-                    .format(module=module['name'], where=where,
+                logger.debug("Exception in {module} main parse: {e}"
+                    .format(module=module['name'],
                             e=quick_traceback.oneline(e)))
                 statsd.increment("parser.parse_exception")
                 continue
+
+            data = self.filtering.post_filter(data, sentence)
 
             data["_protocol"] = module["name"]
             data["_parsed"] = {
