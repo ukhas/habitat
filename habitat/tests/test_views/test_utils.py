@@ -160,6 +160,38 @@ def test_validate_timezones():
                  2: {"one": "g@h", "two": bad_timezone}}]
         assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
 
+def test_issue_302():
+    # the 'try' and 'for' loops in _validate_format used to be in the wrong
+    # order, so the first key that didn't have an entry in 'properties'
+    # caused checking of the whole object to stop::
+    #
+    #   try:
+    #       for key, value in data.items():
+    #           _validate_formats(value, schema['properties'][key])
+    #
+    # The try is there to catch KeyError if schema['properties'][key]
+    # does not exist. If this happens (KeyError thrown) on the first key
+    # tested no further keys are tested.
+
+    schema = copy.deepcopy(test_format_schema)
+    schema["items"]["additionalProperties"]["properties"]["two"]["format"] = \
+            "timezone"
+
+    # Need to ensure that the key that isn't mentioned in the schema (three)
+    # gets checked first
+
+    class DodgyDict(dict):
+        # 'dict' object attribute 'values' is read-only, so need this
+        pass
+
+    bad =  [{1: {"one": "e@f", "two": "UTC"},
+             2: {"one": "g@h", "two": 'bad_timezone', "three": 4}}]
+    bad[0][2] = DodgyDict(bad[0][2])
+    bad[0][2].items = lambda: [('three', 3), ('two', 'bad_timezone'),
+                               ('one', 'g@h')]
+
+    assert_raises(ForbiddenError, utils.validate_doc, bad, schema)
+
 def test_only_validates():
     @utils.only_validates("a_document_type")
     def my_validate_func(new, old, userctx, secobj):

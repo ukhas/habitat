@@ -88,24 +88,24 @@ def _validate_formats(data, schema):
         elif format_name == "timezone" and not _validate_timezone(data):
             raise ForbiddenError("A string was not a valid timezone.")
     if 'properties' in schema and isinstance(schema['properties'], dict):
-        try:
-            for key, value in data.items():
+        for key, value in data.items():
+            try:
                 _validate_formats(value, schema['properties'][key])
-        except (TypeError, KeyError):
-            pass
+            except (TypeError, KeyError):
+                pass
     if 'additionalProperties' in schema:
         if isinstance(schema['additionalProperties'], dict):
-            try:
-                for value in data.values():
+            for value in data.values():
+                try:
                     _validate_formats(value, schema['additionalProperties'])
+                except TypeError:
+                    pass
+    if 'items' in schema and isinstance(schema['items'], dict):
+        for item in data:
+            try:
+                _validate_formats(item, schema['items'])
             except TypeError:
                 pass
-    if 'items' in schema and isinstance(schema['items'], dict):
-        try:
-            for item in data:
-                _validate_formats(item, schema['items'])
-        except TypeError:
-            pass
 
 def validate_doc(data, schema):
     """Validate *data* against *schema*, raising descriptive errors"""
