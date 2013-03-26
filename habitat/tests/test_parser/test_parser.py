@@ -320,6 +320,24 @@ class TestParser(object):
                   "payload_configuration": config}
         assert self.parser._get_config('supply', config) == result
 
+    def test_get_config_calls_find_config(self):
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+
+        result = {"id": "some_actual_document",
+                  "payload_configuration": {"doc": True}}
+        result2 = deepcopy(result)
+        result2["flight_id"] = "a_flight"
+
+        self.parser._find_config_doc('call_a').AndReturn(deepcopy(result))
+        self.parser._find_config_doc('call_b').AndReturn(None)
+        self.parser._find_config_doc('call_c').AndReturn(deepcopy(result2))
+
+        self.m.ReplayAll()
+        assert self.parser._get_config('call_a') == result
+        assert_raises(parser.CantGetConfig, self.parser._get_config, 'call_b')
+        assert self.parser._get_config('call_c') == result2
+        self.m.VerifyAll()
+
     def test_raises_if_provided_config_doesnt_have_correct_callsign(self):
         config = {"sentences": [{"callsign": "bad", "protocol": "Mock"}]}
         assert_raises(parser.CantGetConfig, self.parser._get_config,
