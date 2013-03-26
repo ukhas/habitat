@@ -8,11 +8,13 @@
         "_id": {
             "title": "CouchDB Document ID",
             "type": "string",
+            "minLength": 1,
             "required": false
         },
         "_rev": {
             "title": "CouchDB Document Revision Number",
             "type": "string",
+            "minLength": 1,
             "required": false
         },
         "_revisions": {
@@ -51,6 +53,7 @@
             "title": "Launch Name",
             "description": "A human-readable name to refer to this launch by.",
             "type": "string",
+            "minLength": 1,
             "required": true
         },
         "launch": {
@@ -118,18 +121,21 @@
                     "title": "Launch Location",
                     "description": "Optional human-readable string for launch location, e.g., a city name.",
                     "type": "string",
+                    "minLength": 1,
                     "required": false
                 },
                 "project": {
                     "title": "Project",
                     "description": "The project name that this launch is associated with.",
                     "type": "string",
+                    "minLength": 1,
                     "required": false
                 },
                 "group": {
                     "title": "Group",
                     "description": "The group(s) responsible for this flight.",
                     "type": "string",
+                    "minLength": 1,
                     "required": false
                 }
             }
@@ -141,7 +147,8 @@
             "items": {
                 "title": "Payload Configuration ID",
                 "description": "The CouchDB Document ID for a payload configuration of a payload in this flight.",
-                "type": "string"
+                "type": "string",
+                "minLength": 1
             }
         },
         "aprs": {
