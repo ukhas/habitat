@@ -129,8 +129,8 @@ def validate(new, old, userctx, secobj):
         if len(new['receivers']) != 1:
             raise ForbiddenError("New documents must have exactly one"
                                  "receiver.")
-        if set(new['data'].keys()) != set(('_raw', '_fallbacks')):
-            raise ForbiddenError("New documents may only have _raw and "
+        if set(new['data'].keys()) - set(('_raw', '_fallbacks')):
+            raise ForbiddenError("New documents may only have _raw and/or "
                                  "_fallbacks in data.")
 
 

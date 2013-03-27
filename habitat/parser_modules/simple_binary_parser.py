@@ -126,7 +126,7 @@ class SimpleBinaryParser(ParserModule):
             data = self.loadable_manager.run(sensor, config, field)
         except (ValueError, KeyError) as e:
             error_type = type(e)
-            raise error_type("field {f}): {e!s}".format(f=name, e=e))
+            raise error_type("(field {f}): {e!s}".format(f=name, e=e))
 
         return name, data
 

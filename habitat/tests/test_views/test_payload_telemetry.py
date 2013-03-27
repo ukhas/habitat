@@ -138,9 +138,14 @@ class TestPayloadTelemetry(object):
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, {}, {'roles': []}, {})
 
-    def test_new_docs_may_only_have_raw(self):
+    def test_new_docs_may_only_have_raw_and_fallbacks(self):
         mydoc = deepcopy(doc)
+        mydoc['data']['_fallbacks'] = {'a': 1}
+        payload_telemetry.validate(mydoc, {}, {'roles': []}, {})
         mydoc['data']['result'] = 42
+        assert_raises(ForbiddenError, payload_telemetry.validate,
+                mydoc, {}, {'roles': []}, {})
+        del mydoc['data']['_fallbacks']
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, {}, {'roles': []}, {})
 
@@ -365,8 +370,8 @@ class TestPayloadTelemetry(object):
                          "iridium_cep": "8",
                          "data": "48656c6c6f20576f726c6420526f636b424c4f434b",
                          "payload": "300234010753370",
-                         "latitude": "52.3867",
-                         "longitude": "0.2938",
+                         "latitude": 52.3867,
+                         "longitude": 0.2938,
                          "time": "10:41:50"
                      }
             },

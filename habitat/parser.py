@@ -186,6 +186,8 @@ class Parser(object):
                 logger.debug("Could not find callsign but using fallback.")
                 statsd.increment("parser.fallback_callsign")
                 return fallbacks['payload']
+            else:
+                raise CantGetCallsign()
         return callsign
 
     def _get_config(self, callsign, config=None):
