@@ -33,7 +33,7 @@ import time
 import strict_rfc3339
 
 from . import loadable_manager
-from .utils import dynamicloader
+from .utils import dynamicloader, quick_traceback
 
 logger = logging.getLogger("habitat.parser")
 statsd.init_statsd({'STATSD_BUCKET_PREFIX': 'habitat'})
@@ -168,19 +168,20 @@ class Parser(object):
 
     def _get_callsign(self, raw_data, fallbacks, module):
         """Attempt to find a callsign from the data."""
+        raw_data = self.filtering.pre_filter(raw_data, module)
+
         try:
-            where = "pre_filter"
-            raw_data = self.filtering.pre_filter(raw_data, module)
-            where = "pre_parse"
             callsign = module["module"].pre_parse(raw_data)
         except CantParse as e:
-            logger.debug("CantParse exception in {module} {where}: {e}"
-                         .format(e=e, module=module['name'], where=where))
+            logger.debug("CantParse exception in {module}: {e}"
+                         .format(e=quick_traceback.oneline(e),
+                                 module=module['name']))
             statsd.increment("parser.{0}.cantparse".format(module['name']))
             raise CantGetCallsign()
         except CantExtractCallsign as e:
-            logger.debug("CantExtractCallsign exception in {m} {w}: {e}"
-                         .format(e=e, m=module['name'], w=where))
+            logger.debug("CantExtractCallsign exception in {m}: {e}"
+                         .format(e=quick_traceback.oneline(e),
+                                 m=module['name']))
             statsd.increment("parser.{0}.cantextractcallsign"
                              .format(module['name']))
             if 'payload' in fallbacks:
@@ -233,18 +234,19 @@ class Parser(object):
                 continue
             if sentence["protocol"] != module["name"]:
                 continue
+
+            data = self.filtering.intermediate_filter(raw_data, sentence)
+
             try:
-                where = "intermediate filter"
-                data = self.filtering.intermediate_filter(raw_data, sentence)
-                where = "main parse"
                 data = module["module"].parse(data, sentence)
-                where = "post filter"
-                data = self.filtering.post_filter(data, sentence)
             except (ValueError, KeyError) as e:
-                logger.debug("Exception in {module} {where}: {e}"
-                             .format(module=module['name'], e=e, where=where))
+                logger.debug("Exception in {module} main parse: {e}"
+                    .format(module=module['name'],
+                            e=quick_traceback.oneline(e)))
                 statsd.increment("parser.parse_exception")
                 continue
+
+            data = self.filtering.post_filter(data, sentence)
 
             data["_protocol"] = module["name"]
             data["_parsed"] = {
@@ -343,8 +345,8 @@ class ParserFiltering(object):
         Apply all the module's pre filters, in order, to the data and
         return the resulting filtered data.
         """
-        sentence = {"filters": module}
-        return self._apply_filters(raw_data, sentence, "pre-filters", str)
+        sentence = {"filters": {'pre': module.get('pre-filters', {})}}
+        return self._apply_filters(raw_data, sentence, "pre", str)
 
     def intermediate_filter(self, raw_data, sentence):
         """
@@ -364,17 +366,21 @@ class ParserFiltering(object):
     def _apply_filters(self, data, sentence, filter_type, result_type):
         if "filters" in sentence:
             if filter_type in sentence["filters"]:
-                for f in sentence["filters"][filter_type]:
-                    data = self._filter(data, f, result_type)
+                for index, f in enumerate(sentence["filters"][filter_type]):
+                    whence = (filter_type, index)
+                    data = self._filter(data, f, result_type, whence)
                     statsd.increment("parser.filters.{0}".format(filter_type))
         return data
 
-    def _filter(self, data, f, result_type):
+    def _filter(self, data, f, result_type, filter_whence):
         """
         Load and run a filter from a dictionary specifying type, the
         relevant filter/code and maybe a config.
         Returns the filtered data, or leaves the data untouched
         if the filter could not be run.
+
+        filter_whence is used merely for logging, and should be a tuple:
+        (filter_type, filter_index); e.g. ("intermediate", 4).
         """
         rollback = data
         data = copy.deepcopy(data)
@@ -382,8 +388,10 @@ class ParserFiltering(object):
         try:
             if f["type"] == "normal":
                 fil = 'filters.' + f['filter']
+                filter_whence += ("normal", fil)
                 data = self.loadable_manager.run(fil, f, data)
             elif f["type"] == "hotfix":
+                filter_whence += ("hotfix", )
                 data = self._hotfix_filter(data, f)
             else:
                 raise ValueError("Invalid filter type")
@@ -392,7 +400,8 @@ class ParserFiltering(object):
                 raise ValueError("Hotfix returned no output or "
                                  "output of wrong type")
         except:
-            logger.exception("Error while applying filter " + repr(f))
+            logger.debug("Error while applying filter {0}: {1}"
+                    .format(filter_whence, quick_traceback.oneline()))
             return rollback
         else:
             return data
