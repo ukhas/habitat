@@ -22,10 +22,10 @@ Contains schema validation and a view by flight, payload and received time.
 
 import math
 import json
-import time
 import base64
 import hashlib
 import datetime
+import calendar
 from couch_named_python import ForbiddenError, UnauthorizedError, version
 from ..utils.rfc3339 import rfc3339_to_timestamp, now_to_rfc3339_utcoffset
 from ..utils.rfc3339 import timestamp_to_rfc3339_utcoffset
@@ -271,20 +271,28 @@ def add_listener_update(doc, req):
     doc["receivers"][callsign] = protodoc["receivers"][callsign]
     return doc, "OK"
 
-@version(1)
+@version(2)
 def http_post_update(doc, req):
     """
     Update function: ``payload_telemetry/_update/http_post``
 
-    Converts all the HTTP POST form parameters into a JSON string which is then
-    base64 encoded and used as the _raw field for a new payload telemetry
-    document. The query string is checked for a ``from`` parameter which will
-    be used as the receiver callsign if found.
+    Creates a new payload_telemetry document with all keys present in the HTTP
+    POST form data available in ``doc.data._fallbacks`` and the ``from`` HTTP
+    querystring key as the receiver callsign if available. The ``data`` field
+    will be base64 encoded and used as ``doc.data._raw``.
 
-    If the form data contains a "transmit_time" field which can be parsed as a
-    timestamp in the format "yy-mm-dd hh:mm:ss" it will be used for the
-    ``time_created`` field in the receiver section. This is specifically useful
-    for RockBLOCKs.
+    This function has additional functionality specific to RockBLOCKs: if all
+    of the keys ``imei``, ``momsn``, ``transmit_time``, ``iridium_latitude``,
+    ``iridium_longitude``, ``iridium_cep`` and ``data`` are present in the form
+    data, then:
+    * ``imei`` will be copied to ``doc.data._fallbacks.payload`` so it can be
+      used as a payload callsign.
+    * ``iridium_latitude`` and ``iridium_longitude`` will be copied to
+      ``doc.data._fallbacks.latitude`` and ``longitude`` respectively.
+    * ``data`` will be hex decoded before base64 encoding so it can be directly
+      used by the binary parser module.
+    * ``transmit_time`` will be decoded into an RFC3339 timestamp and used for
+      the ``time_created`` field in the receiver section.
 
     Usage::
 
@@ -292,23 +300,37 @@ def http_post_update(doc, req):
         
         data=hello&imei=whatever&so=forth
 
+    This update handler may not currently be used on existing documents or
+    with a PUT request; such requests will fail.
+
     Returns "OK" if everything was fine, otherwise CouchDB will return a
     (hopefully instructive) error.
     """
-    rawdata = base64.b64encode(json.dumps(req["form"]))
+    if doc is not None:
+        resp = {"headers": {"code": 405,
+                            "body": "This update function may only be used to "
+                                    "create new documents via POST, not with  "
+                                    "an existing document ID on a PUT request."
+                           }
+        }
+        return doc, resp
+
+    form = req["form"]
+    tc = ts = now_to_rfc3339_utcoffset()
+    rawdata = base64.b64encode(form["data"])
+    if set(("imei", "momsn", "transmit_time", "iridium_latitude",
+           "iridium_longitude", "iridium_cep", "data")) <= set(form.keys()):
+        form["payload"] = form["imei"]
+        form["latitude"] = form["iridium_latitude"]
+        form["longitude"] = form["iridium_longitude"]
+        rawdata = base64.b64encode(form["data"].decode("hex"))
+        fmt = "%y-%m-%d %H:%M:%S"
+        tc = datetime.datetime.strptime(form["transmit_time"], fmt)
+        tc = timestamp_to_rfc3339_utcoffset(calendar.timegm(tc.timetuple()))
     receiver = req["query"]["from"] if "from" in req["query"] else "HTTP POST"
     doc_id = hashlib.sha256(rawdata).hexdigest()
     doc = {"_id": doc_id, "type": "payload_telemetry",
-           "data": {"_raw": rawdata}, "receivers": {}}
-    ts = now_to_rfc3339_utcoffset()
-    tc = ts
-    if "transmit_time" in req["form"]:
-        try:
-            fmt = "%y-%m-%d %H:%M:%S"
-            tc = datetime.datetime.strptime(req["form"]["transmit_time"], fmt)
-            tc = timestamp_to_rfc3339_utcoffset(time.mktime(tc.timetuple()))
-        except ValueError:
-            tc = ts
+            "data": {"_raw": rawdata, "_fallbacks": form}, "receivers": {}}
     doc["receivers"][receiver] = {"time_created": tc, "time_uploaded": ts,
                                   "time_server": ts}
     return doc, "OK"

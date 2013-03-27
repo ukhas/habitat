@@ -6,6 +6,7 @@
     "properties": {
         "_id": {
             "title": "CouchDB Document ID",
+            "description": "Must be the hex encoding of the sha256 checksum of the contents of data._raw (which is itself base64 encoded data).",
             "type": "string",
             "required": false
         },
