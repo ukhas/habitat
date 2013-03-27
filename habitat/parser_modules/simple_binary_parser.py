@@ -32,7 +32,7 @@ alignment. Note that at present each field must map to precisely one format
 string argument, so while variable length strings are OK, a field cannot have,
 for instance, two integers.
 
-Example ``payload_configuration.sentences[0]``:
+Example ``payload_configuration.sentences[0]``::
 
     {
         "protocol": "simple_binary",
