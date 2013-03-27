@@ -1,4 +1,4 @@
-# Copyright 2010, 2011 (C) Adam Greig
+# Copyright 2010, 2011, 2013 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -174,7 +174,7 @@ class TestParser(object):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
         doc['receivers']['tester']['time_created'] = 1234567890
-        self.mock_module.pre_parse('test string').AndRaise(ValueError)
+        self.mock_module.pre_parse('test string').AndRaise(parser.CantParse)
         self.m.ReplayAll()
         assert self.parser.parse(doc) is None
         self.m.VerifyAll()
@@ -204,6 +204,16 @@ class TestParser(object):
         assert self.parser.parse(doc) is None
         self.m.VerifyAll()
 
+    def test_uses_fallback_callsign(self):
+        fallbacks = {'payload': 'call'}
+        self.mock_module.pre_parse('rawdata').AndRaise(
+            parser.CantExtractCallsign)
+        self.m.ReplayAll()
+        mod = self.parser.modules[0]
+        result = self.parser._get_callsign("rawdata", fallbacks, mod)
+        assert result == "call"
+        self.m.VerifyAll()
+
     def test_parses(self):
         doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
         doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
@@ -221,6 +231,38 @@ class TestParser(object):
         self.m.ReplayAll()
         result = self.parser.parse(doc)
         assert result['data']['_parsed']
+        assert result['data']['_protocol'] == 'Mock'
+        assert result['data']['_parsed'] == {
+            "payload_configuration": "test",
+            "configuration_sentence_index": 0,
+            "time_parsed": "thetime"
+        }
+        assert result['data']['_raw'] == "dGVzdCBzdHJpbmc="
+        assert result['receivers']['tester']['time_created'] == 1234567890
+        assert len(result['receivers']) == 1
+        self.m.VerifyAll()
+
+    def test_uses_fallback_data(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['data']['_fallbacks'] = {'fall': 'back', 'from': 'fallback'}
+        doc['receivers']['tester']['time_created'] = 1234567890
+        config = {'sentences': [{"callsign": "callsign", 'protocol': 'Mock'}]}
+        config = {'payload_configuration': config}
+        config['id'] = 'test'
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.m.StubOutWithMock(parser, 'rfc3339')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign').AndReturn(config)
+        self.mock_module.parse('test string',
+            config['payload_configuration']['sentences'][0]).AndReturn(
+            {'from': 'parser'})
+        parser.rfc3339.now_to_rfc3339_utcoffset().AndReturn("thetime")
+        self.m.ReplayAll()
+        result = self.parser.parse(doc)
+        assert result['data']['_parsed']
+        assert result['data']['fall'] == 'back'
+        assert result['data']['from'] == 'parser'
         assert result['data']['_protocol'] == 'Mock'
         assert result['data']['_parsed'] == {
             "payload_configuration": "test",
@@ -289,7 +331,7 @@ class TestParser(object):
         
         # first module gets used, returns valid callsign & config, no data
         mods = self.parser.modules
-        self.parser._get_callsign("test string",
+        self.parser._get_callsign("test string", {},
             mods[0]).AndReturn("callsign one")
         self.parser._get_config("callsign one", None).AndReturn("config one")
         self.parser._get_data("test string", "callsign one", "config one",
@@ -298,7 +340,7 @@ class TestParser(object):
         # second module gets tried, should be given None as the config as
         # the previously found one is bad. the bug is that it would be given
         # "config one" instead of None.
-        self.parser._get_callsign("test string",
+        self.parser._get_callsign("test string", {},
             mods[1]).AndReturn("callsign two")
         self.parser._get_config("callsign two", None).AndReturn("config two")
         self.parser._get_data("test string", "callsign two", "config two",

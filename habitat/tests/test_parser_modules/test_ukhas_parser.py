@@ -1,4 +1,4 @@
-# Copyright 2010, 2011 (C) Adam Greig
+# Copyright 2010, 2011, 2013 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -24,6 +24,7 @@ from copy import deepcopy
 
 # Mocking the LoadableManager is a heck of a lot of effort. Not worth it.
 from ...loadable_manager import LoadableManager
+from ...parser import CantParse
 from ...parser_modules.ukhas_parser import UKHASParser
 
 # Provide the sensor functions to the parser
@@ -93,7 +94,7 @@ class TestUKHASParser:
                          "$$good,data,\x01\n", "$$missing,newline*CCCC"]
 
         for sentence in bad_sentences:
-            assert_raises(ValueError, self.p.pre_parse, sentence)
+            assert_raises(CantParse, self.p.pre_parse, sentence)
             assert_raises(ValueError, self.p.parse, sentence, base_config)
 
     def test_pre_parse_accepts_good_setences(self):
@@ -111,7 +112,7 @@ class TestUKHASParser:
         callsign_template = "$${0},data*CC\n"
         for callsign in bad_callsigns:
             sentence = callsign_template.format(callsign)
-            assert_raises(ValueError, self.p.pre_parse, sentence)
+            assert_raises(CantParse, self.p.pre_parse, sentence)
 
     def test_pre_parse_accepts_good_callsigns(self):
         good_callsigns = ["good", "g0_0d", "G0--0D", "abcde/f", "ABCDEF",
@@ -126,7 +127,7 @@ class TestUKHASParser:
         checksum_template = "$$good,data*{0}\n"
         for checksum in bad_checksums:
             sentence = checksum_template.format(checksum)
-            assert_raises(ValueError, self.p.pre_parse, sentence)
+            assert_raises(CantParse, self.p.pre_parse, sentence)
 
     def test_pre_parse_accepts_good_checksums(self):
         good_checksums = ["abcd", "ABCD", "abCD", "ab12", "AB12", "aB12", "ab",

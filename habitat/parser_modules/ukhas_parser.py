@@ -51,7 +51,7 @@ this case the message should not include a terminating ``*``.
 
 import re
 
-from ..parser import ParserModule
+from ..parser import ParserModule, CantParse
 from ..utils import checksums
 
 checksum_algorithms = [
@@ -221,9 +221,12 @@ class UKHASParser(ParserModule):
         :exc:`ValueError <exceptions.ValueError>` is raised.
         """
 
-        string, checksum = self._split_basic_format(string)
-        fields = self._extract_fields(string)
-        self._verify_callsign(fields[0])
+        try:
+            string, checksum = self._split_basic_format(string)
+            fields = self._extract_fields(string)
+            self._verify_callsign(fields[0])
+        except (ValueError, KeyError):
+            raise CantParse
         return fields[0]
 
     def parse(self, string, config):
