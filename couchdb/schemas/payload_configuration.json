@@ -8,11 +8,13 @@
         "_id": {
             "title": "CouchDB Document ID",
             "type": "string",
+            "minLength": 1,
             "required": false
         },
         "_rev": {
             "title": "CouchDB Document Revision Number",
             "type": "string",
+            "minLength": 1,
             "required": false
         },
         "_revisions": {
@@ -31,6 +33,7 @@
             "title": "Payload Name",
             "description": "The payload's name. Does not have to be its radio callsign.",
             "required": true,
+            "minLength": 1,
             "type": "string"
         },
         "time_created": {
@@ -59,12 +62,14 @@
                         "title": "Radio Mode",
                         "description": "The transmission mode in use, as a string, e.g. 'USB' or 'FM'.",
                         "type": "string",
+                        "minLength": 1,
                         "required": true
                     },
                     "modulation": {
                         "title": "Telemetry Modulation",
                         "description": "The form of modulation in use, can be anything. genpayload and dl-fldigi recognise 'RTTY', 'DominoEX' and 'Hellschreiber' (case sensitive).",
                         "type": "string",
+                        "minLength": 1,
                         "required": true
                     },
                     "shift": {
@@ -118,6 +123,7 @@
                         "title": "Telemetry Description",
                         "description": "A brief human readable description of this telemetry configuration, just used for UI.",
                         "type": "string",
+                        "minLength": 1,
                         "required": false
                     }
                 }
@@ -138,24 +144,28 @@
                         "title": "Sentence Protocol",
                         "description": "The protocol in use by this telemetry sentence, as a string, e.g., 'UKHAS'.",
                         "type": "string",
+                        "minLength": 1,
                         "required": true
                     },
                     "checksum": {
                         "title": "Sentence Checksum",
                         "description": "Where relevant, the checksum algorithm in use, as a string, e.g., 'crc16-ccitt'.",
                         "type": "string",
+                        "minLength": 1,
                         "required": false
                     },
                     "callsign": {
                         "title": "Payload Callsign",
                         "description": "The callsign of the payload. Used to look up what configuration should be used to parse incoming telemetry.",
                         "type": "string",
+                        "minLength": 1,
                         "required": true
                     },
                     "description": {
                         "title": "Sentence Description",
                         "description": "A brief human readable description of this sentence configuration, just used for UI.",
                         "type": "string",
+                        "minLength": 1,
                         "required": false
                     },
                     "fields": {
@@ -173,18 +183,21 @@
                                     "title": "Field Name",
                                     "description": "The name used to identify this field once parsed, as a string, e.g. 'altitude'.",
                                     "type": "string",
+                                    "minLength": 1,
                                     "required": true
                                 },
                                 "sensor": {
                                     "title": "Field Sensor",
                                     "description": "The sensor module used to parse this field, as a string, e.g. 'base.ascii_int'.",
                                     "type": "string",
+                                    "minLength": 1,
                                     "required": false
                                 },
                                 "format": {
                                     "title": "Field Format",
                                     "description": "When required by the sensor, the format to use parsing this field, e.g. 'dd.dddd'.",
                                     "type": "string",
+                                    "minLength": 1,
                                     "required": false
                                 }
                             }
@@ -219,24 +232,28 @@
                                             "title": "Filter function",
                                             "description": "For normal filters, this is the path of the function to execute, e.g. 'common.numeric_scale'.",
                                             "type": "string",
+                                            "minLength": 1,
                                             "required": false
                                         },
                                         "code": {
                                             "title": "Hotfix Code",
                                             "description": "For hotfix filters, this is the code to execute, specified as the body of a function with `data` as the parameter which should be modified and returned.",
                                             "type": "string",
+                                            "minLength": 1,
                                             "required": false
                                         },
                                         "signature": {
                                             "title": "Hotfix Signature",
                                             "description": "For hotfix filters, this is the signature to validate the code. See documentation for more details.",
                                             "type": "string",
+                                            "minLength": 1,
                                             "required": false
                                         },
                                         "certificate": {
                                             "title": "Hotfix Certificate",
                                             "description": "For hotfix filters, this is the certificate against which the signature should be checked. Given as a string certificate file name.",
                                             "type": "string",
+                                            "minLength": 1,
                                             "required": false
                                         }
                                     }
@@ -264,24 +281,28 @@
                                             "title": "Filter function",
                                             "description": "For normal filters, this is the path of the function to execute, e.g. 'common.numeric_scale'.",
                                             "type": "string",
+                                            "minLength": 1,
                                             "required": false
                                         },
                                         "code": {
                                             "title": "Hotfix Code",
                                             "description": "For hotfix filters, this is the code to execute, specified as the body of a function with `data` as the parameter which should be modified and returned.",
                                             "type": "string",
+                                            "minLength": 1,
                                             "required": false
                                         },
                                         "signature": {
                                             "title": "Hotfix Signature",
                                             "description": "For hotfix filters, this is the signature to validate the code. See documentation for more details.",
                                             "type": "string",
+                                            "minLength": 1,
                                             "required": false
                                         },
                                         "certificate": {
                                             "title": "Hotfix Certificate",
                                             "description": "For hotfix filters, this is the certificate against which the signature should be checked. Given as a string certificate file name.",
                                             "type": "string",
+                                            "minLength": 1,
                                             "required": false
                                         }
                                     }

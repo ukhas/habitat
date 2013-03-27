@@ -8,11 +8,13 @@
         "_id": {
             "title": "CouchDB Document ID",
             "type": "string",
+            "minLength": 1,
             "required": false
         },
         "_rev": {
             "title": "CouchDB Document Revision Number",
             "type": "string",
+            "minLength": 1,
             "required": false
         },
         "_revisions": {
@@ -52,6 +54,7 @@
                     "title": "Listener Callsign",
                     "description": "A callsign for this listener. Does not hae to be an official amateur radio callsign.",
                     "type": "string",
+                    "minLength": 1,
                     "required": true
                 },
                 "latitude": {

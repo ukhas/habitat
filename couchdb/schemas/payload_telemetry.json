@@ -8,11 +8,13 @@
             "title": "CouchDB Document ID",
             "description": "Must be the hex encoding of the sha256 checksum of the contents of data._raw (which is itself base64 encoded data).",
             "type": "string",
+            "minLength": 1,
             "required": false
         },
         "_rev": {
             "title": "CouchDB Document Revision Number",
             "type": "string",
+            "minLength": 1,
             "required": false
         },
         "_revisions": {
@@ -58,6 +60,7 @@
                     "title": "Protocol",
                     "description": "The protocol (habitat parser module) used to parse this transmission. Inserted by the parser.",
                     "type": "string",
+                    "minLength": 1,
                     "required": false
                 },
                 "_parsed": {
@@ -78,6 +81,7 @@
                             "title": "Payload Configuration Document ID",
                             "description": "The document ID of the payload_configuration document used to parse this document.",
                             "required": true,
+                            "minLength": 1,
                             "type": "string"
                         },
                         "configuration_sentence_index": {
@@ -90,6 +94,7 @@
                             "title": "Flight ID",
                             "description": "The document ID of the flight associated with this telemetry, if it was parsed as part of a flight.",
                             "type": "string",
+                            "minLength": 1,
                             "required": false
                         }
                     }
@@ -98,6 +103,7 @@
                     "title": "Payload Callsign",
                     "description": "The callsign of the payload. Inserted by the parser.",
                     "type": "string",
+                    "minLength": 1,
                     "required": false
                 },
                 "sentence_id": {
@@ -173,12 +179,14 @@
                         "title": "Receiver Latest Telemtry",
                         "description": "A CouchDB document ID for this receiver's most recent listener_telemetry document.",
                         "type": "string",
+                        "minLength": 1,
                         "required": false
                     },
                     "latest_listener_information": {
                         "title": "Receiver Latest Info",
                         "description": "A CouchDB document ID for this receiver's most recent listener_information document.",
                         "type": "string",
+                        "minLength": 1,
                         "required": false
                     }
                 }
