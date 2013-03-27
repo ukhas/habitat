@@ -366,7 +366,8 @@ class TestPayloadTelemetry(object):
                          "data": "48656c6c6f20576f726c6420526f636b424c4f434b",
                          "payload": "300234010753370",
                          "latitude": "52.3867",
-                         "longitude": "0.2938"
+                         "longitude": "0.2938",
+                         "time": "10:41:50"
                      }
             },
             "receivers": {

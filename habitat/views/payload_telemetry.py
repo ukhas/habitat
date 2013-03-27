@@ -293,6 +293,8 @@ def http_post_update(doc, req):
       used by the binary parser module.
     * ``transmit_time`` will be decoded into an RFC3339 timestamp and used for
       the ``time_created`` field in the receiver section.
+    * ``transmit_time`` will be decoded into hours, minutes and seconds and
+      copied to ``doc.data._fallbacks.time``.
 
     Usage::
 
@@ -326,6 +328,7 @@ def http_post_update(doc, req):
         rawdata = base64.b64encode(form["data"].decode("hex"))
         fmt = "%y-%m-%d %H:%M:%S"
         tc = datetime.datetime.strptime(form["transmit_time"], fmt)
+        form["time"] = tc.strftime("%H:%M:%S")
         tc = timestamp_to_rfc3339_utcoffset(calendar.timegm(tc.timetuple()))
     receiver = req["query"]["from"] if "from" in req["query"] else "HTTP POST"
     doc_id = hashlib.sha256(rawdata).hexdigest()
