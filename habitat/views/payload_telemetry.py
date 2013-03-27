@@ -89,7 +89,7 @@ def _is_equal_relaxed_floats(a, b):
         # string, int, bool, None, ...
         return a == b
 
-@version(1)
+@version(2)
 @only_validates("payload_telemetry")
 def validate(new, old, userctx, secobj):
     """
@@ -129,8 +129,9 @@ def validate(new, old, userctx, secobj):
         if len(new['receivers']) != 1:
             raise ForbiddenError("New documents must have exactly one"
                                  "receiver.")
-        if new['data'].keys() != ['_raw']:
-            raise ForbiddenError("New documents may only have _raw in data.")
+        if set(new['data'].keys()) != set(('_raw', '_fallbacks')):
+            raise ForbiddenError("New documents may only have _raw and "
+                                 "_fallbacks in data.")
 
 
 def _estimate_time_received(receivers):
