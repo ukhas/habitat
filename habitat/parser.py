@@ -1,4 +1,4 @@
-# Copyright 2010, 2011, 2012 (C) Adam Greig, Daniel Richman
+# Copyright 2010, 2011, 2012, 2013 (C) Adam Greig, Daniel Richman
 #
 # This file is part of habitat.
 #
@@ -94,7 +94,7 @@ class Parser(object):
         This function attempts to determine which of the loaded parser
         modules should be used to parse the message, and which
         payload_configuration document it should be given to do so
-        (if *config* is specified, no attempt will be made to find any
+        (if *initial_config* is specified, no attempt will be made to find any
         other configuration document).
 
         The resulting parsed document is returned, or None is returned if no
@@ -120,6 +120,11 @@ class Parser(object):
         debug_type, debug_data = self._get_debug(raw_data)
         receiver_callsign = doc['receivers'].keys()[0]
 
+        if '_fallbacks' in doc['data']:
+            fallbacks = doc['data']['_fallbacks']
+        else:
+            fallbacks = {}
+
         logger.info("Parsing [{type}] {data!r} ({id}) from {who}"
                     .format(id=doc["_id"], data=debug_data, type=debug_type,
                             who=receiver_callsign))
@@ -127,12 +132,16 @@ class Parser(object):
         for module in self.modules:
             config = copy.deepcopy(initial_config)
             try:
-                callsign = self._get_callsign(raw_data, module)
+                callsign = self._get_callsign(raw_data, fallbacks, module)
                 config = self._get_config(callsign, config)
                 data = self._get_data(raw_data, callsign, config, module)
+                if fallbacks:
+                    for k, v in fallbacks.iteritems():
+                        if k not in data:
+                            data[k] = v
+                break
             except (CantGetCallsign, CantGetConfig, CantGetData):
-                continue
-            break
+                pass
 
         if type(data) is dict:
             doc['data'].update(data)
@@ -157,18 +166,29 @@ class Parser(object):
             statsd.increment("parser.binary_doc")
             return 'b64', base64.b64encode(raw_data)
 
-    def _get_callsign(self, raw_data, module):
+    def _get_callsign(self, raw_data, fallbacks, module):
         """Attempt to find a callsign from the data."""
         try:
             where = "pre_filter"
             raw_data = self.filtering.pre_filter(raw_data, module)
             where = "pre_parse"
             callsign = module["module"].pre_parse(raw_data)
-        except (ValueError, KeyError) as e:
-            logger.debug("Exception in {module} {where}: {e}"
+        except CantParse as e:
+            logger.debug("CantParse exception in {module} {where}: {e}"
                          .format(e=e, module=module['name'], where=where))
-            statsd.increment("parser.parse_exception")
+            statsd.increment("parser.{0}.cantparse".format(module['name']))
             raise CantGetCallsign()
+        except CantExtractCallsign as e:
+            logger.debug("CantExtractCallsign exception in {m} {w}: {e}"
+                         .format(e=e, m=module['name'], w=where))
+            statsd.increment("parser.{0}.cantextractcallsign"
+                             .format(module['name']))
+            if 'payload' in fallbacks:
+                logger.debug("Could not find callsign but using fallback.")
+                statsd.increment("parser.fallback_callsign")
+                return fallbacks['payload']
+            else:
+                raise CantGetCallsign()
         return callsign
 
     def _get_config(self, callsign, config=None):
@@ -459,8 +479,9 @@ class ParserModule(object):
     def pre_parse(self, string):
         """
         Go though *string* and attempt to extract a callsign, returning
-        it as a string. If no callsign could be extracted, a
-        :exc:`ValueError <exceptions.ValueError>` is raised.
+        it as a string. If *string* is not parseable by this module, raise
+        :py:class:`CantParse`. If *string* might be parseable but no callsign
+        could be extracted, raise :py:class:`CantExtractCallsign`.
         """
         raise ValueError()
 
@@ -475,12 +496,28 @@ class ParserModule(object):
 
 
 class CantGetCallsign(Exception):
+    # Parser internal use.
     pass
 
 
 class CantGetConfig(Exception):
+    # Parser internal use.
     pass
 
 
 class CantGetData(Exception):
+    # Parser internal use.
+    pass
+
+
+class CantParse(Exception):
+    """Parser module cannot parse the given sentence."""
+    pass
+
+
+class CantExtractCallsign(Exception):
+    """
+    Parser submodule cannot find a callsign, though in theory might be able
+    to parse the sentence if one were provided.
+    """
     pass

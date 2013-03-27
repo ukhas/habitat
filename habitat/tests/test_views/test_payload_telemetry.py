@@ -138,9 +138,14 @@ class TestPayloadTelemetry(object):
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, {}, {'roles': []}, {})
 
-    def test_new_docs_may_only_have_raw(self):
+    def test_new_docs_may_only_have_raw_and_fallbacks(self):
         mydoc = deepcopy(doc)
+        mydoc['data']['_fallbacks'] = {'a': 1}
+        payload_telemetry.validate(mydoc, {}, {'roles': []}, {})
         mydoc['data']['result'] = 42
+        assert_raises(ForbiddenError, payload_telemetry.validate,
+                mydoc, {}, {'roles': []}, {})
+        del mydoc['data']['_fallbacks']
         assert_raises(ForbiddenError, payload_telemetry.validate,
                 mydoc, {}, {'roles': []}, {})
 
@@ -299,3 +304,87 @@ class TestPayloadTelemetry(object):
         # too many in receivers
         assert_raises(ForbiddenError, f, None, {"body":
             '{"data": {"_raw": "a"}, "receivers": {"a": {}, "b": {}}}'})
+
+    def test_http_post_update(self):
+        formdata = {"data": "$$HELLO", "oob": "blargh"}
+        req = {"form": formdata, "query": {}}
+        result, status = payload_telemetry.http_post_update(None, req)
+        assert status == "OK"
+        assert result == {
+            "_id":
+            "5c38baed0ad4625a39391829a6afb15aedbe03df62b3f72cb58a36ea0a95daf4",
+            "type": "payload_telemetry",
+            "data": {"_raw": "JCRIRUxMTw==",
+                     "_fallbacks": {"data": "$$HELLO", "oob": "blargh"}
+                    },
+            "receivers": {
+                "HTTP POST": result["receivers"]["HTTP POST"]
+            }
+        }
+        assert "time_server" in result["receivers"]["HTTP POST"]
+        assert "time_created" in result["receivers"]["HTTP POST"]
+        assert "time_uploaded" in result["receivers"]["HTTP POST"]
+        assert (result["receivers"]["HTTP POST"]["time_server"] ==
+                result["receivers"]["HTTP POST"]["time_created"] ==
+                result["receivers"]["HTTP POST"]["time_uploaded"])
+        payload_telemetry.validate(doc, None, {'roles': []}, {})
+    
+    def test_http_post_update_querystring_from(self):
+        formdata = {"data": "$$HELLO", "oob": "blargh"}
+        req = {"form": formdata, "query": {"from": "testsuite"}}
+        result, status = payload_telemetry.http_post_update(None, req)
+        assert "testsuite" in result["receivers"]
+        payload_telemetry.validate(doc, None, {'roles': []}, {})
+
+    def test_http_post_update_put_request(self):
+        formdata = {"data": "$$HELLO", "oob": "blargh"}
+        req = {"form": formdata, "query": {}}
+        result, status = payload_telemetry.http_post_update({'oh':'no'}, req)
+        assert result == {'oh':'no'}
+        assert status["headers"]["code"] == 405
+
+    def test_http_post_update_rockblock(self):
+        formdata = {
+            "imei": "300234010753370",
+            "momsn": "12345",
+            "transmit_time": "12-10-10 10:41:50",
+            "iridium_latitude": "52.3867",
+            "iridium_longitude": "0.2938",
+            "iridium_cep": "8",
+            "data": "48656c6c6f20576f726c6420526f636b424c4f434b"
+        }
+        req = {"form": formdata, "query": {"from": "testsuite"}}
+        result, status = payload_telemetry.http_post_update(None, req)
+        assert status == "OK"
+        assert result == {
+            "_id":
+            "b4c31b7ac510a519ef113c3ebdeab8a89bd55df193cc8264098519f6fded82bc",
+            "type": "payload_telemetry",
+            "data": {"_raw": "SGVsbG8gV29ybGQgUm9ja0JMT0NL",
+                     "_fallbacks": {
+                         "imei": "300234010753370",
+                         "momsn": "12345",
+                         "transmit_time": "12-10-10 10:41:50",
+                         "iridium_latitude": "52.3867",
+                         "iridium_longitude": "0.2938",
+                         "iridium_cep": "8",
+                         "data": "48656c6c6f20576f726c6420526f636b424c4f434b",
+                         "payload": "300234010753370",
+                         "latitude": 52.3867,
+                         "longitude": 0.2938,
+                         "time": "10:41:50"
+                     }
+            },
+            "receivers": {
+                "testsuite": result["receivers"]["testsuite"]
+            }
+        }
+        assert "time_server" in result["receivers"]["testsuite"]
+        assert "time_created" in result["receivers"]["testsuite"]
+        assert "time_uploaded" in result["receivers"]["testsuite"]
+        assert (result["receivers"]["testsuite"]["time_server"] ==
+                result["receivers"]["testsuite"]["time_uploaded"])
+        print result["receivers"]["testsuite"]["time_created"]
+        assert (result["receivers"]["testsuite"]["time_created"] ==
+                "2012-10-10T10:41:50Z")
+        payload_telemetry.validate(doc, None, {'roles': []}, {})

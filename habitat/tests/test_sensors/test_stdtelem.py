@@ -96,3 +96,8 @@ class TestStdtelem:
     def test_latitude_range(self):
         config = {"name": "latitude", "format": "dd.dddd"}
         stdtelem.coordinate(config, "100.00")
+
+    def test_binary_timestamp(self):
+        assert stdtelem.binary_timestamp(1349865710) == "10:41:50"
+        assert stdtelem.binary_timestamp(70) == "00:01:10"
+        assert stdtelem.binary_timestamp(3661) == "01:01:01"

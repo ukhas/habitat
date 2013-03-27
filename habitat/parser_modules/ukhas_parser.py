@@ -51,7 +51,7 @@ this case the message should not include a terminating ``*``.
 
 import re
 
-from ..parser import ParserModule
+from ..parser import ParserModule, CantParse
 from ..utils import checksums
 
 checksum_algorithms = [
@@ -138,7 +138,7 @@ class UKHASParser(ParserModule):
         This method checks that the *config* dict contains all the
         required information.
 
-        Raises :py:exc:`ValueError <exceptions.ValueError>` otherwise.
+        Raises :py:exc:`ValueError <exceptions_raw.ValueError>` otherwise.
         """
 
         try:
@@ -149,7 +149,7 @@ class UKHASParser(ParserModule):
             if config["checksum"] not in checksum_algorithms:
                 raise ValueError("Specified checksum algorithm is invalid.")
             if len(config["fields"]) < 1:
-                raise ValueError("Less than one fields are defined.")
+                raise ValueError("No fields are defined.")
             for field in config["fields"]:
                 field["name"]
                 field["sensor"]
@@ -157,7 +157,7 @@ class UKHASParser(ParserModule):
                     raise ValueError("Field name starts with an underscore.")
                 field_names.append(field["name"])
             if len(field_names) != len(set(field_names)):
-                raise ValueError("Duplicate field name")
+                raise ValueError("Duplicate field name.")
         except (KeyError, TypeError):
             raise ValueError("Invalid configuration document.")
 
@@ -210,7 +210,7 @@ class UKHASParser(ParserModule):
             error_type = type(e)
             raise error_type("(field {f}): {e!s}".format(f=name, e=e))
 
-        return [name, data]
+        return name, data
 
     def pre_parse(self, string):
         """
@@ -221,9 +221,12 @@ class UKHASParser(ParserModule):
         :exc:`ValueError <exceptions.ValueError>` is raised.
         """
 
-        string, checksum = self._split_basic_format(string)
-        fields = self._extract_fields(string)
-        self._verify_callsign(fields[0])
+        try:
+            string, checksum = self._split_basic_format(string)
+            fields = self._extract_fields(string)
+            self._verify_callsign(fields[0])
+        except (ValueError, KeyError):
+            raise CantParse
         return fields[0]
 
     def parse(self, string, config):

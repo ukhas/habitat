@@ -6,6 +6,7 @@
     "properties": {
         "_id": {
             "title": "CouchDB Document ID",
+            "description": "Must be the hex encoding of the sha256 checksum of the contents of data._raw (which is itself base64 encoded data).",
             "type": "string",
             "required": false
         },
@@ -39,6 +40,13 @@
                     "type": "string",
                     "format": "base64",
                     "required": true
+                },
+                "_fallbacks": {
+                    "title": "Fallback Data",
+                    "description": "When out of band data is provided by the receiver, such as a callsign or a rough position, it can be placed here and will be used to provide data not parsed from _raw. In particular the `payload' key may be used to indicate a callsign.",
+                    "type": "object",
+                    "required": false,
+                    "additionalProperties": true
                 },
                 "_sentence": {
                     "title": "Raw Data Sentence",

@@ -179,7 +179,7 @@
                                     "title": "Field Sensor",
                                     "description": "The sensor module used to parse this field, as a string, e.g. 'base.ascii_int'.",
                                     "type": "string",
-                                    "required": true
+                                    "required": false
                                 },
                                 "format": {
                                     "title": "Field Format",

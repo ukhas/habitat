@@ -1,4 +1,4 @@
-# Copyright 2011, 2012 (C) Adam Greig
+# Copyright 2011, 2012, 2013 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -22,9 +22,13 @@ Contains schema validation and a view by flight, payload and received time.
 
 import math
 import json
+import base64
 import hashlib
+import datetime
+import calendar
 from couch_named_python import ForbiddenError, UnauthorizedError, version
 from strict_rfc3339 import rfc3339_to_timestamp, now_to_rfc3339_utcoffset
+from strict_rfc3339 import timestamp_to_rfc3339_utcoffset
 from .utils import validate_doc, read_json_schema
 from .utils import only_validates
 
@@ -85,7 +89,7 @@ def _is_equal_relaxed_floats(a, b):
         # string, int, bool, None, ...
         return a == b
 
-@version(1)
+@version(2)
 @only_validates("payload_telemetry")
 def validate(new, old, userctx, secobj):
     """
@@ -125,8 +129,9 @@ def validate(new, old, userctx, secobj):
         if len(new['receivers']) != 1:
             raise ForbiddenError("New documents must have exactly one"
                                  "receiver.")
-        if new['data'].keys() != ['_raw']:
-            raise ForbiddenError("New documents may only have _raw in data.")
+        if set(new['data'].keys()) - set(('_raw', '_fallbacks')):
+            raise ForbiddenError("New documents may only have _raw and/or "
+                                 "_fallbacks in data.")
 
 
 def _estimate_time_received(receivers):
@@ -265,4 +270,71 @@ def add_listener_update(doc, req):
         doc = {"_id": req["id"], "type": "payload_telemetry",
                "data": {"_raw": protodoc["data"]["_raw"]}, "receivers": {}}
     doc["receivers"][callsign] = protodoc["receivers"][callsign]
+    return doc, "OK"
+
+@version(3)
+def http_post_update(doc, req):
+    """
+    Update function: ``payload_telemetry/_update/http_post``
+
+    Creates a new payload_telemetry document with all keys present in the HTTP
+    POST form data available in ``doc.data._fallbacks`` and the ``from`` HTTP
+    querystring key as the receiver callsign if available. The ``data`` field
+    will be base64 encoded and used as ``doc.data._raw``.
+
+    This function has additional functionality specific to RockBLOCKs: if all
+    of the keys ``imei``, ``momsn``, ``transmit_time``, ``iridium_latitude``,
+    ``iridium_longitude``, ``iridium_cep`` and ``data`` are present in the form
+    data, then:
+    * ``imei`` will be copied to ``doc.data._fallbacks.payload`` so it can be
+      used as a payload callsign.
+    * ``iridium_latitude`` and ``iridium_longitude`` will be copied to
+      ``doc.data._fallbacks.latitude`` and ``longitude`` respectively.
+    * ``data`` will be hex decoded before base64 encoding so it can be directly
+      used by the binary parser module.
+    * ``transmit_time`` will be decoded into an RFC3339 timestamp and used for
+      the ``time_created`` field in the receiver section.
+    * ``transmit_time`` will be decoded into hours, minutes and seconds and
+      copied to ``doc.data._fallbacks.time``.
+
+    Usage::
+
+        POST /habitat/_design/payload_telemetry/_update/http_post?from=callsign
+        
+        data=hello&imei=whatever&so=forth
+
+    This update handler may not currently be used on existing documents or
+    with a PUT request; such requests will fail.
+
+    Returns "OK" if everything was fine, otherwise CouchDB will return a
+    (hopefully instructive) error.
+    """
+    if doc is not None:
+        resp = {"headers": {"code": 405,
+                            "body": "This update function may only be used to "
+                                    "create new documents via POST, not with  "
+                                    "an existing document ID on a PUT request."
+                           }
+        }
+        return doc, resp
+
+    form = req["form"]
+    tc = ts = now_to_rfc3339_utcoffset()
+    rawdata = base64.b64encode(form["data"])
+    if set(("imei", "momsn", "transmit_time", "iridium_latitude",
+           "iridium_longitude", "iridium_cep", "data")) <= set(form.keys()):
+        form["payload"] = form["imei"]
+        form["latitude"] = float(form["iridium_latitude"])
+        form["longitude"] = float(form["iridium_longitude"])
+        rawdata = base64.b64encode(form["data"].decode("hex"))
+        fmt = "%y-%m-%d %H:%M:%S"
+        tc = datetime.datetime.strptime(form["transmit_time"], fmt)
+        form["time"] = tc.strftime("%H:%M:%S")
+        tc = timestamp_to_rfc3339_utcoffset(calendar.timegm(tc.timetuple()))
+    receiver = req["query"]["from"] if "from" in req["query"] else "HTTP POST"
+    doc_id = hashlib.sha256(rawdata).hexdigest()
+    doc = {"_id": doc_id, "type": "payload_telemetry",
+            "data": {"_raw": rawdata, "_fallbacks": form}, "receivers": {}}
+    doc["receivers"][receiver] = {"time_created": tc, "time_uploaded": ts,
+                                  "time_server": ts}
     return doc, "OK"
