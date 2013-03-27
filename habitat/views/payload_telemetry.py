@@ -272,7 +272,7 @@ def add_listener_update(doc, req):
     doc["receivers"][callsign] = protodoc["receivers"][callsign]
     return doc, "OK"
 
-@version(2)
+@version(3)
 def http_post_update(doc, req):
     """
     Update function: ``payload_telemetry/_update/http_post``
@@ -324,8 +324,8 @@ def http_post_update(doc, req):
     if set(("imei", "momsn", "transmit_time", "iridium_latitude",
            "iridium_longitude", "iridium_cep", "data")) <= set(form.keys()):
         form["payload"] = form["imei"]
-        form["latitude"] = form["iridium_latitude"]
-        form["longitude"] = form["iridium_longitude"]
+        form["latitude"] = float(form["iridium_latitude"])
+        form["longitude"] = float(form["iridium_longitude"])
         rawdata = base64.b64encode(form["data"].decode("hex"))
         fmt = "%y-%m-%d %H:%M:%S"
         tc = datetime.datetime.strptime(form["transmit_time"], fmt)
