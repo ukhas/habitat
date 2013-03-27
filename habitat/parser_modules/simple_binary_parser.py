@@ -147,7 +147,7 @@ class SimpleBinaryParser(ParserModule):
         fmtstring = ''.join(prefix + [f["format"] for f in config["fields"]])
         
         try:
-            data = struct.unpack(fmtstring, data)
+            data = struct.unpack(str(fmtstring), data)
         except struct.error as exp:
             raise ValueError("Could not unpack binary data: {0}".format(exp))
         
