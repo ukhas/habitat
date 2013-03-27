@@ -17,6 +17,8 @@ parser:
     modules:
         - name: "UKHAS"
           class: "habitat.parser_modules.ukhas_parser.UKHASParser"
+        - name: "simple_binary"
+          class: "habitat.parser_modules.simple_binary_parser.SimpleBinaryParser"
 loadables:
     - name: "sensors.base"
       class: "habitat.sensors.base"

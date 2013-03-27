@@ -20,9 +20,10 @@ Sensor functions for dealing with telemetry.
 """
 
 import math
+import datetime
 from time import strptime
 
-__all__ = ["time", "coordinate"]
+__all__ = ["time", "coordinate", "binary_timestamp"]
 
 
 def time(data):
@@ -87,3 +88,11 @@ def coordinate(config, data):
             raise ValueError("Coordinate out of range (-180 <= x <= 180)")
 
     return coord
+
+def binary_timestamp(data):
+    """
+    Parse a four byte unsigned integer into a time string in the format
+    "HH:MM:SS". Date information is thus discarded.
+    """
+    d = datetime.datetime.utcfromtimestamp(data)
+    return d.strftime("%H:%M:%S")
