@@ -26,4 +26,4 @@ Parser modules for specific protocols.
 """
 
 from . import ukhas_parser
-from . import rockblock_binary_parser
+from . import simple_binary_parser
