@@ -19,7 +19,8 @@ def deploy_code(habitat):
 def install_requirements(habitat):
     pip = "/home/{0}/venv/bin/pip".format(habitat)
     reqs = "/home/{0}/habitat/requirements.txt".format(habitat)
-    sudo("{0} install -r {1}".format(pip, reqs))
+    with settings(sudo_user=habitat):
+        sudo("{0} install -r {1}".format(pip, reqs))
 
 def restart_parser(habitat):
     sudo("supervisorctl restart {0}:{0}-parser".format(habitat))
