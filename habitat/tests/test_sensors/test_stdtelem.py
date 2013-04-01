@@ -19,7 +19,7 @@
 Tests the stdtelem sensor functions
 """
 
-from nose.tools import raises
+from nose.tools import raises, assert_raises
 from ...sensors import stdtelem
 
 
@@ -101,3 +101,13 @@ class TestStdtelem:
         assert stdtelem.binary_timestamp(1349865710) == "10:41:50"
         assert stdtelem.binary_timestamp(70) == "00:01:10"
         assert stdtelem.binary_timestamp(3661) == "01:01:01"
+
+    def test_binary_bcd_time(self):
+        assert stdtelem.binary_bcd_time("\x0D\x22\x06") == "13:34:06"
+        assert stdtelem.binary_bcd_time("\x01\x02\x03") == "01:02:03"
+        assert stdtelem.binary_bcd_time("\x01\x02") == "01:02:00"
+        assert_raises(ValueError, stdtelem.binary_bcd_time, "\x01")
+        assert_raises(ValueError, stdtelem.binary_bcd_time, "\x01\x02\x03\x04")
+        assert_raises(ValueError, stdtelem.binary_bcd_time, "\x18\x02")
+        assert_raises(ValueError, stdtelem.binary_bcd_time, "\x17\x3C")
+        assert_raises(ValueError, stdtelem.binary_bcd_time, "\x17\x02\x3C")
