@@ -22,8 +22,9 @@ These sensors cover simple ASCII representations of numbers and strings.
 """
 
 import math
+import base64
 
-__all__ = ["ascii_int", "ascii_float", "string", "constant"]
+__all__ = ["ascii_int", "ascii_float", "string", "constant", "binary_b64"]
 
 
 def ascii_int(config, data):
@@ -65,3 +66,9 @@ def constant(config, data):
     if data != expect:
         raise ValueError("Expected '{0}', got '{1}'".format(expect, data))
     return None
+
+def binary_b64(data):
+    """
+    Encodes raw binary data to base64.
+    """
+    return base64.b64encode(data)
