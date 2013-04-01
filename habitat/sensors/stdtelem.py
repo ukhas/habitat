@@ -96,3 +96,19 @@ def binary_timestamp(data):
     """
     d = datetime.datetime.utcfromtimestamp(data)
     return d.strftime("%H:%M:%S")
+
+def binary_bcd_time(data):
+    """
+    Parse three bytes (given as a string, format ``3s``) into hours, minutes
+    and seconds in the format "HH:MM:SS".
+    """
+    if len(data) == 2:
+        if ord(data[0]) > 23 or ord(data[1]) > 59:
+            raise ValueError("Data out of range (hours 0-23, mins 0-59)")
+        return "{0:02d}:{1:02d}:00".format(*[ord(c) for c in data])
+    if len(data) == 3:
+        if ord(data[0]) > 23 or ord(data[1]) > 59 or ord(data[2]) > 59:
+            raise ValueError("Data out of range (hours 0-23; mins, secs 0-59)")
+        return "{0:02d}:{1:02d}:{2:02d}".format(*[ord(c) for c in data])
+    else:
+        raise ValueError("Data not correct length (2 or 3 bytes)")
