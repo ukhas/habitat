@@ -23,7 +23,7 @@ import math
 import datetime
 from time import strptime
 
-__all__ = ["time", "coordinate", "binary_timestamp"]
+__all__ = ["time", "coordinate", "binary_timestamp", "binary_bcd_time"]
 
 
 def time(data):
@@ -99,8 +99,8 @@ def binary_timestamp(data):
 
 def binary_bcd_time(data):
     """
-    Parse three bytes (given as a string, format ``3s``) into hours, minutes
-    and seconds in the format "HH:MM:SS".
+    Parse two or three bytes (given as a string, format ``2s`` or ``3s``) into
+    hours, minutes and optionally seconds in the format "HH:MM:SS".
     """
     if len(data) == 2:
         if ord(data[0]) > 23 or ord(data[1]) > 59:
