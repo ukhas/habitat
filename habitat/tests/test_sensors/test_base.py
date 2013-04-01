@@ -75,3 +75,6 @@ class TestBaseSensors:
         assert_raises(ValueError, base.ascii_float, {}, "NaN")
         assert_raises(ValueError, base.ascii_float, {}, "inf")
         assert_raises(ValueError, base.ascii_float, {}, "-inf")
+
+    def test_binary_b64(self):
+        assert base.binary_b64("hello") == "aGVsbG8="
