@@ -85,11 +85,11 @@ Javascript
 .. code-block:: javascript
 
     db = $.couch.db("habitat")
-    db.view("payload_configuration/name_time_created", include_docs: true, success: function(data) {
-        for(payload in data) {
-            console.log("Payload: " + payload.key[0]);
+    db.view("payload_configuration/name_time_created", {include_docs: true, success: function(data) {
+        for(payload in data.rows) {
+            console.log("Payload: " + data.rows[payload].key[0]);
         }
-    });
+    }});
 
 
 View Collation
