@@ -175,15 +175,15 @@
                         "format": "date-time",
                         "required": true
                     },
-                    "latest_listener_telemtry": {
-                        "title": "Receiver Latest Telemtry",
+                    "latest_listener_telemetry": {
+                        "title": "Receiver Latest Telemetry",
                         "description": "A CouchDB document ID for this receiver's most recent listener_telemetry document.",
                         "type": "string",
                         "minLength": 1,
                         "required": false
                     },
                     "latest_listener_information": {
-                        "title": "Receiver Latest Info",
+                        "title": "Receiver Latest Information",
                         "description": "A CouchDB document ID for this receiver's most recent listener_information document.",
                         "type": "string",
                         "minLength": 1,
