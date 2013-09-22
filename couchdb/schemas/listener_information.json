@@ -1,0 +1,63 @@
+{
+    "title": "Listener Information Document",
+    "description": "Stores generic information about a listener.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": true,
+    "properties": {
+        "_id": {
+            "title": "CouchDB Document ID",
+            "type": "string",
+            "minLength": 1,
+            "required": false
+        },
+        "_rev": {
+            "title": "CouchDB Document Revision Number",
+            "type": "string",
+            "minLength": 1,
+            "required": false
+        },
+        "_revisions": {
+            "title": "CouchDB Document Revision History",
+            "type": "object",
+            "required": false
+        },
+        "type": {
+            "title": "Document Type",
+            "description": "Indicates that this is a listener_information document.  Should be set to 'listener_information'.",
+            "type": "string",
+            "pattern": "^listener_information$",
+            "required": true
+        },
+        "time_created": {
+            "title": "Time Created",
+            "description": "An RFC3339 string containing the time this document was created.",
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "time_uploaded": {
+            "title": "Time Uploaded",
+            "description": "An RFC3339 string containing the time this document was uploaded to the database.",
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "data": {
+            "title": "Listener Data",
+            "description": "General data about the listener. Only the callsign property is required.",
+            "type": "object",
+            "required": true,
+            "additionalProperties": true,
+            "properties": {
+                "callsign": {
+                    "title": "Listener Callsign",
+                    "description": "A callsign for this listener. Does not have to be an official amateur radio callsign.",
+                    "type": "string",
+                    "minLength": 1,
+                    "required": true
+                }
+            }
+        }
+    }
+}

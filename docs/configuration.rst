@@ -2,144 +2,79 @@
 Configuration
 ==============
 
-Startup Configuration
-=====================
+Command Line Configuration
+==========================
 
-There are two areas of configuration for habitat. At startup, a CouchDB
-database must be identified by a URI and database name, and a socket file given
-for CGI communications. These can be given either as command line arguments:
-
-.. code-block:: bash
-
-    habitat.py -c http://user:pass@server:port -d database -s /tmp/socket
-
-habitat will also load configuration options from a configuration file. By
-default it will attempt to load /etc/habitat/habitat.cfg but won't complain
-if it can't. The config file location can be overridden on the command line:
+habitat daemons takes zero or one command line arguments: an optional filename
+specifying the configuration to use, or "./habitat.yml" by default:
 
 .. code-block:: bash
 
-    habitat.py -f /etc/habitat/habitat_alternative.cfg
+    ./bin/parser
+    # or
+    ./bin/parser /path/to/config.yml
 
-The format of the configuration file is as follows:
 
-.. code-block:: ini
+Configuration File
+==================
 
-    [habitat]
-    couch_uri = http://username:password@server:port
-    couch_db = database
-    socket_file = /tmp/socket
+The configuration file is written in `YAML <http://www.yaml.org/>`_ as several
+key: value pairs. Various habitat components may require certain pieces of
+configuration; where possible these are all documented here.
 
-Command line flags override options specified in a configuration file.
+habitat-wide Configuration
+--------------------------
 
-Once this information is obtained, habitat can load itself up and the remaining
-configuration is obtained from Couch documents.
+.. code-block:: yaml
 
-Startup Configuration Options
-=============================
+    couch_uri: "http://localhost:5984"
+    couch_db: habitat
+    log_stderr_level: DEBUG
+    log_file_level: INFO
 
-``(short option, long option [, config file option])``
+*couch_uri* and *couch_db* specify how to connect to the CouchDB database. The
+URI may contain authentication details if required.
 
- * ``-f`` / ``--config-file``: Configuration file to load
- * ``-c`` / ``--couch-uri`` / ``couch_uri``: The couch URI to connect to in
-   ``http://username:password@host:port/`` form.
- * ``-d`` / ``--couch-db`` / ``couch_db``: The couch database to use.
- * ``-s`` / ``--socket`` / ``socket_file``: UNIX path; where the SCGI Socket
-   should be created.
- * ``-v`` / ``--verbosity`` / ``log_stderr_level``: How verbose output to
-   the console should be. Options: NONE, DEBUG, INFO, WARN, ERROR, CRITICAL.
- * ``-l`` / ``--log-file`` / ``log_file``: Log file path.
- * ``-e`` / ``--log-level`` / ``log_file_level``: Log file verbosity
-   (same options as verbosity/log_stderr_level)
+*log_stderr_level* and *log_file_level* set the log levels for a log file and
+the stderr output and may be "NONE", "ERROR", "WARN", "INFO" or "DEBUG".
 
-Runtime Configuration
-=====================
-
-Configuration for actual habitat functionality is stored in the Couch database
-and can be dynamically reloaded at runtime to allow for configuration updates
-without restarting the main server.
-
-Currently three documents are checked for configuration data:
-``message_server_config``, ``parser_config`` and ``sensor_manager_config``.
-
-Message Server Configuration
-----------------------------
-
-The message server takes a list of sinks that should be loaded at startup,
-given as Python path strings. An example configuration might be:
-
-.. code-block:: javascript
-
-    "message_server_config": {
-        "_id": "message_server_config",
-        "type": "config",
-        "sinks": [
-            "habitat.parser.ParserSink",
-            "habitat.archive.ArchiveSink"
-        ]
-    }
-
-Parser Configuration
+parser configuration
 --------------------
 
-The parser sink takes a list of parser modules that should be loaded at
-startup, again given as Python path strings but with some additional
-information:
+.. code-block:: yaml
 
-* Name, to identify the parser module when a payload specifies it should be
-  used
-* Pre-filters, Python functions that should be executed before any data is
-  passed to this module
+    parser:
+        certs_dir: "/path/to/certs"
+        modules:
+            - name: "UKHAS"
+              class: "habitat.parser_modules.ukhas_parser.UKHASParser"
+    parserdaemon:
+        log_file: "/path/to/parser/log"
 
-The list of modules is given in priority order, with the first item on the
-list the first module to be attempted. You should sort them in the order
-you are most likely to receive data in.
+Inside the *parser* and *parserdaemon* objects:
 
-An example configuration would be:
+* *certs_dir* specifies where the habitat certificates (used for code signing)
+  are kept
+* *log_file* specifies where the parser daemon should write its log file to
+* *modules* gives a list of all the parser modules that should be loaded, with
+  a name (that must match names used in flight documents) and the Python path
+  to load.
 
-.. code-block:: javascript
+This configuration is used by :doc:`/habitat/habitat/habitat.parser` and
+:doc:`/habitat/habitat/habitat.parser_daemon`.
 
-    "parser_config": {
-        "_id": "parser_config",
-        "type": "config",
-        "modules": [
-            {
-                "name": "UKHAS",
-                "class": "habitat.parser_modules.ukhas_parser.UKHASParser",
-                "pre-filters": [
-                    {
-                        "type": "normal",
-                        "callable": "habitat.filters.dire_emergency"
-                    }
-                ]
-            }
-        ]
-    }
+loadable_manager configuration
+------------------------------
 
-Note that pre-filters should be used only when they cannot be avoided as they
-will be applied to all incoming data regardless of origin. Individual payloads
-can configure intermediate and post-parse filters for manipulating their data
-server-side and should be used in preference to pre-filters.
+.. code-block:: yaml
+    
+    loadables:
+        - name: "sensors.base"
+          class: "habitat.sensors.base"
+        - name: "sensors.stdtelem"
+          class: "habitat.sensors.stdtelem"
+        - name: "filters.common"
+          class: "habitat.filters"
 
-See :doc:`filters` for more information on filters.
-
-Sensor Manager Config
----------------------
-
-The sensor manager loads a selection of sensor function libaries at startup
-(in addition to the built-in *base* library). Each library loaded is assigned
-a shortcut.
-
-The example below loads the module habitat.sensors.stdtelem and assigns it
-the shortcut "stdtelem". This means that the function
-``habitat.sensors.stdtelem.time`` can be used simply as ``stdtelem.time``.
-
-
-.. code-block:: javascript
-
-    "sensor_manager_config": {
-        "_id": "sensor_manager_config",
-        "type": "config",
-        "libraries": {"stdtelem": "habitat.sensors.stdtelem"}
-    }
-
+Inside the *loadables* object is a list of modules to load and the short name
+they should be loaded against. This is used by :doc:`/habitat/habitat/habitat.loadable_manager`.

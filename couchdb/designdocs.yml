@@ -1,0 +1,42 @@
+flight:
+    validate_doc_update: habitat.views.flight.validate
+    views:
+        end_start_including_payloads: habitat.views.flight.end_start_including_payloads_map
+        launch_time_including_payloads: habitat.views.flight.launch_time_including_payloads_map
+        unapproved_name_including_payloads: habitat.views.flight.unapproved_name_including_payloads_map
+        all_name_time_created: habitat.views.flight.all_name_map
+
+habitat:
+    validate_doc_update: habitat.views.habitat.validate
+
+listener_information:
+    validate_doc_update: habitat.views.listener_information.validate
+    views:
+        callsign_time_created: habitat.views.listener_information.callsign_time_created_map
+        time_created_callsign: habitat.views.listener_information.time_created_callsign_map
+
+listener_telemetry:
+    validate_doc_update: habitat.views.listener_telemetry.validate
+    views:
+        callsign_time_created: habitat.views.listener_telemetry.callsign_time_created_map
+        time_created_callsign: habitat.views.listener_telemetry.time_created_callsign_map
+
+payload_configuration:
+    validate_doc_update: habitat.views.payload_configuration.validate
+    views:
+        name_time_created: habitat.views.payload_configuration.name_time_created_map
+        callsign_time_created_index: habitat.views.payload_configuration.callsign_time_created_index_map
+        
+payload_telemetry:
+    validate_doc_update: habitat.views.payload_telemetry.validate
+    views:
+        flight_payload_time: habitat.views.payload_telemetry.flight_payload_time_map
+        payload_time: habitat.views.payload_telemetry.payload_time_map
+        time: habitat.views.payload_telemetry.time_map
+    updates:
+        add_listener: habitat.views.payload_telemetry.add_listener_update
+        http_post: habitat.views.payload_telemetry.http_post_update
+
+parser:
+    filters:
+        unparsed: habitat.views.parser.unparsed_filter

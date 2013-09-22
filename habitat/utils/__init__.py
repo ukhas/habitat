@@ -25,6 +25,13 @@ Various utilities for general use by ``habitat``.
     habitat.utils.dynamicloader
     habitat.utils.filtertools
     habitat.utils.startup
+    habitat.utils.immortal_changes
+    habitat.utils.quick_traceback
 """
 
-__all__ = ["checksums", "dynamicloader", "filtertools", "startup"]
+from . import checksums
+from . import dynamicloader
+from . import filtertools
+from . import startup
+from . import immortal_changes
+from . import quick_traceback

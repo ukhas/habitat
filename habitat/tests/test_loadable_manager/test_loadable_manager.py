@@ -40,6 +40,7 @@ empty_config = {
 
 cfg_c = {"abracadabra": "15802"}
 
+
 class TestLoadableManager(object):
     def setup(self):
         self.mocker = mox.Mox()
@@ -49,9 +50,9 @@ class TestLoadableManager(object):
         self.mocker.UnsetStubs()
 
     def test_init_loads_db_listed_modules_and_works(self):
-        loadable_manager.dynamicloader.load(example_path+"_a").AndReturn(
+        loadable_manager.dynamicloader.load(example_path + "_a").AndReturn(
             example_loadable_library_a)
-        loadable_manager.dynamicloader.load(example_path+"_b").AndReturn(
+        loadable_manager.dynamicloader.load(example_path + "_b").AndReturn(
             example_loadable_library_b)
         f_a = example_loadable_library_a.format_a
         f_b = example_loadable_library_a.format_b
@@ -73,9 +74,9 @@ class TestLoadableManager(object):
 
     @raises(ValueError)
     def test_errors_bubble_up(self):
-        loadable_manager.dynamicloader.load(example_path+"_a").AndReturn(
+        loadable_manager.dynamicloader.load(example_path + "_a").AndReturn(
             example_loadable_library_a)
-        loadable_manager.dynamicloader.load(example_path+"_b").AndReturn(
+        loadable_manager.dynamicloader.load(example_path + "_b").AndReturn(
             example_loadable_library_b)
         f_d = example_loadable_library_b.format_d
         loadable_manager.dynamicloader.hasnumargs(f_d, 1).AndReturn(False)
@@ -88,9 +89,9 @@ class TestLoadableManager(object):
         self.mocker.ResetAll()
 
     def test_run_passes_config_dict(self):
-        loadable_manager.dynamicloader.load(example_path+"_a").AndReturn(
+        loadable_manager.dynamicloader.load(example_path + "_a").AndReturn(
             example_loadable_library_a)
-        loadable_manager.dynamicloader.load(example_path+"_b").AndReturn(
+        loadable_manager.dynamicloader.load(example_path + "_b").AndReturn(
             example_loadable_library_b)
         f_c = example_loadable_library_b.format_c
         loadable_manager.dynamicloader.hasnumargs(f_c, 1).AndReturn(False)
@@ -104,9 +105,9 @@ class TestLoadableManager(object):
 
     @raises(ValueError)
     def test_cannot_use_loadable_not_in_all(self):
-        loadable_manager.dynamicloader.load(example_path+"_a").AndReturn(
+        loadable_manager.dynamicloader.load(example_path + "_a").AndReturn(
             example_loadable_library_a)
-        loadable_manager.dynamicloader.load(example_path+"_b").AndReturn(
+        loadable_manager.dynamicloader.load(example_path + "_b").AndReturn(
             example_loadable_library_b)
         self.mocker.ReplayAll()
 

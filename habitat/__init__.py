@@ -16,28 +16,41 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-habitat is a web application for tracking the flight path of high altitude
+The top level habitat package.
+
+habitat is an application for tracking the flight path of high altitude
 balloons, relying on a network of users with radios sending in received
 telemetry strings which are parsed into position information and displayed
 on maps.
+
+See http://habitat.habhub.org for more information.
 
 .. autosummary::
     :toctree: habitat
 
     habitat.parser
+    habitat.parser_daemon
     habitat.parser_modules
     habitat.loadable_manager
     habitat.sensors
     habitat.filters
     habitat.uploader
     habitat.utils
+    habitat.views
 """
 
 __name__ = "habitat"
 __version__ = "0.2.0"
 __authors__ = "Adam Greig, Daniel Richman"
-__short_copyright__ = "2010, 2011 " + __authors__
+__short_copyright__ = "2010-2012 " + __authors__
 __copyright__ = "Copyright " + __short_copyright__
 
-__all__ = ["filters", "parser", "parser_modules", "loadable_manager",
-           "sensors", "uploader", "utils"]
+from . import filters
+from . import parser
+from . import parser_daemon
+from . import parser_modules
+from . import loadable_manager
+from . import sensors
+from . import uploader
+from . import utils
+from . import views

@@ -19,16 +19,19 @@
 
 import sys
 import logging
+import logging.handlers
 import yaml
 
 logger = logging.getLogger("habitat.utils.startup")
 
+
 def load_config():
     """
-    loads the habitat config
+    Loads the habitat config.
 
-    If a single argument is provided (sys.argv) then that yml file is used,
-    otherwise './habitat.yml' is used.
+    The path to the configuration YAML file can be specified as the single
+    command line argument (read from ``sys.argv[1]``) or will default to
+    ``./habitat.yml``.
     """
 
     if len(sys.argv) == 2:
@@ -39,37 +42,48 @@ def load_config():
         raise ValueError("Expected one command line argument only.")
 
     with open(filename) as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
 
     return config
 
-def _get_logging_level(config, key):
-    if key not in config:
-        return None
 
-    value = config[key].upper()
+def _get_logging_level(value):
+    value = value.upper()
 
     if value == "NONE":
         return None
     else:
         return getattr(logging, value)
 
+
 class null_logger(logging.Handler):
-    """a python logging handler that discards log messages silently"""
+    """A python logging handler that discards log messages silently."""
     def emit(self, record):
         pass
+
+
+_format_email = \
+"""%(levelname)s from logger %(name)s (thread %(threadName)s)
+
+Time:       %(asctime)s
+Location:   %(pathname)s:%(lineno)d
+Module:     %(module)s
+Function:   %(funcName)s
+
+%(message)s"""
+
+_format_string = \
+"[%(asctime)s] %(levelname)s %(name)s %(threadName)s: %(message)s"
+
 
 def setup_logging(config, daemon_name):
     """
     **setup_logging** initalises the :py:mod:`Python logging module <logging>`.
 
     It will initalise the 'habitat' logger and creates one, two, or no
-    Handlers, depending on the values provided for *log_file_level* and
-    *log_stderr_level* in **config**.
+    Handlers, depending on the values provided for ``log_file_level`` and
+    ``log_stderr_level`` in *config*.
     """
-
-    formatstring = "[%(asctime)s] %(levelname)s %(name)s %(threadName)s: " + \
-                   "%(message)s"
 
     root_logger = logging.getLogger()
 
@@ -81,22 +95,39 @@ def setup_logging(config, daemon_name):
     logging.getLogger("restkit").setLevel(logging.WARNING)
 
     have_handlers = False
-    stderr_level = _get_logging_level(config, "log_stderr_level")
-    file_level = _get_logging_level(config, "log_file_level")
+    levels = config["log_levels"]
+
+    stderr_level = _get_logging_level(levels.get("stderr", "NONE"))
+    file_level = _get_logging_level(levels.get("file", "NONE"))
+    email_level = _get_logging_level(levels.get("email", "NONE"))
 
     if stderr_level != None:
         stderr_handler = logging.StreamHandler()
-        stderr_handler.setFormatter(logging.Formatter(formatstring))
+        stderr_handler.setFormatter(logging.Formatter(_format_string))
         stderr_handler.setLevel(stderr_level)
         root_logger.addHandler(stderr_handler)
         have_handlers = True
 
     if file_level != None:
         file_name = config[daemon_name]["log_file"]
-        file_handler = logging.FileHandler(file_name)
-        file_handler.setFormatter(logging.Formatter(formatstring))
+        file_handler = logging.handlers.WatchedFileHandler(file_name)
+        file_handler.setFormatter(logging.Formatter(_format_string))
         file_handler.setLevel(file_level)
         root_logger.addHandler(file_handler)
+        have_handlers = True
+
+    if email_level != None:
+        emails_to = config["log_emails"]["to"]
+        emails_from = config["log_emails"]["from"]
+        email_server = config["log_emails"]["server"]
+        if not isinstance(emails_to, list):
+            emails_to = [emails_to]
+
+        mail_handler = logging.handlers.SMTPHandler(
+                email_server, emails_from, emails_to, daemon_name)
+        mail_handler.setLevel(email_level)
+        mail_handler.setFormatter(logging.Formatter(_format_email))
+        root_logger.addHandler(mail_handler)
         have_handlers = True
 
     if not have_handlers:
@@ -104,13 +135,14 @@ def setup_logging(config, daemon_name):
         # If we're meant to be totally silent...
         root_logger.addHandler(null_logger())
 
-    logger.info("Log initalised")
+    logger.info("Log initialised")
+
 
 def main(main_class):
     """
-    main function for habitat daemons. Loads config, sets up logging, and runs
+    Main function for habitat daemons. Loads config, sets up logging, and runs.
 
-    *main_class.__name__.lower()* will be used as the config sub section
+    ``main_class.__name__.lower()`` will be used as the config sub section
     and passed as *daemon_name*.
 
     *main_class* specifies a class from which an object will be created.

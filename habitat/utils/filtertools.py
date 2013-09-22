@@ -19,19 +19,43 @@
 
 from . import checksums
 
+
 class UKHASChecksumFixer(object):
     """
-    A context manager which helps filters modify data that has been
-    checksummed. Tell it what the original protocol was and pass a dict
-    containing the data to be mangled in the 'data' key, then use the
-    assigned value after entry as a string ignoring its checksum and modify
-    it as you please. On exit, if the orignal checksum was valid a new
-    and valid checksum will be written to the modified data, otherwise
-    the original sentence is placed back into the dict.
+    A utility to help filters modify data that has been checksummed. It may be
+    used as a context manager or via a class method.
+
+    For use as a context manager:
+
+    Specify the protocol in use with *protocol* and pass in the string being
+    modified as ``data["data"]``, then use the return value as a dictionary
+    whose ``data`` key you can modify as you desire. On exit, the checksum of
+    that string is then updated if the original string's checksum was valid.
+
+
+    If the original checksum was invalid, the original string is output
+    instead.
+
+    >>> data = {"data": "$$hello,world*E408"}
+    >>> with UKHASChecksumFixer('crc16-ccitt', data) as fixer:
+    ...     fixer["data"] = "$$hi,there,world*E408"
+    ...
+    >>> fixer["data"]
+    '$$hi,there,world*39D3'
+
+    For direct calling as a class method:
+
+    Call UKHASChecksumFixer.fix(protocol, old_data, new_data). The function
+    will either return new_data with a fixed checksum if the original checksum
+    was valid, or it will return the old_data if the original checksum was
+    invalid.
+
+    >>> UKHASChecksumFixer.fix('crc16-ccitt',
+    ...                        "$$hello,world*E408", "$$hi,there,world*E408")
+    '$$hi,there,world*39D3'
     """
 
     def __init__(self, protocol, data):
-        """Store the original data and our protocol"""
         self.original_data = data["data"]
         self.data = data
         self.protocol = protocol
@@ -42,34 +66,45 @@ class UKHASChecksumFixer(object):
 
     def __exit__(self, type, value, traceback):
         """Verify the checksum, update if appropriate"""
-        if self.protocol != "none":
-            checksum_data = self._split_str(self.original_data)
-            if checksum_data[1].upper() == self._sum(checksum_data[0]):
-                new_string = self._split_str(self.data["data"])[0]
-                new_sum = self._sum(new_string)
-                self.data["data"] = '$$' + new_string + '*' + new_sum
-            else:
-                self.data["data"] = self.original_data
+        self.data["data"] = self.fix(self.protocol, self.original_data,
+                                     self.data["data"])
 
-    def _sum(self, data):
-        if self.protocol == "crc16-ccitt":
+    @classmethod
+    def fix(cls, protocol, old_data, new_data):
+        if protocol != "none":
+            check_data = cls._split_str(protocol, old_data)
+            if check_data[1].upper() == cls._sum(protocol, check_data[0]):
+                new_str = cls._split_str(protocol, new_data)[0]
+                new_sum = cls._sum(protocol, new_str)
+                return "$${0}*{1}\n".format(new_str, new_sum)
+            else:
+                return old_data
+        else:
+            return new_data
+
+    @classmethod
+    def _sum(cls, protocol, data):
+        if protocol == "crc16-ccitt":
             return checksums.crc16_ccitt(data)
-        elif self.protocol == "xor":
+        elif protocol == "xor":
             return checksums.xor(data)
-        elif self.protocol == "fletcher-16":
+        elif protocol == "fletcher-16":
             return checksums.fletcher_16(data)
-        elif self.protocol == "fletcher-16-256":
+        elif protocol == "fletcher-16-256":
             return checksums.fletcher_16_256(data)
         else:
             return ""
 
-    def _sum_length(self):
-        if self.protocol == "xor":
+    @classmethod
+    def _sum_length(cls, protocol):
+        if protocol == "xor":
             return 2
-        elif self.protocol in ["crc16-ccitt", "fletcher-16",
-                               "fletcher-16-256"]:
+        elif protocol in ["crc16-ccitt", "fletcher-16", "fletcher-16-256"]:
             return 4
+        else:
+            return 0
 
-    def _split_str(self, data):
-        l = self._sum_length()
-        return (data[2:-(l + 1)], data[-l:])
+    @classmethod
+    def _split_str(cls, protocol, data):
+        l = cls._sum_length(protocol)
+        return (data[2:-(l + 2)], data[-(l + 1):-1])

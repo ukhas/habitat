@@ -1,3 +1,5 @@
+.. _ukhas-parser-config:
+
 ==========================
 UKHAS Parser Configuration
 ==========================
@@ -11,6 +13,12 @@ on how what configuration settings the UKHAS parser module expects.
 
 Parser module configuration is given in the "sentence" dictionary of the
 payload dictionary in a flight document.
+
+Generating Payload Configuration Documents
+==========================================
+
+The easiest and recommended way to generate configuration documents is using
+the web tool `genpayload <http://habitat.habhub.org/genpayload>`_.
 
 Standard UKHAS Sentences
 ========================
@@ -32,55 +40,9 @@ fields may be configured per-payload.
 Parser Module Configuration
 ===========================
 
-The parser module expects to be given the payload name, the checksum algorithm,
+The parser module expects to be given the callsign, the checksum algorithm,
 the protocol name ("UKHAS") and a list of fields, each of which should at
 least specify the field name and data type.
-
-For example, a configuration for the above typical sentence might be:
-
-.. code-block:: javascript
-
-    "habitat": {
-        "sentence": {
-            "protocol": "UKHAS",
-            "checksum": "crc16-ccitt",
-            "fields": [
-                {
-                    "name": "message_count",
-                    "type": "int"
-                }, {
-                    "name": "time",
-                    "type": "time"
-                }, {
-                    "name": "latitude",
-                    "type": "coordinate",
-                    "format": "dd.dddd"
-                }, {
-                    "name": "longitude",
-                    "type": "coordinate",
-                    "format": "dd.dddd"
-                }, {
-                    "name": "altitude",
-                    "type": "int"
-                }
-            ]
-        },
-        "filters": {
-            "intermediate": [
-                {
-                    "type": "normal",
-                    "callable": "habitat.filters.upper_case"
-                }
-            ], "post": [
-            ]
-        }
-    }
-
-Payload Name
-------------
-
-The payload name is given as the key to the configuration dictionary, in
-the above case the string "habitat" on the first line.
 
 Checksum Algorithms
 -------------------
@@ -113,7 +75,62 @@ the ``*``.
 Field Names
 -----------
 
-Field names may be any string that does not start with an underscore.
+Field names may be any string that does not start with an underscore. It is
+recommended that they follow the basic pattern of
+``prefix[_suffix[_suffix[...]]]`` to aid presentation: for example,
+``temperature_internal`` and ``temperature_external`` could then be grouped
+together automatically by a user interface.
+
+In addition, several common field names have been standardised on, and their
+use is strongly encouraged:
+
+.. list-table::
+    :header-rows: 1
+
+    * - **Field**
+      - **Name To Use**
+      - **Notes**
+    * - **Sentence ID** (aka count, message count, sequence number)
+      - ``sentence_id``
+      - An increasing integer
+    * - **Time**
+      - ``time``
+      - Something like HH:MM:SS or HHMMSS or HHMM or HH:MM.
+    * - **Latitude**
+      - ``latitude``
+      - Will be converted to decimal degrees based on *format* field.
+    * - **Longitude**
+      - ``longitude``
+      - Will be converted to decimal degrees based on *format* field.
+    * - **Altitude**
+      - ``altitude``
+      - In, or converted to, metres.
+    * - **Temperature**
+      - ``temperature``
+      - Should specify a suffix, such as ``_internal`` or ``_external``. In or
+        converted to degrees Celsius.
+    * - **Satellites In View**
+      - ``satellites``
+      -
+    * - **Battery Voltage**
+      - ``battery``
+      - Suffixes allowable, e.g., ``_backup``, ``_cutdown``, but without the
+        suffix it is treated as the main battery voltage. In volts.
+    * - **Pressure**
+      - ``pressure``
+      - Suffixes allowable, e.g., ``_balloon``. Should be in or converted to
+        Pa.
+    * - **Speed**
+      - ``speed``
+      - For speed over the ground. Should be converted to m/s (SI units).
+    * - **Ascent Rate**
+      - ``ascentrate``
+      - For vertical speed. Should be m/s.
+
+Standard user interfaces will use title case to render these names, so
+``flight_mode`` would become ``Flight Mode`` and so on. Some exceptions may be
+made in the case of the common field names specified above.
+
 
 Field Types
 -----------
@@ -127,6 +144,8 @@ Supported types are:
 * ``int``: a value that should be interpreted as an integer.
 * ``time``: a field containing the time as either ``HH:MM:SS`` or just
   ``HH:MM``. Will be interpreted into a time representation.
+* ``time``: a field containing the time of day, in one of the following
+  formats: ``HH:MM:SS``, ``HHMMSS``, ``HH:MM``, ``HHMM``.
 * ``coordinate``: a coordinate, see below
 
 Coordinate Fields
@@ -138,12 +157,22 @@ is used to define how the coordinate should be parsed. Options are:
 
 * ``dd.dddd``: decimal degrees, with any number of digits after the
   decimal point. Leading zeros are allowed.
-* ``ddmm.mm``: degrees and decimal minutes, with the first two digits
-  taken as the degrees and the rest as the minutes. Degrees must be
-  padded to two digits, so for instance 2 degrees and 12.3 minutes
-  should be transmitted as ``0212.3``.
+* ``ddmm.mm``: degrees and decimal minutes, with the two digits just before the
+  decimal point representing the number of minutes and all digits before those
+  two representing the number of degrees.
 
 In both cases, the number can be prefixed by a space or + or - sign.
+
+Please note that the the options reflect the style of coordinate (degrees only
+vs degrees and minutes), not the number of digits in either case.
+
+Units
+-----
+
+Received data may use any convenient unit, however it is strongly recommended
+that filters (see below) be used to convert the incoming data into SI units.
+These then allow for standardisation and ease of display on user interface
+layers.
 
 Filters
 -------

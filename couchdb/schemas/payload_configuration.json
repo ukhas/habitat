@@ -1,0 +1,324 @@
+{
+    "title": "Payload Configuration Document",
+    "description": "Stores configuration data for one payload including radio transmission information and telemetry format.",
+    "type": "object",
+    "additionalProperties": "false",
+    "required": true,
+    "properties": {
+        "_id": {
+            "title": "CouchDB Document ID",
+            "type": "string",
+            "minLength": 1,
+            "required": false
+        },
+        "_rev": {
+            "title": "CouchDB Document Revision Number",
+            "type": "string",
+            "minLength": 1,
+            "required": false
+        },
+        "_revisions": {
+            "title": "CouchDB Document Revision History",
+            "type": "object",
+            "required": false
+        },
+        "type": {
+            "title": "Document Type",
+            "description": "Indicates that this is a payload_configuration document. Should be set to 'payload_configuration'.",
+            "type": "string",
+            "pattern": "^payload_configuration$",
+            "required": true
+        },
+        "name": {
+            "title": "Payload Name",
+            "description": "The payload's name. Does not have to be its radio callsign.",
+            "required": true,
+            "minLength": 1,
+            "type": "string"
+        },
+        "time_created": {
+            "title": "Document Creation Date",
+            "description": "The date at which this document was created. Used for fetching the latest version of a configuration document. In RFC3339.",
+            "type": "date-time",
+            "required": true
+        },
+        "transmissions": {
+            "title": "Radio Transmissions",
+            "description": "A list of all the radio formats in use by the payload.",
+            "type": "array",
+            "items": {
+                "title": "Radio Transmission Details",
+                "description": "Information on one set of radio settings in use by the payload.",
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                    "frequency": {
+                        "title": "Radio Frequency",
+                        "description": "The transmission frequency in use, as a number in Hz.",
+                        "type": "number",
+                        "required": true
+                    },
+                    "mode": {
+                        "title": "Radio Mode",
+                        "description": "The transmission mode in use, as a string, e.g. 'USB' or 'FM'.",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": true
+                    },
+                    "modulation": {
+                        "title": "Telemetry Modulation",
+                        "description": "The form of modulation in use, can be anything. genpayload and dl-fldigi recognise 'RTTY', 'DominoEX' and 'Hellschreiber' (case sensitive).",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": true
+                    },
+                    "shift": {
+                        "title": "Telemetry Shift",
+                        "description": "The frequency shift used by the telemetry, as a number in Hz (RTTY only).",
+                        "type": "number",
+                        "required": false
+                    },
+                    "encoding": {
+                        "title": "Telemetry Encoding",
+                        "description": "The encoding scheme used by the telemetry, as a string, e.g. 'ASCII-8' (RTTY only).",
+                        "type": "string",
+                        "required": false,
+                        "enum": ["BAUDOT", "ASCII-7", "ASCII-8"]
+                    },
+                    "baud": {
+                        "title": "Telemetry Baud Rate",
+                        "description": "The baud rate used by the telemetry, as a number (RTTY only).",
+                        "type": "number",
+                        "required": false
+                    },
+                    "parity": {
+                        "title": "Telemetry Parity",
+                        "description": "The parity used by the telemetry, as a string, e.g. 'none' or 'even' (RTTY only).",
+                        "type": "string",
+                        "required": false,
+                        "enum": ["even", "odd", "none"]
+                    },
+                    "stop": {
+                        "title": "Telemetry Stop Bits",
+                        "description": "The number of stop bits used by the telemetry, as a number (RTTY only).",
+                        "type": "number",
+                        "required": false,
+                        "enum": [1, 1.5, 2]
+                    },
+                    "speed": {
+                        "title": "Telemetry Speed",
+                        "description": "The speed setting used by the telemetry (DominoEX only).",
+                        "type": "number",
+                        "required": false,
+                        "enum": [4, 5, 8, 11, 16, 22]
+                    },
+                    "variant": {
+                        "title": "Telemetry Variant",
+                        "description": "The variant of the modulation used (Hellschreiber only).",
+                        "type": "string",
+                        "required": false,
+                        "enum": ["feldhell", "slowhell"]
+                    },
+                    "description": {
+                        "title": "Telemetry Description",
+                        "description": "A brief human readable description of this telemetry configuration, just used for UI.",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": false
+                    }
+                }
+            }
+        },
+        "sentences": {
+            "title": "Telemetry Sentences",
+            "description": "A list of all the sentence formats in use by the payload.",
+            "type": "array",
+            "items": {
+                "title": "Telemetry Sentence Details",
+                "description": "Information on the format of transmitted telemetry.",
+                "type": "object",
+                "required": true,
+                "additionalProperties": true,
+                "properties": {
+                    "protocol": {
+                        "title": "Sentence Protocol",
+                        "description": "The protocol in use by this telemetry sentence, as a string, e.g., 'UKHAS'.",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": true
+                    },
+                    "checksum": {
+                        "title": "Sentence Checksum",
+                        "description": "Where relevant, the checksum algorithm in use, as a string, e.g., 'crc16-ccitt'.",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": false
+                    },
+                    "callsign": {
+                        "title": "Payload Callsign",
+                        "description": "The callsign of the payload. Used to look up what configuration should be used to parse incoming telemetry.",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": true
+                    },
+                    "description": {
+                        "title": "Sentence Description",
+                        "description": "A brief human readable description of this sentence configuration, just used for UI.",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": false
+                    },
+                    "fields": {
+                        "title": "Sentence Fields",
+                        "description": "The fields this sentence is made up of, as an array, taken in order.",
+                        "required": false,
+                        "type": "array",
+                        "items": {
+                            "title": "Sentence Field",
+                            "description": "One field in the sentence.",
+                            "type": "object",
+                            "additionalProperties": true,
+                            "properties": {
+                                "name": {
+                                    "title": "Field Name",
+                                    "description": "The name used to identify this field once parsed, as a string, e.g. 'altitude'.",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "required": true
+                                },
+                                "sensor": {
+                                    "title": "Field Sensor",
+                                    "description": "The sensor module used to parse this field, as a string, e.g. 'base.ascii_int'.",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "required": false
+                                },
+                                "format": {
+                                    "title": "Field Format",
+                                    "description": "When required by the sensor, the format to use parsing this field, e.g. 'dd.dddd'.",
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "required": false
+                                }
+                            }
+                        }
+                    },
+                    "filters": {
+                        "title": "Payload Filters",
+                        "description": "Filters are applied during or after data parsing to help munge data back to how it should be. They're specified here.",
+                        "type": "object",
+                        "required": false,
+                        "additionalProperties": false,
+                        "properties": {
+                            "intermediate": {
+                                "title": "Intermediate Filters",
+                                "description": "These filters are applied once raw data has been identified as belonging to this payload, before parsing.",
+                                "type": "array",
+                                "required": false,
+                                "items": {
+                                    "title": "Filter",
+                                    "description": "A filter munges data into what it should be. Additional configuration properties may be specified for specific filters.",
+                                    "type": "object",
+                                    "additionalProperties": true,
+                                    "properties": {
+                                        "type": {
+                                            "title": "Filter Type",
+                                            "description": "Either 'normal' for standard, pre-written filters, or 'hotfix' for code executed from this document.",
+                                            "type": "string",
+                                            "required": true,
+                                            "enum": ["normal", "hotfix"]
+                                        },
+                                        "filter": {
+                                            "title": "Filter function",
+                                            "description": "For normal filters, this is the path of the function to execute, e.g. 'common.numeric_scale'.",
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "required": false
+                                        },
+                                        "code": {
+                                            "title": "Hotfix Code",
+                                            "description": "For hotfix filters, this is the code to execute, specified as the body of a function with `data` as the parameter which should be modified and returned.",
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "required": false
+                                        },
+                                        "signature": {
+                                            "title": "Hotfix Signature",
+                                            "description": "For hotfix filters, this is the signature to validate the code. See documentation for more details.",
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "required": false
+                                        },
+                                        "certificate": {
+                                            "title": "Hotfix Certificate",
+                                            "description": "For hotfix filters, this is the certificate against which the signature should be checked. Given as a string certificate file name.",
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "required": false
+                                        }
+                                    }
+                                }
+                            },
+                            "post": {
+                                "title": "Post Filters",
+                                "description": "These filters are applied once the sentence has been parsed, and may be used to alter the resulting output data.",
+                                "type": "array",
+                                "required": false,
+                                "items": {
+                                    "title": "Filter",
+                                    "description": "A filter munges data into what it should be. Additional configuration properties may be specified for specific filters.",
+                                    "type": "object",
+                                    "additionalProperties": true,
+                                    "properties": {
+                                        "type": {
+                                            "title": "Filter Type",
+                                            "description": "Either 'normal' for standard, pre-written filters, or 'hotfix' for code executed from this document.",
+                                            "type": "string",
+                                            "required": true,
+                                            "enum": ["normal", "hotfix"]
+                                        },
+                                        "filter": {
+                                            "title": "Filter function",
+                                            "description": "For normal filters, this is the path of the function to execute, e.g. 'common.numeric_scale'.",
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "required": false
+                                        },
+                                        "code": {
+                                            "title": "Hotfix Code",
+                                            "description": "For hotfix filters, this is the code to execute, specified as the body of a function with `data` as the parameter which should be modified and returned.",
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "required": false
+                                        },
+                                        "signature": {
+                                            "title": "Hotfix Signature",
+                                            "description": "For hotfix filters, this is the signature to validate the code. See documentation for more details.",
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "required": false
+                                        },
+                                        "certificate": {
+                                            "title": "Hotfix Certificate",
+                                            "description": "For hotfix filters, this is the certificate against which the signature should be checked. Given as a string certificate file name.",
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "required": false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "metadata": {
+            "title": "Payload Metadata",
+            "description": "Any additional information about the payload.",
+            "type": "object",
+            "required": false,
+            "additionalProperties": true
+        }
+    }
+}

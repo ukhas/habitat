@@ -17,28 +17,28 @@
 
 from ...utils import filtertools
 
+
 class TestUKHASChecksumFixer:
     """UKHAS Checksum Fixer"""
     def test_leaves_bad_data(self):
-        data = {"data": "$$habitat,bad*ABCD"}
-        with filtertools.UKHASChecksumFixer("crc16-ccitt", data) as c:
-            c["data"] = "$$habitat,good*ABCD"
-        assert c["data"] == "$$habitat,bad*ABCD"
+        self.check_fixer("crc16-ccitt", "$$habitat,bad*ABCD\n",
+            "$$habitat,good*ABCD\n", "$$habitat,bad*ABCD\n")
 
     def test_updates_checksum(self):
-        data = {"data": "$$habitat,good*4918"}
-        with filtertools.UKHASChecksumFixer("crc16-ccitt", data) as c:
-            c["data"] = "$$habitat,other*4918"
-        assert c["data"] == "$$habitat,other*2E0C"
+        self.check_fixer("crc16-ccitt", "$$habitat,good*4918\n",
+            "$$habitat,other*4918\n", "$$habitat,other*2E0C\n")
 
     def test_updates_xor_checksum(self):
-        data = {"data": "$$habitat,good*4c"}
-        with filtertools.UKHASChecksumFixer("xor", data) as c:
-            c["data"] = "$$habitat,other*4c"
-        assert c["data"] == "$$habitat,other*2B"
+        self.check_fixer("xor", "$$habitat,good*4c\n",
+            "$$habitat,other*4c\n", "$$habitat,other*2B\n")
 
     def test_leaves_when_protocol_is_none(self):
-        data = {"data": "$$habitat,boring"}
-        with filtertools.UKHASChecksumFixer("none", data) as c:
-            c["data"] = "$$habitat,sucky"
-        assert c["data"] == "$$habitat,sucky"
+        self.check_fixer("none", "$$habitat,boring\n",
+            "$$habitat,sucky\n", "$$habitat,sucky\n")
+
+    def check_fixer(self, protocol, old, new, expect):
+        data = {"data": old}
+        with filtertools.UKHASChecksumFixer(protocol, data) as c:
+            c["data"] = new
+        assert c["data"] == expect
+        assert filtertools.UKHASChecksumFixer.fix(protocol, old, new) == expect

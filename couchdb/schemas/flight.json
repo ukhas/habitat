@@ -1,0 +1,188 @@
+{
+    "title": "Flight Document",
+    "description": "Stores information about one flight, including launch window and payloads.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": true,
+    "properties": {
+        "_id": {
+            "title": "CouchDB Document ID",
+            "type": "string",
+            "minLength": 1,
+            "required": false
+        },
+        "_rev": {
+            "title": "CouchDB Document Revision Number",
+            "type": "string",
+            "minLength": 1,
+            "required": false
+        },
+        "_revisions": {
+            "title": "CouchDB Document Revision History",
+            "type": "object",
+            "required": false
+        },
+        "type": {
+            "title": "Document Type",
+            "description": "Indicates that this is a flight document. Should be set to 'flight'.",
+            "type": "string",
+            "pattern": "^flight$",
+            "required": true
+        },
+        "approved": {
+            "title": "Flight Document Approval Status",
+            "description": "The approval status of this flight. Unapproved flights are hidden by default. Flights are approved by admins.",
+            "type": "boolean",
+            "required": true
+        },
+        "start": {
+            "title": "Start of Launch Window",
+            "description": "A date in RFC3339 format that indicates the start of validity for this flight document.",
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "end": {
+            "title": "End of Launch Window",
+            "description": "A date in RFC3339 format that indicates the last date of validity for this flight document.",
+            "type": "string",
+            "format": "date-time",
+            "required": true
+        },
+        "name": {
+            "title": "Launch Name",
+            "description": "A human-readable name to refer to this launch by.",
+            "type": "string",
+            "minLength": 1,
+            "required": true
+        },
+        "launch": {
+            "title": "Launch Details",
+            "description": "Specific details about the launch.",
+            "type": "object",
+            "required": true,
+            "additionalProperties": false,
+            "properties": {
+                "time": {
+                    "title": "Launch Time",
+                    "description": "The (possibly estimated) time of actual launch in RFC3339 format.",
+                    "type": "string",
+                    "format": "date-time",
+                    "required": true
+                },
+                "timezone": {
+                    "title": "Launch Timezone",
+                    "description": "The timezone the launch occurred in, as an Olson specifer (e.g. Europe/London).",
+                    "type": "string",
+                    "format": "timezone",
+                    "required": true
+                },
+                "location": {
+                    "title": "Launch Location",
+                    "description": "The (possibly estimated) position of launch.",
+                    "type": "object",
+                    "required": true,
+                    "additionalProperties": false,
+                    "properties": {
+                        "latitude": {
+                            "title": "Launch Latitude",
+                            "description": "Latitude launch occured at, in decimal degrees.",
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90,
+                            "required": true
+                        },
+                        "longitude": {
+                            "title": "Launch Longitude",
+                            "description": "Longitude launch occured at, in decimal degrees.",
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180,
+                            "required": true
+                        },
+                        "altitude": {
+                            "title": "Launch Altitude",
+                            "description": "Altitude launch occured at, in metres above mean sea level.",
+                            "type": "number",
+                            "required": false
+                        }
+                    }
+                }
+            }
+        },
+        "metadata": {
+            "title": "Flight Metadata",
+            "description": "Any other informative data about the flight. May contain any fields.",
+            "type": "object",
+            "required": false,
+            "additionalProperties": true,
+            "properties": {
+                "location": {
+                    "title": "Launch Location",
+                    "description": "Optional human-readable string for launch location, e.g., a city name.",
+                    "type": "string",
+                    "minLength": 1,
+                    "required": false
+                },
+                "project": {
+                    "title": "Project",
+                    "description": "The project name that this launch is associated with.",
+                    "type": "string",
+                    "minLength": 1,
+                    "required": false
+                },
+                "group": {
+                    "title": "Group",
+                    "description": "The group(s) responsible for this flight.",
+                    "type": "string",
+                    "minLength": 1,
+                    "required": false
+                }
+            }
+        },
+        "payloads": {
+            "title": "Payloads in Flight",
+            "description": "The configuration to use for each payload in this flight.",
+            "type": "array",
+            "items": {
+                "title": "Payload Configuration ID",
+                "description": "The CouchDB Document ID for a payload configuration of a payload in this flight.",
+                "type": "string",
+                "minLength": 1
+            }
+        },
+        "aprs": {
+            "title": "APRS import configuration",
+            "description": "Configuration for the APRS import daemon: telemetry for listed callsigns is downloaded and associated with the flight.",
+            "type": "object",
+            "required": false,
+            "additionalProperties": false,
+            "properties": {
+                "payloads": {
+                    "title": "Payloads",
+                    "description": "A list of payload APRS callsigns to retreieve and save as payload_telemetry documents.",
+                    "type": "array",
+                    "required": false,
+                    "items": {
+                        "title": "Callsign",
+                        "description": "An APRS callsign",
+                        "type": "string",
+                        "pattern": "^[A-Z0-9]{4,6}(\\-[0-9]{1,2})?$"
+                    }
+                },
+                "chasers": {
+                    "title": "Chasers", 
+                    "description": "A list of payload APRS callsigns to retreieve and save as listener_telemetry documents with the chase property set to true.",
+                    "type": "array",
+                    "required": false,
+                    "items": {
+                        "title": "Callsign",
+                        "description": "An APRS callsign",
+                        "type": "string",
+                        "pattern": "^[A-Z0-9]{4,6}(\\-[0-9]{1,2})?$"
+                    }
+                }
+            }
+        }
+    }
+}

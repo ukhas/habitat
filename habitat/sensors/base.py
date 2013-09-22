@@ -16,23 +16,59 @@
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Basic sensor functions
+Basic sensor functions.
+
+These sensors cover simple ASCII representations of numbers and strings.
 """
 
-__all__ = ["ascii_int", "ascii_float", "string"]
+import math
+import base64
 
-def ascii_int(data):
-    """parse a string to an integer, or None if the string is empty"""
-    if data == '':
-        return None
-    return int(data)
+__all__ = ["ascii_int", "ascii_float", "string", "constant", "binary_b64"]
 
-def ascii_float(data):
-    """parse a string to a float, or None if the string is empty"""
-    if data == '':
+
+def ascii_int(config, data):
+    """
+    Parse *data* to an integer.
+    """
+    if config.get("optional", False) and data == '':
         return None
-    return float(data)
+    return int(data, config.get("base", 10))
+
+
+def ascii_float(config, data):
+    """
+    Parse *data* to a float.
+    """
+    if config.get("optional", False) and data == '':
+        return None
+    val = float(data)
+    if math.isnan(val) or math.isinf(val):
+        raise ValueError("Cannot accept nan, inf or -inf")
+    return val
+
 
 def string(data):
-    """null sensor; just returns the data as a string"""
+    """
+    Returns *data* as a string.
+    """
     return str(data)
+
+
+def constant(config, data):
+    """
+    Checks that *data* is equal to config["expect"], returning None.
+    """
+    if "expect" in config:
+        expect = config["expect"]
+    else:
+        expect = ''
+    if data != expect:
+        raise ValueError("Expected '{0}', got '{1}'".format(expect, data))
+    return None
+
+def binary_b64(data):
+    """
+    Encodes raw binary data to base64.
+    """
+    return base64.b64encode(data)

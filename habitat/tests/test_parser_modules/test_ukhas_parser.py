@@ -1,4 +1,4 @@
-# Copyright 2010 (C) Adam Greig
+# Copyright 2010, 2011, 2013 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -24,6 +24,7 @@ from copy import deepcopy
 
 # Mocking the LoadableManager is a heck of a lot of effort. Not worth it.
 from ...loadable_manager import LoadableManager
+from ...parser import CantParse
 from ...parser_modules.ukhas_parser import UKHASParser
 
 # Provide the sensor functions to the parser
@@ -33,6 +34,7 @@ fake_sensors_config = {
         {"name": "sensors.stdtelem", "class": "habitat.sensors.stdtelem"}
     ]
 }
+
 
 class FakeParser:
     def __init__(self):
@@ -44,7 +46,7 @@ base_config = {
     "checksum": "crc16-ccitt",
     "fields": [
         {
-            "name": "message_count",
+            "name": "sentence_id",
             "sensor": "base.ascii_int"
         }, {
             "name": "time",
@@ -70,6 +72,7 @@ base_config = {
     ]
 }
 
+
 class TestUKHASParser:
     """UKHAS Parser"""
     def setup(self):
@@ -85,64 +88,58 @@ class TestUKHASParser:
     def test_pre_parse_rejects_bad_sentences(self):
         # Each of these is a totally invalid stub that should just fail.  The
         # last one might be valid but has non-hexadecimal checksum characters.
-        bad_sentences = ["", "bad", "$$bad*", "bad*CC", "bad*CCCC",
-                         "bad,bad,bad,bad", "$$bad*GH", "$$bad,bad*GHIJ",
-                         "$$@invalid@,data*CCCC", "$$good,data,\x01"]
+        bad_sentences = ["", "\n", "bad\n", "$$bad*\n", "bad*CC\n",
+                         "bad*CCCC\n", "bad,bad,bad,bad\n", "$$bad*GH\n",
+                         "$$bad,bad*GHIJ\n", "$$@invalid@,data*CCCC\n",
+                         "$$good,data,\x01\n", "$$missing,newline*CCCC"]
 
         for sentence in bad_sentences:
-            assert_raises(ValueError, self.p.pre_parse, sentence)
+            assert_raises(CantParse, self.p.pre_parse, sentence)
+            assert_raises(ValueError, self.p.parse, sentence, base_config)
 
     def test_pre_parse_accepts_good_setences(self):
         # Each of these short stubs should pass pre-parsing and return a
         # callsign
-        good_sentences = ["$$good,data", "$$good,data*CC", "$$good,data*CCCC",
-                          "$$good,lots,of,1234,5678.90,data$CCCC"]
+        good_sentences = ["$$good,data\n", "$$good,data*CC\n",
+                          "$$good,data*CCCC\n",
+                          "$$good,lots,of,1234,5678.90,data*CCCC\n"]
 
         for sentence in good_sentences:
             assert self.p.pre_parse(sentence) == "good"
 
     def test_pre_parse_rejects_bad_callsigns(self):
         bad_callsigns = ["abcdef@123", "ABC\xFA", "$$", "almost good"]
-        callsign_template = "$${0},data*CC"
+        callsign_template = "$${0},data*CC\n"
         for callsign in bad_callsigns:
             sentence = callsign_template.format(callsign)
-            assert_raises(ValueError, self.p.pre_parse, sentence)
+            assert_raises(CantParse, self.p.pre_parse, sentence)
 
     def test_pre_parse_accepts_good_callsigns(self):
         good_callsigns = ["good", "g0_0d", "G0--0D", "abcde/f", "ABCDEF",
                           "012345", "abcDEF123"]
-        callsign_template = "$${0},data*CC"
+        callsign_template = "$${0},data*CC\n"
         for callsign in good_callsigns:
             sentence = callsign_template.format(callsign)
             assert self.p.pre_parse(sentence) == callsign
 
     def test_pre_parse_rejects_bad_checksums(self):
         bad_checksums = ["abcg", "123G", "$$", "*ABC", "defG", "123\xFA"]
-        checksum_template = "$$good,data*{0}"
+        checksum_template = "$$good,data*{0}\n"
         for checksum in bad_checksums:
             sentence = checksum_template.format(checksum)
-            assert_raises(ValueError, self.p.pre_parse, sentence)
+            assert_raises(CantParse, self.p.pre_parse, sentence)
 
     def test_pre_parse_accepts_good_checksums(self):
         good_checksums = ["abcd", "ABCD", "abCD", "ab12", "AB12", "aB12", "ab",
                           "aB", "AB", "a0", "A0"]
-        checksum_template = "$$good,data*{0}"
+        checksum_template = "$$good,data*{0}\n"
         for checksum in good_checksums:
             sentence = checksum_template.format(checksum)
             assert self.p.pre_parse(sentence) == "good"
 
-    def test_parse_rejects_bad_sentences(self):
-        # Each of these is a totally invalid stub that should just fail.  The
-        # last one might be valid but has non-hexadecimal checksum characters.
-        bad_sentences = ["", "bad", "$$bad*", "bad*CC", "bad*CCCC",
-                         "bad,bad,bad,bad", "$$bad*GH", "$$bad,bad*GHIJ",
-                         "$$@invalid@,data*CCCC", "$$good,data,\x01"]
-        for sentence in bad_sentences:
-            assert_raises(ValueError, self.p.parse, sentence, base_config)
-
     def test_parse_rejects_invalid_configs(self):
         # A valid sentence for testing the configs with
-        sentence = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab"
+        sentence = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab\n"
 
         # A configuration with no checksum
         config_checksum_none = deepcopy(base_config)
@@ -210,23 +207,32 @@ class TestUKHASParser:
         assert_raises(ValueError, self.p.parse, sentence,
                 config_format_invalid)
 
-        # A configuration with an invalid field name (should fail)
+        # Configurations with an invalid field names (should fail)
         config_name_invalid = deepcopy(config_checksum_none)
         config_name_invalid["fields"][0]["name"] = "_notallowed"
         assert_raises(ValueError, self.p.parse, sentence, config_name_invalid)
 
+        config_name_invalid["fields"][0]["name"] = "payload"
+        assert_raises(ValueError, self.p.parse, sentence, config_name_invalid)
+
+        # A configuration with a duplicate field name (should fail)
+        config_duplicate_name = deepcopy(config_checksum_none)
+        config_duplicate_name["fields"][1]["name"] = \
+                config_duplicate_name["fields"][0]["name"]
+        assert_raises(ValueError, self.p.parse, sentence, config_duplicate_name)
+
     def test_parse_parses_correct_checksums(self):
         # Correct parser output for the checksum test sentences
         output_checksum_test = {
-            "payload": "habitat", "message_count": 1,
-            "time": {"hour": 0, "minute": 0, "second": 0},
+            "payload": "habitat", "sentence_id": 1,
+            "time": "00:00:00",
             "latitude": 0.0, "longitude": 0.0, "altitude": 0,
             "speed": 0.0, "custom_string": "hab"}
 
         # A configuration with no checksum
         config_checksum_none = deepcopy(base_config)
         config_checksum_none["checksum"] = "none"
-        sentence_no_checksum = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab"
+        sentence_no_checksum = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab\n"
         assert (
             self.p.parse(sentence_no_checksum, config_checksum_none)
             == self.output_append_sentence(output_checksum_test,
@@ -235,7 +241,7 @@ class TestUKHASParser:
         # A configuration with a CRC16-CCITT checksum
         config_checksum_crc16_ccitt = deepcopy(base_config)
         config_checksum_crc16_ccitt["checksum"] = "crc16-ccitt"
-        sentence_crc16_ccitt = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*EE5E"
+        sentence_crc16_ccitt = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*EE5E\n"
         assert (
             self.p.parse(sentence_crc16_ccitt, config_checksum_crc16_ccitt)
             == self.output_append_sentence(output_checksum_test,
@@ -244,7 +250,7 @@ class TestUKHASParser:
         # A configuration with an XOR checksum
         config_checksum_xor = deepcopy(base_config)
         config_checksum_xor["checksum"] = "xor"
-        sentence_xor = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*0b"
+        sentence_xor = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*0b\n"
         assert (
             self.p.parse(sentence_xor, config_checksum_xor)
             == self.output_append_sentence(output_checksum_test,
@@ -253,7 +259,7 @@ class TestUKHASParser:
         # A configuration with a Fletcher-16 checksum
         config_checksum_fletcher_16 = deepcopy(base_config)
         config_checksum_fletcher_16["checksum"] = "fletcher-16"
-        sentence_fletcher_16 = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*e3a6"
+        sentence_fletcher_16 = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*e3a6\n"
         assert (
             self.p.parse(sentence_fletcher_16, config_checksum_fletcher_16)
             == self.output_append_sentence(output_checksum_test,
@@ -263,7 +269,7 @@ class TestUKHASParser:
         config_checksum_fletcher_16_256 = deepcopy(base_config)
         config_checksum_fletcher_16_256["checksum"] = "fletcher-16-256"
         sentence_fletcher_16_256 = \
-            "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*DBF5"
+            "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*DBF5\n"
         assert (
             self.p.parse(sentence_fletcher_16_256,
                          config_checksum_fletcher_16_256)
@@ -271,13 +277,13 @@ class TestUKHASParser:
                                            sentence_fletcher_16_256))
 
     def test_parse_rejects_incorrect_checksums(self):
-        sentence_no_checksum = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab"
+        sentence_no_checksum = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab\n"
 
         # A configuration with a CRC16-CCITT checksum
         config_checksum_crc16_ccitt = deepcopy(base_config)
         config_checksum_crc16_ccitt["checksum"] = "crc16-ccitt"
         sentence_bad_crc16_ccitt = \
-            "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*abcd"
+            "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*abcd\n"
         assert_raises(ValueError, self.p.parse, sentence_bad_crc16_ccitt,
                       config_checksum_crc16_ccitt)
         assert_raises(ValueError, self.p.parse, sentence_no_checksum,
@@ -286,7 +292,7 @@ class TestUKHASParser:
         # A configuration with an XOR checksum
         config_checksum_xor = deepcopy(base_config)
         config_checksum_xor["checksum"] = "xor"
-        sentence_bad_xor = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*aa"
+        sentence_bad_xor = "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*aa\n"
         assert_raises(ValueError, self.p.parse, sentence_bad_xor,
                       config_checksum_xor)
         assert_raises(ValueError, self.p.parse, sentence_no_checksum,
@@ -296,7 +302,7 @@ class TestUKHASParser:
         config_checksum_fletcher_16 = deepcopy(base_config)
         config_checksum_fletcher_16["checksum"] = "fletcher-16"
         sentence_bad_fletcher_16 = \
-            "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*abcd"
+            "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*abcd\n"
         assert_raises(ValueError, self.p.parse, sentence_bad_fletcher_16,
                       config_checksum_fletcher_16)
         assert_raises(ValueError, self.p.parse, sentence_no_checksum,
@@ -306,7 +312,7 @@ class TestUKHASParser:
         config_checksum_fletcher_16_256 = deepcopy(base_config)
         config_checksum_fletcher_16_256["checksum"] = "fletcher-16-256"
         sentence_bad_fletcher_16_256 = \
-            "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*dcba"
+            "$$habitat,1,00:00:00,0.0,0.0,0,0.0,hab*dcba\n"
         assert_raises(ValueError, self.p.parse, sentence_bad_fletcher_16_256,
                       config_checksum_fletcher_16_256)
         assert_raises(ValueError, self.p.parse, sentence_no_checksum,
@@ -317,16 +323,16 @@ class TestUKHASParser:
         config = deepcopy(base_config)
         config["checksum"] = "none"
 
-        sentence_bad_int = "$$habitat,a,00:00:00,0.0,0.0,0,0.0,hab"
+        sentence_bad_int = "$$habitat,a,00:00:00,0.0,0.0,0,0.0,hab\n"
         assert_raises(ValueError, self.p.parse, sentence_bad_int, config)
 
-        sentence_bad_time = "$$habitat,1,aa:bb:cc,0.0,0.0,0,0.0,hab"
+        sentence_bad_time = "$$habitat,1,aa:bb:cc,0.0,0.0,0,0.0,hab\n"
         assert_raises(ValueError, self.p.parse, sentence_bad_time, config)
 
-        sentence_bad_time_2 = "$$habitat,1,123,0.0,0.0,0,0.0,hab"
+        sentence_bad_time_2 = "$$habitat,1,123,0.0,0.0,0,0.0,hab\n"
         assert_raises(ValueError, self.p.parse, sentence_bad_time_2, config)
 
-        sentence_bad_float = "$$habitat,1,00:00:00,abc,0.0,0,0.0,hab"
+        sentence_bad_float = "$$habitat,1,00:00:00,abc,0.0,0,0.0,hab\n"
         assert_raises(ValueError, self.p.parse, sentence_bad_float, config)
 
     def test_parse_rejects_bad_minutes(self):
@@ -336,7 +342,8 @@ class TestUKHASParser:
         config_minutes["fields"][3]["format"] = "ddmm.mm"
         config_minutes["checksum"] = "none"
 
-        sentence_bad_minutes = "$$habitat,1,00:00:00,087.123,0000.00,0,0.0,hab"
+        sentence_bad_minutes = \
+            "$$habitat,1,00:00:00,087.123,0000.00,0,0.0,hab\n"
 
         assert_raises(ValueError, self.p.parse, sentence_bad_minutes,
                 config_minutes)
@@ -354,47 +361,37 @@ class TestUKHASParser:
 
         # Correct parser output for (most) of the good sentences
         output_good = {
-            "payload": "habitat", "message_count": 123,
-            "time": {"hour": 12, "minute": 45, "second": 06},
+            "payload": "habitat", "sentence_id": 123,
+            "time": "12:45:06",
             "latitude": -35.1032, "longitude": 138.8568,
             "altitude": 4285, "speed": 3.6, "custom_string": "hab"}
 
         sentence_good_1 = \
-            "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681"
-        
+            "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab*5681\n"
+
         assert(self.p.parse(sentence_good_1, base_config)
                == self.output_append_sentence(output_good, sentence_good_1))
 
-        sentence_good_2 = \
-            "$$habitat,123,12:45,-35.1032,138.8568,4285,3.6,hab*8e78"
-
-        # Correct parser output for sentence_good_2 (no seconds on the time)
-        output_good_2 = deepcopy(output_good)
-        del output_good_2["time"]["second"]
-
-        assert(self.p.parse(sentence_good_2, base_config)
-               == self.output_append_sentence(output_good_2, sentence_good_2))
-
         sentence_good_3 = \
-            "$$habitat,123,12:45:06,-3506.192,13851.408,4285,3.6,hab*6139"
+            "$$habitat,123,12:45:06,-3506.192,13851.408,4285,3.6,hab*6139\n"
 
         assert(self.p.parse(sentence_good_3, config_minutes)
                == self.output_append_sentence(output_good, sentence_good_3))
 
         sentence_good_4 = \
-            "$$habitat,123,12:45:06, -35.1032,138.8568,4285,3.6,hab*96A2"
+            "$$habitat,123,12:45:06, -35.1032,138.8568,4285,3.6,hab*96A2\n"
 
         assert(self.p.parse(sentence_good_4, base_config)
                == self.output_append_sentence(output_good, sentence_good_4))
 
         sentence_good_5 = \
-            "$$habitat,123,12:45:06,-035.1032,138.8568,4285,3.6,hab*C5CA"
+            "$$habitat,123,12:45:06,-035.1032,138.8568,4285,3.6,hab*C5CA\n"
 
         assert(self.p.parse(sentence_good_5, base_config)
                == self.output_append_sentence(output_good, sentence_good_5))
 
         sentence_good_6 = \
-            "$$habitat,123,12:45:06,035.1032,0138.8568,4285,3.6,hab*D856"
+            "$$habitat,123,12:45:06,035.1032,0138.8568,4285,3.6,hab*D856\n"
 
         # Correct parser output for sentence_good_6 (positive latitude)
         output_good_6 = deepcopy(output_good)
@@ -406,29 +403,21 @@ class TestUKHASParser:
     def test_parse_handles_shorter_sentences(self):
         # A sentence with less fields than the config suggests, but otherwise
         # valid
-        sentence_short = "$$habitat,123,12:45:06,-35.1032,138.8568,4285*5260"
+        sentence_short = "$$habitat,123,12:45:06,-35.1032,138.8568,4285*5260\n"
 
-        output_short = {
-            "payload": "habitat", "message_count": 123,
-            "time": {"hour": 12, "minute": 45, "second": 06},
-            "latitude": -35.1032, "longitude": 138.8568,
-            "altitude": 4285}
-
-        assert (self.p.parse(sentence_short, base_config) ==
-                self.output_append_sentence(output_short, sentence_short))
+        assert_raises(ValueError, self.p.parse, sentence_short, base_config)
 
     def test_parse_handles_longer_sentences(self):
         # A sentence with more fields than the config suggests, but otherwise
         # valid
         sentence_long = \
             "$$habitat,123,12:45:06,-35.1032,138.8568,4285,3.6,hab,123," \
-            "4.56,seven*3253"
+            "4.56,seven*3253\n"
 
-        output_long = {
-            "payload": "habitat", "message_count": 123,
-            "time": {"hour": 12, "minute": 45, "second": 06},
-            "latitude": -35.1032, "longitude": 138.8568,
-            "altitude": 4285, "speed": 3.6, "custom_string": "hab",
-            "_extra_data": ["123", "4.56", "seven"]}
-        assert (self.p.parse(sentence_long, base_config)
-                == self.output_append_sentence(output_long, sentence_long))
+        assert_raises(ValueError, self.p.parse, sentence_long, base_config)
+
+    def test_parser_rejects_sentence_with_no_newline(self):
+        # sentence from test_parse_handles_shorter_sentences with no \n:
+        bad_sentence = "$$habitat,123,12:45:06,-35.1032,138.8568,4285*5260"
+
+        assert_raises(ValueError, self.p.parse, bad_sentence, base_config)

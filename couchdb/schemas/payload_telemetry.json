@@ -1,0 +1,196 @@
+{
+    "title": "Payload Telemetry Document",
+    "description": "Stores data transmitted by payloads, either as-yet-unparsed or parsed.",
+    "type": "object",
+    "required": true,
+    "properties": {
+        "_id": {
+            "title": "CouchDB Document ID",
+            "description": "Must be the hex encoding of the sha256 checksum of the contents of data._raw (which is itself base64 encoded data).",
+            "type": "string",
+            "minLength": 1,
+            "required": false
+        },
+        "_rev": {
+            "title": "CouchDB Document Revision Number",
+            "type": "string",
+            "minLength": 1,
+            "required": false
+        },
+        "_revisions": {
+            "title": "CouchDB Document Revision History",
+            "type": "object",
+            "required": false
+        },
+        "type": {
+            "title": "Document Type",
+            "description": "Indicates that this is a payload telemetry document. Should be 'payload_telemetry'.",
+            "type": "string",
+            "pattern": "^payload_telemetry$",
+            "required": true
+        },
+        "data": {
+            "title": "Data",
+            "description": "All the data about this transmission, including the raw transmitted data and any parsing results.",
+            "type": "object",
+            "required": true,
+            "additionalProperties": true,
+            "properties": {
+                "_raw": {
+                    "title": "Raw Data",
+                    "description": "The raw transmitted data, as a base64 string. Must be uploaded by listeners.",
+                    "type": "string",
+                    "format": "base64",
+                    "required": true
+                },
+                "_fallbacks": {
+                    "title": "Fallback Data",
+                    "description": "When out of band data is provided by the receiver, such as a callsign or a rough position, it can be placed here and will be used to provide data not parsed from _raw. In particular the `payload' key may be used to indicate a callsign.",
+                    "type": "object",
+                    "required": false,
+                    "additionalProperties": true
+                },
+                "_sentence": {
+                    "title": "Raw Data Sentence",
+                    "description": "The ASCII representation of the raw data, if the data is all printable. Inserted by the parser.",
+                    "type": "string",
+                    "required": false
+                },
+                "_protocol": {
+                    "title": "Protocol",
+                    "description": "The protocol (habitat parser module) used to parse this transmission. Inserted by the parser.",
+                    "type": "string",
+                    "minLength": 1,
+                    "required": false
+                },
+                "_parsed": {
+                    "title": "Parsed",
+                    "required": false,
+                    "description": "When present, records information relating to the parsing of the document. If absent the document has not been (or could not be) parsed. Inserted by the parser.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "time_parsed": {
+                            "title": "Time Parsed",
+                            "description": "The time, as an RFC3339 string, when the parser parsed this document.",
+                            "required": true,
+                            "type": "string",
+                            "format": "date-time"
+                        },
+                        "payload_configuration": {
+                            "title": "Payload Configuration Document ID",
+                            "description": "The document ID of the payload_configuration document used to parse this document.",
+                            "required": true,
+                            "minLength": 1,
+                            "type": "string"
+                        },
+                        "configuration_sentence_index": {
+                            "title": "Payload Configuration Sentence Index",
+                            "description": "The index into the sentences list in the payload_configuration document used to parse this document.",
+                            "required": true,
+                            "type": "number"
+                        },
+                        "flight": {
+                            "title": "Flight ID",
+                            "description": "The document ID of the flight associated with this telemetry, if it was parsed as part of a flight.",
+                            "type": "string",
+                            "minLength": 1,
+                            "required": false
+                        }
+                    }
+                },
+                "payload": {
+                    "title": "Payload Callsign",
+                    "description": "The callsign of the payload. Inserted by the parser.",
+                    "type": "string",
+                    "minLength": 1,
+                    "required": false
+                },
+                "sentence_id": {
+                    "title": "Sentence ID",
+                    "description": "The sentence ID. Used to be known as 'sequence' or 'count'. Inserted by the parser, if configured to do so.",
+                    "type": "number",
+                    "required": false
+                },
+                "time": {
+                    "title": "GPS Time",
+                    "description": "The GPS time; a string in the format of HH:MM:SS. Inserted by the parser, if configured to do so.",
+                    "type": "string",
+                    "format": "time",
+                    "required": false
+                },
+                "latitude": {
+                    "title": "Latitude",
+                    "description": "The latitude of the payload. Inserted by the parser, if configured to do so.",
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90,
+                    "required": false
+                },
+                "longitude": {
+                    "title": "Longitude",
+                    "description": "The longitude of the payload. Inserted by the parser, if configured to do so.",
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180,
+                    "required": false
+                },
+                "altitude": {
+                    "title": "Altitude",
+                    "description": "The altitude of the payload. Inserted by the parser, if configured to do so.",
+                    "type": "number",
+                    "required": false
+                },
+                "_fix_invalid": {
+                    "title": "Fix Invalid",
+                    "description": "Flag that indicates that the values of time, latitude, longitude and altitude should not be used. Inserted by the parser, if configured to do so.",
+                    "type": "boolean",
+                    "required": false
+                }
+            }
+        },
+        "receivers": {
+            "title": "Telemetry Receivers",
+            "description": "The listeners who received this telemetry and when they received it.",
+            "type": "object",
+            "required": true,
+            "additionalProperties": {
+                "title": "Receiver",
+                "description": "Information about one receiver of this telemetry.",
+                "type": "object",
+                "required": true,
+                "additionalProperties": true,
+                "properties": {
+                    "time_created": {
+                        "title": "Time Created",
+                        "description": "The time, as an RFC3339 string, when the receiver created this document.",
+                        "type": "string",
+                        "format": "date-time",
+                        "required": true
+                    },
+                    "time_uploaded": {
+                        "title": "Time Uploaded",
+                        "description": "The time, as an RFC3339 string, when the receiver uploaded this document to the database.",
+                        "type": "string",
+                        "format": "date-time",
+                        "required": true
+                    },
+                    "latest_listener_telemetry": {
+                        "title": "Receiver Latest Telemetry",
+                        "description": "A CouchDB document ID for this receiver's most recent listener_telemetry document.",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": false
+                    },
+                    "latest_listener_information": {
+                        "title": "Receiver Latest Information",
+                        "description": "A CouchDB document ID for this receiver's most recent listener_information document.",
+                        "type": "string",
+                        "minLength": 1,
+                        "required": false
+                    }
+                }
+            }
+        }
+    }
+}

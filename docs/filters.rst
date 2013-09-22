@@ -80,3 +80,27 @@ Which would be assembled into:
     def f(data):
         parts = data.split(',')
         return '.'.join(parts)
+
+A more complete hotfix example, to fix non-zero-padded time values:
+
+.. code-block:: python
+
+    from habitat.utils.filtertools import UKHASChecksumFixer
+
+    parts = data.split(",")
+    timestr = parts[2]
+    timeparts = timestr.split(":")
+    timestr = "{0:02d}:{1:02d}:{2:02d}".format(*[int(part) for part in timeparts])
+    parts[2] = timestr
+    newdata = ",".join(parts)
+
+    with UKHASChecksumFixer('xor', {"data": data}) as fixer:
+        fixer["data"] = newdata
+
+        return fixer["data"]
+
+Filter Utils
+============
+
+Please refer to :doc:`/habitat/habitat/habitat/habitat.utils.filtertools` for
+information on available filter tools such as UKHASChecksumFixer used above.

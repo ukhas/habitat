@@ -13,7 +13,11 @@ habitat.uploader
 
    .. autosummary::
    
+      Extractor
+      ExtractorManager
+      UKHASExtractor
       Uploader
+      UploaderThread
    
    
 

@@ -1,4 +1,4 @@
-# Copyright 2010, 2011 (C) Adam Greig
+# Copyright 2010, 2011, 2013 (C) Adam Greig
 #
 # This file is part of habitat.
 #
@@ -21,22 +21,26 @@ Unit tests for the Parser's Sink class.
 
 import os
 import mox
+import logging
 
 import couchdbkit
 import M2Crypto
 
 from copy import deepcopy
-from nose.tools import assert_raises
+from nose.tools import assert_raises, eq_
 
-from ... import parser
+from ... import parser, loadable_manager
+
 
 class TestParser(object):
     def setup(self):
         self.m = mox.Mox()
         self.mock_module = self.m.CreateMock(parser.ParserModule)
+
         class MockModule(parser.ParserModule):
             def __new__(cls, parser):
                 return self.mock_module
+
         base_path = os.path.split(os.path.abspath(__file__))[0]
         cert_path = os.path.join(base_path, 'certs')
         self.parser_config = {"parser": {"modules": [
@@ -50,7 +54,6 @@ class TestParser(object):
         parser.couchdbkit.Server("http://localhost:5984")\
                 .AndReturn(self.mock_server)
         self.mock_server.__getitem__("test").AndReturn(self.mock_db)
-        self.mock_db.info().AndReturn({"update_seq": 191238})
 
         self.m.ReplayAll()
         self.parser = parser.Parser(self.parser_config)
@@ -71,7 +74,7 @@ class TestParser(object):
 
     def test_init_doesnt_load_bad_modules(self):
         def try_to_load_module(module):
-            new_config = deepcopy(self.parser_config) 
+            new_config = deepcopy(self.parser_config)
             new_config["parser"]["modules"][0]["class"] = module
             parser.Parser(new_config)
 
@@ -113,9 +116,295 @@ class TestParser(object):
                 pass
         assert_raises(TypeError, try_to_load_module, BadParseModule)
 
+    def test_init_connects_to_couch(self):
+        # This actually tested by setup(), since the parser needs to be
+        # initialised with CouchDB mocks in all other tests.
+        assert self.parser.db == self.mock_db
+
+    def test_find_config_doc_looks_for_flights(self):
+        view_result = [{"key": [5, 5, 654, 0]}, # this flight has ended
+                       {"key": [5, 5, 654, 1], "doc": {
+                           "_id": 456, "sentences": [
+                                {"callsign": "habitat"}
+                            ]}, "id": 654},
+                       {"key": [6, 3, 321, 0]},
+                       {"key": [6, 3, 321, 1], "doc": {
+                           "_id": 123, "sentences": [
+                                {"callsign": "habitat"}
+                            ]}, "id": 321}]
+        self.m.StubOutWithMock(parser, 'time')
+        parser.time.time().AndReturn(4)
+        self.parser.db.view("flight/end_start_including_payloads",
+            include_docs=True, startkey=[4]).AndReturn(view_result)
+        self.m.ReplayAll()
+        result = self.parser._find_config_doc("habitat")
+        assert result == {"id": 123, "flight_id": 321,
+                          "payload_configuration": view_result[3]["doc"]}
+        self.m.VerifyAll()
+
+    def test_find_config_doc_fallbacks_to_configs(self):
+        flight_result = [{"key": [5, 3, 321, 0]},
+                         {"key": [5, 3, 321, 1], "doc": {
+                             "_id": 123, "sentences": [{"callsign": "bla"}]},
+                          "id": 321}]
+        config_result = {"id": 123, "doc": {
+            "sentences": [{"callsign": "habitat"}]}}
+        self.m.StubOutWithMock(parser, 'time')
+        mock_view = self.m.CreateMock(couchdbkit.ViewResults)
+        parser.time.time().AndReturn(4)
+        self.parser.db.view("flight/end_start_including_payloads",
+            include_docs=True, startkey=[4]).AndReturn(flight_result)
+        self.parser.db.view(
+            "payload_configuration/callsign_time_created_index",
+            startkey=["habitat", "inf"], include_docs=True, limit=1,
+            descending=True
+            ).AndReturn(mock_view)
+        mock_view.first().AndReturn(config_result)
+        self.m.ReplayAll()
+        result = self.parser._find_config_doc("habitat")
+        eq_(result, {"id": 123, "payload_configuration": config_result["doc"]})
+        self.m.VerifyAll()
+
+    def test_is_ok_with_configs_without_sentences(self):
+        # issue #255: KeyError because sentences is optional in
+        # payload_configuration documents
+        config = {"not_sentences": None}
+        self.parser._callsign_in_config("habitat", config)
+
+    def test_doesnt_parse_if_no_callsign_found(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        self.mock_module.pre_parse('test string').AndRaise(parser.CantParse)
+        self.m.ReplayAll()
+        assert self.parser.parse(doc) is None
+        self.m.VerifyAll()
+
+    def test_doesnt_parse_if_no_config(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign').AndReturn(False)
+        self.m.ReplayAll()
+        assert self.parser.parse(doc) is None
+        self.m.VerifyAll()
+
+    def test_doesnt_parse_if_wrong_config_protocol(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        config = {'sentences': [{"callsign": "callsign", 'protocol': 'Fake'}]}
+        config = {'payload_configuration': config}
+        config['id'] = 'test'
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign').AndReturn(config)
+        self.m.ReplayAll()
+        assert self.parser.parse(doc) is None
+        self.m.VerifyAll()
+
+    def test_uses_fallback_callsign(self):
+        fallbacks = {'payload': 'call'}
+        self.mock_module.pre_parse('rawdata').AndRaise(
+            parser.CantExtractCallsign)
+        self.m.ReplayAll()
+        mod = self.parser.modules[0]
+        result = self.parser._get_callsign("rawdata", fallbacks, mod)
+        assert result == "call"
+        self.m.VerifyAll()
+
+    def test_parses(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 1234567890
+        config = {'sentences': [{"callsign": "callsign", 'protocol': 'Mock'}]}
+        config = {'payload_configuration': config}
+        config['id'] = 'test'
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.m.StubOutWithMock(parser, 'strict_rfc3339')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign').AndReturn(config)
+        self.mock_module.parse('test string',
+            config['payload_configuration']['sentences'][0]).AndReturn({})
+        parser.strict_rfc3339.now_to_rfc3339_utcoffset().AndReturn("thetime")
+        self.m.ReplayAll()
+        result = self.parser.parse(doc)
+        assert result['data']['_parsed']
+        assert result['data']['_protocol'] == 'Mock'
+        assert result['data']['_parsed'] == {
+            "payload_configuration": "test",
+            "configuration_sentence_index": 0,
+            "time_parsed": "thetime"
+        }
+        assert result['data']['_raw'] == "dGVzdCBzdHJpbmc="
+        assert result['receivers']['tester']['time_created'] == 1234567890
+        assert len(result['receivers']) == 1
+        self.m.VerifyAll()
+
+    def test_uses_fallback_data(self):
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'telem'}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['data']['_fallbacks'] = {'fall': 'back', 'from': 'fallback'}
+        doc['receivers']['tester']['time_created'] = 1234567890
+        config = {'sentences': [{"callsign": "callsign", 'protocol': 'Mock'}]}
+        config = {'payload_configuration': config}
+        config['id'] = 'test'
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.m.StubOutWithMock(parser, 'strict_rfc3339')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign').AndReturn(config)
+        self.mock_module.parse('test string',
+            config['payload_configuration']['sentences'][0]).AndReturn(
+            {'from': 'parser'})
+        parser.strict_rfc3339.now_to_rfc3339_utcoffset().AndReturn("thetime")
+        self.m.ReplayAll()
+        result = self.parser.parse(doc)
+        assert result['data']['_parsed']
+        assert result['data']['fall'] == 'back'
+        assert result['data']['from'] == 'parser'
+        assert result['data']['_protocol'] == 'Mock'
+        assert result['data']['_parsed'] == {
+            "payload_configuration": "test",
+            "configuration_sentence_index": 0,
+            "time_parsed": "thetime"
+        }
+        assert result['data']['_raw'] == "dGVzdCBzdHJpbmc="
+        assert result['receivers']['tester']['time_created'] == 1234567890
+        assert len(result['receivers']) == 1
+        self.m.VerifyAll()
+
+    def setup_parse(self, config=None, doc=None):
+        if config is None:
+            config = {'payload_configuration': {'sentences': [
+                {"callsign": "callsign", "protocol": "Mock"}]}, "id": "test"}
+        payload_config = config['payload_configuration']['sentences'][0]
+        if doc is None:
+            doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'test_id'}
+            doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+            doc['receivers']['tester']['time_created'] = 123
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+        self.mock_module.pre_parse('test string').AndReturn('callsign')
+        self.parser._find_config_doc('callsign').AndReturn(config)
+        self.mock_module.parse('test string', payload_config).AndReturn({})
+        return doc, config
+
+    def test_calls_filters(self):
+        doc, config = self.setup_parse()
+        mock_filtering = self.m.CreateMock(parser.ParserFiltering)
+        payload_config = config['payload_configuration']['sentences'][0]
+        mock_filtering.pre_filter('test string',
+                self.parser.modules[0]).AndReturn('test string')
+        mock_filtering.intermediate_filter('test string',
+                payload_config).AndReturn('test string')
+        mock_filtering.post_filter({}, payload_config).AndReturn({})
+        self.parser.filtering = mock_filtering
+        self.m.ReplayAll()
+        self.parser.parse(doc)
+        self.m.VerifyAll()
+
+    def test_doesnt_use_configs_for_other_protocols(self):
+        # This was a bug: by @danielrichman:
+        # If we have parsermodules A and B, and call parse("some
+        # data"); protocols A and B are similar enough that pre_parse for A
+        # might return a callsing for something actually protocol B, but then
+        # rejects it later in parse, `config = self._get_config(...)` will
+        # remember the old config found.
+
+        # set up a second module
+        second_module = self.m.CreateMock(parser.ParserModule)
+        class MockTwo(parser.ParserModule):
+            def __new__(cls, parser):
+                return second_module
+        mod_config = {"name": "MockTwo", "class": MockTwo}
+        self.parser.modules.append(mod_config)
+
+        # stub out most parse functionality
+        self.m.StubOutWithMock(self.parser, '_get_callsign')
+        self.m.StubOutWithMock(self.parser, '_get_config')
+        self.m.StubOutWithMock(self.parser, '_get_data')
+
+        # fake doc
+        doc = {'data': {}, 'receivers': {'tester': {}}, '_id': 'test_id'}
+        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
+        doc['receivers']['tester']['time_created'] = 123
+        
+        # first module gets used, returns valid callsign & config, no data
+        mods = self.parser.modules
+        self.parser._get_callsign("test string", {},
+            mods[0]).AndReturn("callsign one")
+        self.parser._get_config("callsign one", None).AndReturn("config one")
+        self.parser._get_data("test string", "callsign one", "config one",
+            mods[0]).AndRaise(parser.CantGetData())
+
+        # second module gets tried, should be given None as the config as
+        # the previously found one is bad. the bug is that it would be given
+        # "config one" instead of None.
+        self.parser._get_callsign("test string", {},
+            mods[1]).AndReturn("callsign two")
+        self.parser._get_config("callsign two", None).AndReturn("config two")
+        self.parser._get_data("test string", "callsign two", "config two",
+            mods[1]).AndRaise(parser.CantGetData())
+
+        self.m.ReplayAll()
+        self.parser.parse(doc)
+        self.m.VerifyAll()
+
+    def test_uses_provided_config_despite_no_id(self):
+        config = {"sentences": [{"callsign": "supply", "protocol": "Mock"}]}
+        result = {"id": None, "payload_configuration": config}
+        assert self.parser._get_config('supply', config) == result
+
+    def test_uses_provided_config(self):
+        config = {"sentences": [{"callsign": "supply", "protocol": "Mock"}],
+                  "_id": "some_actual_document"}
+        result = {"id": "some_actual_document",
+                  "payload_configuration": config}
+        assert self.parser._get_config('supply', config) == result
+
+    def test_get_config_calls_find_config(self):
+        self.m.StubOutWithMock(self.parser, '_find_config_doc')
+
+        result = {"id": "some_actual_document",
+                  "payload_configuration": {"doc": True}}
+        result2 = deepcopy(result)
+        result2["flight_id"] = "a_flight"
+
+        self.parser._find_config_doc('call_a').AndReturn(deepcopy(result))
+        self.parser._find_config_doc('call_b').AndReturn(None)
+        self.parser._find_config_doc('call_c').AndReturn(deepcopy(result2))
+
+        self.m.ReplayAll()
+        assert self.parser._get_config('call_a') == result
+        assert_raises(parser.CantGetConfig, self.parser._get_config, 'call_b')
+        assert self.parser._get_config('call_c') == result2
+        self.m.VerifyAll()
+
+    def test_raises_if_provided_config_doesnt_have_correct_callsign(self):
+        config = {"sentences": [{"callsign": "bad", "protocol": "Mock"}]}
+        assert_raises(parser.CantGetConfig, self.parser._get_config,
+            'good', config)
+
+class TestParserFiltering(object):
+    def setup(self):
+        self.m = mox.Mox()
+
+        base_path = os.path.split(os.path.abspath(__file__))[0]
+        cert_path = os.path.join(base_path, 'certs')
+        self.parser_config = {"parser": {
+            "certs_dir": cert_path}, "loadables": [],
+            "couch_uri": "http://localhost:5984", "couch_db": "test"}
+
+        lmgr = self.m.CreateMock(loadable_manager.LoadableManager)
+        self.fil = parser.ParserFiltering(self.parser_config, lmgr)
+
+    def teardown(self):
+        self.m.UnsetStubs()
+
     def test_init_loads_CAs(self):
-        assert len(self.parser.certificate_authorities) == 1
-        cert = self.parser.certificate_authorities[0]
+        assert len(self.fil.certificate_authorities) == 1
+        cert = self.fil.certificate_authorities[0]
         assert cert.get_serial_number() == 9315532607032814920L
 
     def test_init_doesnt_load_non_CA_cert(self):
@@ -125,349 +414,145 @@ class TestParser(object):
         config['parser']['certs_dir'] = cert_path
         assert_raises(ValueError, parser.Parser, config)
 
-    def test_init_connects_to_couch(self):
-        # This actually tested by setup(), since the parser needs to be
-        # initialised with CouchDB mocks in all other tests.
-        assert self.parser.db == self.mock_db
-
-    def test_run_calls_wait_and_uses_update_seq(self):
-        c = self.m.CreateMock(couchdbkit.Consumer)
-        parser.couchdbkit.Consumer(self.parser.db).AndReturn(c)
-        c.wait(self.parser._couch_callback, filter="habitat/unparsed",
-               since=191238, include_docs=True, heartbeat=1000)
-        self.m.ReplayAll()
-        self.parser.run()
-        self.m.VerifyAll()
-
-    def test_couch_callback(self):
-        result = {'doc': {'hello': 'world'}, 'seq': 1}
-        parsed = {'hello': 'parser'}
-        self.m.StubOutWithMock(self.parser, 'parse')
-        self.m.StubOutWithMock(self.parser, '_save_updated_doc')
-        self.parser.parse(result['doc']).AndReturn(parsed)
-        self.parser._save_updated_doc(parsed)
-        self.m.ReplayAll()
-        self.parser._couch_callback(result)
-        self.m.VerifyAll()
-
-    def test_saving_saves(self):
-        orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
-        parsed_doc = deepcopy(orig_doc)
-        parsed_doc['data']['b'] = 2
-        self.parser.db.__getitem__('id').AndReturn(orig_doc)
-        self.parser.db.save_doc(parsed_doc)
-        self.m.ReplayAll()
-        self.parser._save_updated_doc(parsed_doc)
-        self.m.VerifyAll()
-
-    def test_saving_merges(self):
-        orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
-        parsed_doc = deepcopy(orig_doc)
-        parsed_doc['data']['b'] = 2
-        updated_doc = deepcopy(orig_doc)
-        updated_doc['receivers'].append(2)
-        merged_doc = deepcopy(parsed_doc)
-        merged_doc['receivers'] = deepcopy(updated_doc['receivers'])
-        self.parser.db.__getitem__('id').AndReturn(updated_doc)
-        self.parser.db.save_doc(merged_doc)
-        self.m.ReplayAll()
-        self.parser._save_updated_doc(parsed_doc)
-        self.m.VerifyAll()
-    
-    def test_saving_merges_after_conflict(self):
-        orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
-        parsed_doc = deepcopy(orig_doc)
-        parsed_doc['data']['b'] = 2
-        updated_doc = deepcopy(orig_doc)
-        updated_doc['receivers'].append(2)
-        merged_doc = deepcopy(parsed_doc)
-        merged_doc['receivers'] = deepcopy(updated_doc['receivers'])
-        self.parser.db.__getitem__('id').AndReturn(orig_doc)
-        self.parser.db.save_doc(parsed_doc).AndRaise(
-            couchdbkit.exceptions.ResourceConflict())
-        self.parser.db.__getitem__('id').AndReturn(updated_doc)
-        self.parser.db.save_doc(merged_doc)
-        self.m.ReplayAll()
-        self.parser._save_updated_doc(parsed_doc)
-        self.m.VerifyAll()
-    
-    def test_saving_quits_after_many_conflicts(self):
-        orig_doc = {"_id": "id", "receivers": [1], 'data': {'a': 1}}
-        parsed_doc = deepcopy(orig_doc)
-        parsed_doc['data']['b'] = 2
-        for i in xrange(30):
-            self.parser.db.__getitem__('id').AndReturn(orig_doc)
-            self.parser.db.save_doc(parsed_doc).AndRaise(
-                couchdbkit.exceptions.ResourceConflict())
-        self.m.ReplayAll()
-        assert_raises(RuntimeError, self.parser._save_updated_doc, parsed_doc)
-        self.m.VerifyAll()
-
-    def test_looks_for_config_doc(self):
-        callsign = "habitat"
-        time_created = 1234567890
-        view_result = {'doc': {'payloads': {callsign: True}}}
-        mock_view = self.m.CreateMock(couchdbkit.ViewResults)
-        self.parser.db.view("habitat/payload_config", limit=1,
-                include_docs=True, startkey=[callsign,
-                    time_created]).AndReturn(mock_view)
-        mock_view.first().AndReturn(view_result)
-        self.m.ReplayAll()
-        result = self.parser._find_config_doc(callsign, time_created)
-        assert result == view_result['doc']
-        self.m.VerifyAll()
-
-    def test_doesnt_use_bad_config_doc(self):
-        callsign = "habitat"
-        time_created = 1234567890
-        view_result = {'doc': {'payloads': {"not habitat": True}}}
-        mock_view = self.m.CreateMock(couchdbkit.ViewResults)
-        self.parser.db.view("habitat/payload_config", limit=1,
-                include_docs=True, startkey=[callsign,
-                    time_created]).AndReturn(mock_view)
-        mock_view.first().AndReturn(view_result)
-        self.m.ReplayAll()
-        assert_raises(ValueError, self.parser._find_config_doc, callsign,
-                time_created)
-        self.m.VerifyAll()
-    
-    def test_doesnt_parse_if_no_callsign_found(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
-        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-        doc['receivers']['tester']['time_created'] = 1234567890
-        self.mock_module.pre_parse('test string').AndRaise(ValueError)
-        self.m.ReplayAll()
-        assert self.parser.parse(doc) is None
-        self.m.VerifyAll()
-
-    def test_uses_default_config(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
-        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-        doc['receivers']['tester']['time_created'] = 1234567890
-        default = {'sentence': {'protocol': 'Mock'}}
-        self.parser.modules[0]['default_config'] = default
-        self.mock_module.pre_parse('test string').AndRaise(ValueError)
-        self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.mock_module.parse('test string',default['sentence']).AndReturn({})
-        self.m.ReplayAll()
-        result = self.parser.parse(doc)
-        assert result['data']['_parsed']
-        assert result['data']['_used_default_config']
-        self.m.VerifyAll()
-
-    def test_doesnt_parse_if_no_config(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
-        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-        doc['receivers']['tester']['time_created'] = 1234567890
-        self.m.StubOutWithMock(self.parser, '_find_config_doc')
-        self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign',
-                1234567890).AndRaise(ValueError)
-        self.m.ReplayAll()
-        assert self.parser.parse(doc) is None
-        self.m.VerifyAll()
-
-    def test_doesnt_parse_if_bad_config(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
-        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-        doc['receivers']['tester']['time_created'] = 1234567890
-        config = {'payloads': {'callsign': {'messed': 'up'}}, '_id': 'test'}
-        self.m.StubOutWithMock(self.parser, '_find_config_doc')
-        self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
-        self.m.ReplayAll()
-        assert self.parser.parse(doc) is None
-        self.m.VerifyAll()
-
-    def test_doesnt_parse_if_wrong_config_protocol(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
-        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-        doc['receivers']['tester']['time_created'] = 1234567890
-        config = {'payloads': {'callsign': {'sentence': {'protocol': 'Fake'}}}}
-        config['_id'] = 'test'
-        self.m.StubOutWithMock(self.parser, '_find_config_doc')
-        self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
-        self.m.ReplayAll()
-        assert self.parser.parse(doc) is None
-        self.m.VerifyAll()
-
-    def test_parses(self):
-        doc = {'data': {}, 'receivers': {'tester': {}}}
-        doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-        doc['receivers']['tester']['time_created'] = 1234567890
-        config = {'payloads': {'callsign': {'sentence': {'protocol': 'Mock'}}}}
-        config['_id'] = 'test'
-        self.m.StubOutWithMock(self.parser, '_find_config_doc')
-        self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 1234567890).AndReturn(config)
-        self.mock_module.parse('test string',
-                config['payloads']['callsign']['sentence']).AndReturn({})
-        self.m.ReplayAll()
-        result = self.parser.parse(doc)
-        assert result['data']['_parsed']
-        assert result['data']['_protocol'] == 'Mock'
-        assert result['data']['_flight'] == 'test'
-        assert result['data']['_raw'] == "dGVzdCBzdHJpbmc="
-        assert result['receivers']['tester']['time_created'] == 1234567890
-        assert len(result['receivers']) == 1
-        self.m.VerifyAll()
-
-    def setup_parse(self, config=None, doc=None):
-        if config is None:
-            config = {'payloads': {'callsign': { 'sentence': {}}}}
-            config['_id'] = 'test'
-            config['payloads']['callsign']['sentence']['protocol'] = 'Mock'
-        payload_config = config['payloads']['callsign']['sentence']
-        if doc is None:
-            doc = {'data': {}, 'receivers': {'tester': {}}}
-            doc['data']['_raw'] = "dGVzdCBzdHJpbmc="
-            doc['receivers']['tester']['time_created'] = 123
-        self.m.StubOutWithMock(self.parser, '_find_config_doc')
-        self.mock_module.pre_parse('test string').AndReturn('callsign')
-        self.parser._find_config_doc('callsign', 123).AndReturn(config)
-        self.mock_module.parse('test string', payload_config).AndReturn({})
-        return doc, config
-
-    def test_calls_filters(self):
-        doc, config = self.setup_parse()
-        self.m.StubOutWithMock(self.parser, '_pre_filter')
-        self.m.StubOutWithMock(self.parser, '_intermediate_filter')
-        self.m.StubOutWithMock(self.parser, '_post_filter')
-        payload_config = config['payloads']['callsign']
-        self.parser._pre_filter('test string',
-                self.parser.modules[0]).AndReturn('test string')
-        self.parser._intermediate_filter('test string',
-                payload_config).AndReturn('test string')
-        self.parser._post_filter({}, payload_config).AndReturn({})
-        self.m.ReplayAll()
-        self.parser.parse(doc)
-        self.m.VerifyAll()
-
     def test_runs_pre_filters(self):
-        self.m.StubOutWithMock(self.parser, '_filter')
+        self.m.StubOutWithMock(self.fil, '_filter')
         data = 'test data'
         module = {'pre-filters': ['f1', 'f2']}
-        self.parser._filter('test data', 'f1').AndReturn('filtered data')
-        self.parser._filter('filtered data', 'f2').AndReturn('result')
+        self.fil._filter('test data', 'f1', str, ('pre', 0))\
+                .AndReturn('filtered data')
+        self.fil._filter('filtered data', 'f2', str, ('pre', 1))\
+                .AndReturn('result')
         self.m.ReplayAll()
-        assert self.parser._pre_filter(data, module) == 'result'
+        assert self.fil.pre_filter(data, module) == 'result'
         self.m.VerifyAll()
 
     def test_runs_intermediate_filters(self):
-        self.m.StubOutWithMock(self.parser, '_filter')
+        self.m.StubOutWithMock(self.fil, '_filter')
         data = 'test data'
         config = {'filters': {'intermediate': ['f1', 'f2']}}
-        self.parser._filter('test data', 'f1').AndReturn('filtered data')
-        self.parser._filter('filtered data', 'f2').AndReturn('result')
+        self.fil._filter(data, 'f1', str, ('intermediate', 0))\
+                .AndReturn('filtered data')
+        self.fil._filter('filtered data', 'f2', str, ('intermediate', 1))\
+                .AndReturn('result')
         self.m.ReplayAll()
-        assert self.parser._intermediate_filter(data, config) == 'result'
+        assert self.fil.intermediate_filter(data, config) == 'result'
         self.m.VerifyAll()
 
     def test_runs_post_filters(self):
-        self.m.StubOutWithMock(self.parser, '_filter')
-        data = 'test data'
+        self.m.StubOutWithMock(self.fil, '_filter')
+        data = {'test': 2}
         config = {'filters': {'post': ['f1', 'f2']}}
-        self.parser._filter('test data', 'f1').AndReturn('filtered data')
-        self.parser._filter('filtered data', 'f2').AndReturn('result')
+        self.fil._filter(data, 'f1', dict, ('post', 0))\
+                .AndReturn({'test': 3})
+        self.fil._filter({'test': 3}, 'f2', dict, ('post', 1))\
+                .AndReturn({'result': True})
         self.m.ReplayAll()
-        assert self.parser._post_filter(data, config) == 'result'
+        assert self.fil.post_filter(data, config) == {'result': True}
         self.m.VerifyAll()
-    
+
     def test_filters_must_have_type(self):
-        assert self.parser._filter('test data', {}) == 'test data'
+        assert self.fil._filter('test data', {}, str, ('x', 0)) == 'test data'
 
     def test_calls_loadable_manager_for_normal_filters(self):
-        self.m.StubOutWithMock(self.parser, 'loadable_manager')
         data = 'test data'
         f = {'type': 'normal', 'filter': 'some.func'}
-        self.parser.loadable_manager.run(
+        self.fil.loadable_manager.run(
             'filters.some.func', f, 'test data').AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.parser._filter(data, f) == 'filtered'
+        assert self.fil._filter(data, f, str, ('x', 0)) == 'filtered'
         self.m.VerifyAll()
 
     def test_calls_loadable_manager_for_normal_filters_with_config(self):
-        self.m.StubOutWithMock(self.parser, 'loadable_manager')
         data = 'test data'
         f = {'type': 'normal', 'filter': 'some.func', 'config': 'parameters'}
-        self.parser.loadable_manager.run(
+        self.fil.loadable_manager.run(
             'filters.some.func', f, 'test data').AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.parser._filter(data, f) == 'filtered'
+        assert self.fil._filter(data, f, str, ('x', 0)) == 'filtered'
         self.m.VerifyAll()
 
     def test_calls_hotfix_filter(self):
-        self.m.StubOutWithMock(self.parser, '_hotfix_filter')
+        self.m.StubOutWithMock(self.fil, '_hotfix_filter')
         data = 'test data'
         f = {'type': 'hotfix'}
-        self.parser._hotfix_filter('test data', f).AndReturn('filtered')
+        self.fil._hotfix_filter('test data', f).AndReturn('filtered')
         self.m.ReplayAll()
-        assert self.parser._filter(data, f) == 'filtered'
+        assert self.fil._filter(data, f, str, ('x', 0)) == 'filtered'
         self.m.VerifyAll()
 
     def test_skips_unknown_filter_types(self):
-        assert self.parser._filter('test data', {'type': '?'}) == 'test data'
-
-    def test_uncallable_normal_filters(self):
-        class F:
-            pass
-        f = {'callable': F, 'type': 'normal'}
-        assert self.parser._filter('test string', f) == 'test string'
+        assert self.fil._filter('tdta', {'type': '?'}, str, ('x', 0)) == 'tdta'
 
     def test_unimportable_normal_filters(self):
-        f = {'callable': 'fakefakefake.fakepath.is.fake', 'type': 'normal'}
-        assert self.parser._filter('test string', f) == 'test string'
+        f = {'filter': 'fakefakefake.fakepath.is.fake', 'type': 'normal'}
+        assert self.fil._filter('test string', f, str, ('x', 0)) == \
+                'test string'
 
-    def test_incorrect_num_args_normal_filters(self):
-        def fil(data, config, too, many, args):
-            assert data == 'test string'
-            assert config == 'config'
-            return 'filtered'
-        f = {'callable': fil, 'config': 'config', 'type': 'normal'}
-        assert self.parser._filter('test string', f) == 'test string'
+    def test_sanity_checks_filter_return_type(self):
+        cases = [("string", str, True), ("string", dict, False),
+                 ({"data": True}, dict, True), ({"data": True}, str, False)]
+
+        for (filter_return, want_type, should_work) in cases:
+            data_in = 'test string'
+            config = {'filter': 'intercept_me', 'type': 'normal'}
+            if should_work:
+                expect_result = filter_return
+            else:
+                expect_result = data_in
+
+            self.fil.loadable_manager.run('filters.intercept_me', config,
+                    data_in).AndReturn(filter_return)
+
+            self.m.ReplayAll()
+            assert self.fil._filter(data_in, config, want_type, ('x', 0)) == \
+                    expect_result
+            self.m.VerifyAll()
+            self.m.ResetAll()
 
     def test_hotfix_filters(self):
-        self.m.StubOutWithMock(self.parser, '_sanity_check_hotfix')
-        self.m.StubOutWithMock(self.parser, '_get_certificate')
-        self.m.StubOutWithMock(self.parser, '_verify_certificate')
-        self.m.StubOutWithMock(self.parser, '_compile_hotfix')
+        self.m.StubOutWithMock(self.fil, '_sanity_check_hotfix')
+        self.m.StubOutWithMock(self.fil, '_get_certificate')
+        self.m.StubOutWithMock(self.fil, '_verify_certificate')
+        self.m.StubOutWithMock(self.fil, '_compile_hotfix')
         f = {'certificate': 'cert'}
         env = {'f': lambda data: 'hotfix ran'}
-        self.parser._sanity_check_hotfix(f)
-        self.parser._get_certificate('cert').AndReturn('got_cert')
-        self.parser._verify_certificate(f, 'got_cert')
-        self.parser._compile_hotfix(self.parser, f).AndReturn(env)
+        self.fil._sanity_check_hotfix(f)
+        self.fil._get_certificate('cert').AndReturn('got_cert')
+        self.fil._verify_certificate(f, 'got_cert')
+        self.fil._compile_hotfix(f).AndReturn(env)
         self.m.ReplayAll()
-        assert self.parser._hotfix_filter({}, f) == 'hotfix ran'
+        assert self.fil._hotfix_filter({}, f) == 'hotfix ran'
         self.m.VerifyAll()
 
     def test_handles_hotfix_exceptions(self):
-        self.m.StubOutWithMock(self.parser, '_sanity_check_hotfix')
-        self.m.StubOutWithMock(self.parser, '_get_certificate')
-        self.m.StubOutWithMock(self.parser, '_verify_certificate')
-        self.m.StubOutWithMock(self.parser, '_compile_hotfix')
+        self.m.StubOutWithMock(self.fil, '_sanity_check_hotfix')
+        self.m.StubOutWithMock(self.fil, '_get_certificate')
+        self.m.StubOutWithMock(self.fil, '_verify_certificate')
+        self.m.StubOutWithMock(self.fil, '_compile_hotfix')
         f = {'certificate': 'cert', 'type': 'hotfix'}
+
         class OhNoError(Exception):
             pass
+
         def hotfix(data):
             raise OhNoError
+
         env = {'f': hotfix}
-        self.parser._sanity_check_hotfix(f)
-        self.parser._get_certificate('cert').AndReturn('got_cert')
-        self.parser._verify_certificate(f, 'got_cert')
-        self.parser._compile_hotfix(self.parser, f).AndReturn(env)
+        self.fil._sanity_check_hotfix(f)
+        self.fil._get_certificate('cert').AndReturn('got_cert')
+        self.fil._verify_certificate(f, 'got_cert')
+        self.fil._compile_hotfix(f).AndReturn(env)
         self.m.ReplayAll()
-        assert self.parser._filter('unfiltered', f) == 'unfiltered'
+        assert self.fil._filter('unfiltered', f, str, ('x', 0)) == 'unfiltered'
         self.m.VerifyAll()
 
     def test_handles_hotfix_syntax_error(self):
         f = {'code': "this isn't python!"}
-        assert_raises(ValueError, self.parser._compile_hotfix, f)
-    
+        assert_raises(ValueError, self.fil._compile_hotfix, f)
+
     def test_handles_invalid_hotfix_code(self):
         f = {'code': 12}
-        assert_raises(ValueError, self.parser._compile_hotfix, f)
+        assert_raises(ValueError, self.fil._compile_hotfix, f)
 
     def test_hotfix_doesnt_allow_invalid_signature(self):
         f = {'code': 'return False', 'certificate': 'adamgreig.crt'}
@@ -475,7 +560,7 @@ class TestParser(object):
         cert = self.m.CreateMock(M2Crypto.X509.X509)
         cert.verify(mox.IsA(M2Crypto.EVP.PKey)).AndReturn(True)
         self.m.ReplayAll()
-        assert_raises(ValueError, self.parser._verify_certificate, f, cert)
+        assert_raises(ValueError, self.fil._verify_certificate, f, cert)
         self.m.VerifyAll()
 
     def test_hotfix_doesnt_allow_wrong_signature(self):
@@ -490,31 +575,42 @@ class TestParser(object):
         pubkey.get_rsa().AndReturn(rsa)
         rsa.verify(d, "signature", 'sha256').AndReturn(False)
         self.m.ReplayAll()
-        assert_raises(ValueError, self.parser._verify_certificate, f, cert)
+        assert_raises(ValueError, self.fil._verify_certificate, f, cert)
         self.m.VerifyAll()
 
     def test_hotfix_doesnt_allow_missing_signature(self):
         f = {'code': 'bla', 'certificate': 'cert.pem'}
-        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
+        assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
 
     def test_hotfix_doesnt_allow_missing_certificate(self):
         f = {'code': 'bla', 'signature': 'sign here'}
-        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
-    
+        assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
+
     def test_hotfix_doesnt_allow_missing_code(self):
         f = {'certificate': 'cert.pem', 'signature': 'sign here'}
-        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
+        assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
 
     def test_hotfix_doesnt_allow_certs_not_signed_by_ca(self):
         cert = self.m.CreateMock(M2Crypto.X509.X509)
         cert.verify(mox.IsA(M2Crypto.EVP.PKey)).AndReturn(False)
         self.m.ReplayAll()
-        assert_raises(ValueError, self.parser._verify_certificate, {}, cert)
+        assert_raises(ValueError, self.fil._verify_certificate, {}, cert)
         self.m.VerifyAll()
 
     def test_hotfix_doesnt_allow_unloadable_certs(self):
-        assert_raises(ValueError, self.parser._get_certificate, 'doesntexist')
+        assert_raises(ValueError, self.fil._get_certificate, 'doesntexist')
 
     def test_hotfix_doesnt_allow_certs_with_paths_in_name(self):
         f = {'certificate': '../../dots.pem', 'code': '', 'signature': ''}
-        assert_raises(ValueError, self.parser._sanity_check_hotfix, f)
+        assert_raises(ValueError, self.fil._sanity_check_hotfix, f)
+
+    def test_filter_failures_do_not_produce_errors_in_the_log(self):
+        # see issue #299
+        self.m.StubOutWithMock(parser.logger, 'exception')
+
+        f = {'type': 'normal', 'filter': 'x'}
+        self.fil.loadable_manager.run('filters.x', f, 'test data')\
+                .AndRaise(KeyError)
+        self.m.ReplayAll()
+        assert self.fil._filter('asdf', f, str, ('x', 0)) == 'asdf'
+        self.m.VerifyAll()

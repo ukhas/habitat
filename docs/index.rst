@@ -9,8 +9,9 @@ Contents:
    intro
    installing
    configuration
-   database/index
+   database
    filters
+   certs
    ukhas_parser
    habitat
 

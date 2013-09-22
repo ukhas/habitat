@@ -15,36 +15,65 @@
 # You should have received a copy of the GNU General Public License
 # along with habitat.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """
-``habitat.loadable_manager``: the loadable-function manager
+Load configured Python functions for later use elsewhere.
 
-This manager is given a list of modules to load from the configuration file,
-and it loads all of the functions in each module such that they can later be
-used by other pieces of habitat code while ensuring that only modules specified
-on the command line can be used in such a way; this prevents user-specified
-Python code paths being used.
+The manager is configured with modules to use and it loads all the functions
+defined in each module's ``__all__``. This ensures that users cannot specify
+arbitrary paths in runtime configuration which may lead to undesired or
+insecure behaviour.
 
 The modules that functions are loaded from are given shorthand names to ease
-referring to them from configuration documents et cetera, for example
-``habitat.sensors.stdtelem.time`` might become ``stdtelem.time``. The shorthand
-is specified in the configuration document.
+referring to them elsewhere, for example :meth:`habitat.sensors.stdtelem.time`
+might become ``stdtelem.time``. The shorthand is specified in the configuration
+document.
+
+Configuration
+=============
+
+*loadable_manager* reads its configuration data from the config argument
+to *LoadableManager.__init__*, which is typically parsed from the
+configuration YAML file in the following format::
+
+    loadables:
+        - name: "sensors.base"
+          class: "habitat.sensors.base"
+        - name: "filters.common"
+          class: "habitat.filters"
+
+``name`` specifies the shorthand name that the module will be available under;
+it should begin either ``sensors`` or ``filters`` for use by the respective
+parts of habitat, which prepend the relevant prefix themselves.
+
+For example, to use the filter :meth:`habitat.filters.semicolons_to_commas` in
+a flight document, having configured as above, you would specify::
+
+    "filters": {
+        "intermediate": {
+            [
+                {
+                    "type": "normal",
+                    "filter": "common.semicolons_to_commas"
+                }
+            ]
+        }
+    }
 
 Sensor Functions
 ================
 
-One of the major uses of loadable_manager (and historically its only use) is
-sensor functions, used by parser modules to convert input data into usable
-Python data formats. See :py:mod:`habitat.sensors` for some sensors included
-with habitat, but you may also want to write your own for a specific type of
-data.
+One of the major uses of *loadable_manager* (and historically its only
+use) is sensor functions, used by parser modules to convert input data into
+usable Python data formats. See :mod:`habitat.sensors` for some sensors
+included with habitat, but you may also want to write your own for a specific
+type of data.
 
 A sensor function may two one or two arguments, *config* and *data* or just
 *data*. It can return any Python object which can be stored in the CouchDB
 database.
 
 *config* is a dict of options. It is passed to the function from
-:py:meth:`LoadableManager.run`
+:meth:`LoadableManager.run`
 
 *data* is the string to parse.
 
@@ -52,7 +81,7 @@ database.
 Filter Functions
 ================
 
-Another use for the loadable_manager is filters that are applied against
+Another use for the *loadable_manager* is filters that are applied against
 incoming telemetry strings. Which filters to use is specified in a payload's
 flight document, either as user-specified (but signed) hotfix code or a
 loadable function name, as with sensors.
@@ -66,15 +95,16 @@ should return a suitably modified form of data, optionally using anything from
 
 from .utils import dynamicloader
 
-__all__ = ["LoadableManager"]
 
 class LoadableManager:
-    """The main Loadable Manager class"""
+    """
+    The main Loadable Manager class.
+    """
 
     def __init__(self, config):
         """
-        All modules listed in config["loadables"] will be loaded using
-        :py:meth:`load`.
+        On construction, all modules listed in config["loadables"] will be
+        loaded using :py:meth:`load`.
         """
 
         self.libraries = {}
@@ -83,21 +113,19 @@ class LoadableManager:
             self.load(loadable["class"], loadable["name"])
 
     def load(self, module, shorthand):
-        """loads *module* as a library and assigns it to *shorthand*"""
+        """Loads *module* as a library and assigns it to *shorthand*."""
 
         module = dynamicloader.load(module)
         self.libraries[shorthand] = module
 
     def run(self, name, config, data):
         """
-        Runs *name* loadable using *config* and *data* (though *config* is only
-        passed to *name* if *name* takes two arguments).
+        Run the loadable specified by *name*, giving it *config* and *data*.
 
-        *name*: The loaded function to use.
+        If the loadable only takes one argument, it will only be given *data*.
+        *config* is ignored in this case.
 
-        *config*: The config dict to provide to the function
-
-        *data*: The data to parse.
+        Returns the result of running the loadable.
         """
 
         name_parts = name.split('.')
