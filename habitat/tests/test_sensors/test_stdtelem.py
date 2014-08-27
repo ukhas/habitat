@@ -64,7 +64,11 @@ class TestStdtelem:
             ("dddmm.mmmm", "-3506.192", -35.1032),
             ("dddmm.mmmm", "-2431.5290", -24.5254833),
             ("dddmm.mmmm", "2431.529", 24.525483),
-            ("dddmm.mmmm", "-2431.0", -24.5167)
+            ("dddmm.mmmm", "-2431.0", -24.5167),
+            ("dddmm.mmmm", "-130.0", -1.5),
+            ("dddmm.mmmm", "30.0", 0.5),
+            ("dddmm.mmmm", "0.0", 0.0),
+            ("dddmm.mmmm", "0", 0.0)
         ]
         for i in coordinates:
             config = {"format": i[0], "miscellania": True, "asdf": 1234}
@@ -86,8 +90,7 @@ class TestStdtelem:
             ("dd.dddd", "+200.00"),
             ("ddmm.mm", "20000.0000"),
             ("ddmm.mm", "-20000.0000"),
-            ("ddmm.mm", "03599.1234"),
-            ("ddmm.mm", "-12")
+            ("ddmm.mm", "03599.1234")
         ]
         for i in invalid_coordinates:
             self.check_invalid_coordinate(i)
