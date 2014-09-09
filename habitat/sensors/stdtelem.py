@@ -68,15 +68,14 @@ def coordinate(config, data):
     if left[-1] == "d" and right[-1] == "d":
         coord = float(data)
     elif left[0] == "d" and left[-1] == "m" and right[-1] == "m":
-        first, second = data.split(".")
-        degrees = float(first[:-2])
-        minutes = float(first[-2:] + "." + second)
+        val = float(data)
+        degrees = int(val / 100)
+        minutes = val - (degrees * 100)
         if minutes > 60.0:
             raise ValueError("Minutes component > 60.")
-        m_to_d = minutes / 60.0
-        degrees += math.copysign(m_to_d, degrees)
-        dp = len(second) + 3 # num digits in minutes + 1
-        coord = round(degrees, dp)
+        coord = degrees + (minutes / 60)
+        exponent = 3 + ( len(data.split('.')[1]) if data.find('.') > -1 else 0 )
+        coord = round(coord, exponent)
     else:
         raise ValueError("Invalid coordinate format")
 
