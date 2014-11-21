@@ -232,7 +232,7 @@ class TestSetupLogging(object):
         self.mocker.StubOutClassWithMocks(smtplib, 'SMTP')
 
         for things in self.expected_messages(level):
-            smtp = smtplib.SMTP("email_server", 25)
+            smtp = smtplib.SMTP("email_server", 25, timeout=5.0)
             smtp.sendmail("from_bob", ["addr_1", "addr_2"], EqIfIn(*things))
             smtp.quit()
 
