@@ -259,7 +259,10 @@ def add_listener_update(doc, req):
     returned) or because of a save conflict. In the event of a save conflict,
     uploaders should retry the same request until the conflict is resolved.
     """
-    protodoc = json.loads(req["body"])
+    try:
+        protodoc = json.loads(req["body"])
+    except ValueError:
+        raise ForbiddenError("invalid JSON")
     if "data" not in protodoc or "_raw" not in protodoc["data"]:
         raise ForbiddenError("doc.data._raw is required")
     if "receivers" not in protodoc or len(protodoc["receivers"]) != 1:
