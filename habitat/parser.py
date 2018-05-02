@@ -127,7 +127,7 @@ class Parser(object):
 
         logger.info("Parsing [{type}] {data!r} ({id}) from {who}"
                     .format(id=doc["_id"], data=debug_data, type=debug_type,
-                            who=receiver_callsign))
+                            who=receiver_callsign.encode("ascii", "replace")))
 
         for module in self.modules:
             config = copy.deepcopy(initial_config)
