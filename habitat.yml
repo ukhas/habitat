@@ -1,4 +1,4 @@
-couch_uri: "http://localhost:5984"
+couch_uri: "http://habitat.habhub.org"
 couch_db: habitat
 log_levels:
     stderr: DEBUG
@@ -26,3 +26,5 @@ loadables:
       class: "habitat.sensors.stdtelem"
     - name: "filters.common"
       class: "habitat.filters"
+radiosonde_override: "8c36ab528b16cb3adf00b7e07a228854"
+radiosonde_override_prefix: "RS_"
