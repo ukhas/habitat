@@ -1,4 +1,4 @@
-couch_uri: "http://habitat.habhub.org"
+couch_uri: "localhost:5984"
 couch_db: habitat
 log_levels:
     stderr: DEBUG
