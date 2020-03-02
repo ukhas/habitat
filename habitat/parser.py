@@ -85,6 +85,25 @@ class Parser(object):
         self.couch_server = couchdbkit.Server(config["couch_uri"])
         self.db = self.couch_server[config["couch_db"]]
 
+        # Grab the radiosonde override config.
+        self.rs_prefix = "RS_"  # Default radiosonde callsign identifier.
+        self.rs_config = None
+        try:
+            self.rs_prefix = config["radiosonde_override_prefix"]
+            _rs_config = self.db[config["radiosonde_override"]]
+            self.rs_config = {
+                'payload_configuration': _rs_config,
+                'id': config["radiosonde_override"]}
+            logging.debug(
+                "Loaded radiosonde override payload doc (%s)",
+                config["radiosonde_override"])
+        except KeyError as e:
+            logging.debug("Could not find key in config - %s", str(e))
+        except couchdbkit.ResourceNotFound as e:
+            logging.debug(
+                "Could not find payload doc %s",
+                config["radiosonde_override"])
+
     @statsd.StatsdTimer.wrap('parser.time')
     def parse(self, doc, initial_config=None):
         """
@@ -197,6 +216,7 @@ class Parser(object):
         Attempt to get a config doc given the callsign and maybe a provided
         config doc.
         """
+
         if config and not self._callsign_in_config(callsign, config):
             logger.debug("Callsign {c!r} not found in configuration doc"
                          .format(c=callsign))
@@ -208,7 +228,17 @@ class Parser(object):
                     .format(config["_id"]))
             return {"id": config["_id"], "payload_configuration": config}
 
-        config = self._find_config_doc(callsign)
+        if (self.rs_config != None) and callsign.startswith(self.rs_prefix):
+            logging.debug(
+                "Overriding payload doc lookup for radiosonde telemetry.")
+            config = copy.deepcopy(self.rs_config)
+            # Replace the callsign fields within the config
+            # to keep the downstream parsers happy.
+            config['payload_configuration']['name'] = callsign
+            config['payload_configuration']['sentences'][0]['callsign'] = callsign
+
+        else:
+            config = self._find_config_doc(callsign)
 
         if not config:
             logger.debug("No configuration doc for {callsign!r} found"
