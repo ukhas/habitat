@@ -65,7 +65,7 @@ class Parser(object):
 
         config = copy.deepcopy(config)
         parser_config = config["parser"]
-        
+
         self.loadable_manager = loadable_manager.LoadableManager(config)
         # loadable_manager used by ParserFiltering and ParserModules.
 
@@ -86,18 +86,23 @@ class Parser(object):
         self.db = self.couch_server[config["couch_db"]]
 
         # Grab the radiosonde override config.
-        self.rs_prefix = "RS_" # Default radiosonde callsign identifier.
+        self.rs_prefix = "RS_"  # Default radiosonde callsign identifier.
         self.rs_config = None
         try:
             self.rs_prefix = config["radiosonde_override_prefix"]
             _rs_config = self.db[config["radiosonde_override"]]
-            self.rs_config = {'payload_configuration': _rs_config, 'id': config["radiosonde_override"]}
-            logging.debug("Loaded radiosonde override payload doc (%s)" % config["radiosonde_override"])
-        except Exception as e:
-            logging.debug("Could not load radiosonde override payload doc - %s" % str(e))
-
-
-            
+            self.rs_config = {
+                'payload_configuration': _rs_config,
+                'id': config["radiosonde_override"]}
+            logging.debug(
+                "Loaded radiosonde override payload doc (%s)",
+                config["radiosonde_override"])
+        except KeyError as e:
+            logging.debug("Could not find key in config - %s", str(e))
+        except couchdbkit.ResourceNotFound as e:
+            logging.debug(
+                "Could not find payload doc %s",
+                config["radiosonde_override"])
 
     @statsd.StatsdTimer.wrap('parser.time')
     def parse(self, doc, initial_config=None):
@@ -224,9 +229,11 @@ class Parser(object):
             return {"id": config["_id"], "payload_configuration": config}
 
         if (self.rs_config != None) and callsign.startswith(self.rs_prefix):
-            logging.debug("Overriding payload doc lookup for radiosonde telemetry.")
+            logging.debug(
+                "Overriding payload doc lookup for radiosonde telemetry.")
             config = copy.deepcopy(self.rs_config)
-            # Replace the callsign fields within the config to keep the downstream parsers happy.
+            # Replace the callsign fields within the config
+            # to keep the downstream parsers happy.
             config['payload_configuration']['name'] = callsign
             config['payload_configuration']['sentences'][0]['callsign'] = callsign
 
