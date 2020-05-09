@@ -258,6 +258,8 @@ class Parser(object):
 
     def _get_data(self, raw_data, callsign, config, module):
         """Attempt to parse data from what we know so far."""
+        raw_data = self.filtering.pre_filter(raw_data, module)
+
         sentences = config["payload_configuration"]["sentences"]
         for sentence_index, sentence in enumerate(sentences):
             if sentence["callsign"] != callsign:
